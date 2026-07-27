@@ -197,7 +197,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI")
 	TObjectPtr<UMaterialInterface> ZombieVillageFloorMaterial;
 
-	/** 마을 중심 청크에 스폰할 발판 클래스 (기본: BP_WeaponUpgradeZone). 비우면 발판 없이 바닥만 깐다.
+	/** 마을 중심 청크에 스폰할 발판 클래스 (기본: BP_CompanionSpawnZone — 랜덤 직업 동료 소환). 비우면 발판 없이 바닥만 깐다.
 	 *  청크 액터 묶음에 들어가므로 언로드 시 함께 제거된다 — 게이지 진행도 영속은 후속 과제(FPOIState). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI")
 	TSubclassOf<AActor> VillagePadClass;
@@ -219,6 +219,15 @@ protected:
 	/** 마을 중심 청크에 배치할 주민 수. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI", meta = (ClampMin = "0", ClampMax = "6"))
 	int32 VillagerCount = 3;
+
+	/** 마을 외곽 링에 놓을 건축 구조물 후보("집" 대용 — 네크로폴리스 팩의 납골당/예배당류 추천: SM_crypt_small_01/02, SM_chapel_01).
+	 *  슬롯마다 이 중 하나를 랜덤으로 골라 배치. 비어있으면 구조물 없이 스킵. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI")
+	TArray<TObjectPtr<UStaticMesh>> VillageStructureMeshes;
+
+	/** 외곽 링 슬롯 6개 중 앞에서부터 몇 개나 채울지. 낮추면 구조물 빈도가 줄어든다. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI", meta = (ClampMin = "0", ClampMax = "6"))
+	int32 VillageStructureCount = 6;
 
 	/** 켜면 POI 청크 생성 시 경계 박스(마을=초록, 좀비마을=빨강)와 로그를 남긴다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI|Debug")
@@ -281,13 +290,17 @@ private:
 	/// Villege
 	///////////////////////////////////////////////////////////////////////////////////////////////////
 
-	void SetupVillege(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk);
+	void SetupVillege(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
 
 	/** 경비병: 발판 주변 고정 자리(대각선 네 모서리)에 경비 모드로 스폰 */
 	void SpawnVillageGuards(const FVector& Center, FMapChunk& Chunk);
 
 	/** 주민(비전투): 발판과 안 겹치는 고정 자리에서 시작해 마을 중심 주변을 배회 */
 	void SpawnVillagers(const FVector& Center, FMapChunk& Chunk);
+
+	/** 마을 외곽 링(고정 슬롯 6곳)에 구조물 배치 — 스폰존 방향과 그 반대쪽은 비워서 길처럼 보이게 함.
+	 *  슬롯 좌표는 고정이고, 슬롯당 메시 선택/스케일만 청크 시드로 살짝 흔든다. */
+	void SpawnVillageStructures(const FVector& Center, FMapChunk& Chunk, FRandomStream& Stream);
 
 	/** 발판 상태가 기본값과 다르면 GameInstance에 저장 (UnloadChunk와 EndPlay 두 출구에서 호출).
 	 *  기본값 그대로면 저장 스킵 — 시드가 재생성하는 값은 기억할 필요 없다(delta만 저장). */

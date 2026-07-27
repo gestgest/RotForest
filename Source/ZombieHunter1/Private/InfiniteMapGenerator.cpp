@@ -42,8 +42,8 @@ AInfiniteMapGenerator::AInfiniteMapGenerator()
 		ZombieVillageFloorMaterial = ZombieVillageMatFinder.Object;
 	}
 
-	// 마을 중심 발판: 무기강화 발판 BP를 기본 지정 (에디터 Details에서 교체/해제 가능)
-	static ConstructorHelpers::FClassFinder<AActor> VillagePadFinder(TEXT("/Game/BP/GameObject/BP_WeaponUpgradeZone"));
+	// 마을 중심 발판: 랜덤 직업 동료 소환존 BP를 기본 지정 (에디터 Details에서 교체/해제 가능)
+	static ConstructorHelpers::FClassFinder<AActor> VillagePadFinder(TEXT("/Game/BP/GameObject/BP_CompanionSpawnZone"));
 	if (VillagePadFinder.Succeeded())
 	{
 		VillagePadClass = VillagePadFinder.Class;
@@ -292,7 +292,7 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 		}
 	}
 
-	SetupVillege(bIsPOIChunk, POI, Center, Chunk);
+	SetupVillege(bIsPOIChunk, POI, Center, Chunk, Stream);
 
 	//POI : 마을이나 좀비마을 와이어 박스 만듬
 	if (bIsPOIChunk && bDebugDrawPOI && POI.bIsCenter)
@@ -473,7 +473,7 @@ FPOIInfo AInfiniteMapGenerator::GetPOIForRegion(const FIntPoint& RegionCoord) co
 
 // 마을 v1: 마을 안의 오브젝트 생성 (무기고, npc 같은거)
 // todo : 게이지 진행도는 언로드되면 초기화됨 — 상태 영속(FPOIState)은 후속 과제.
-void AInfiniteMapGenerator::SetupVillege(bool bIsPOIChunk, FPOIInfo & POI, const FVector Center, FMapChunk & Chunk)
+void AInfiniteMapGenerator::SetupVillege(bool bIsPOIChunk, FPOIInfo & POI, const FVector Center, FMapChunk & Chunk, FRandomStream & Stream)
 {
 	if (bIsPOIChunk && POI.bIsCenter && POI.Type == EPOIType::Village && VillagePadClass && GetWorld())
 	{
@@ -508,6 +508,7 @@ void AInfiniteMapGenerator::SetupVillege(bool bIsPOIChunk, FPOIInfo & POI, const
 
 		SpawnVillageGuards(Center, Chunk);
 		SpawnVillagers(Center, Chunk);
+		SpawnVillageStructures(Center, Chunk, Stream);
 	}
 }
 
@@ -587,6 +588,55 @@ void AInfiniteMapGenerator::SpawnVillagers(const FVector& Center, FMapChunk& Chu
 		Villager->SetFolderPath(TEXT("Spawned/Map"));
 #endif
 		Chunk.SpawnedActors.Add(Villager);
+	}
+}
+
+// 마을 외곽 링(반경 2400 — 발자국 절반 3000 안쪽)에 구조물 6개.
+// 스폰존이 있는 북쪽(0°)과 그 반대쪽 남쪽(180°)은 비워서 마을 안팎으로 길이 뚫린 것처럼 보이게 한다.
+// 좌표는 경비병/주민처럼 고정 슬롯 — 슬롯당 메시 선택/스케일만 청크 시드로 살짝 흔든다(재생성해도 같은 그림).
+void AInfiniteMapGenerator::SpawnVillageStructures(const FVector& Center, FMapChunk& Chunk, FRandomStream& Stream)
+{
+	if (VillageStructureMeshes.Num() == 0 || VillageStructureCount <= 0)
+	{
+		return;
+	}
+
+	struct FStructureSlot
+	{
+		FVector2D Pos;
+		float FacingYaw; // 중심(발판)을 바라보는 방향
+	};
+	static const FStructureSlot Slots[6] = {
+		{ FVector2D(1697.f,  1697.f), 225.f },
+		{ FVector2D(2400.f,     0.f), 180.f },
+		{ FVector2D(1697.f, -1697.f), 135.f },
+		{ FVector2D(-1697.f,-1697.f),  45.f },
+		{ FVector2D(-2400.f,    0.f),   0.f },
+		{ FVector2D(-1697.f, 1697.f), 315.f },
+	};
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	Params.Owner = this;
+
+	const int32 Count = FMath::Min(VillageStructureCount, 6);
+	for (int32 i = 0; i < Count; ++i)
+	{
+		const FStructureSlot& Slot = Slots[i];
+		UStaticMesh* Mesh = VillageStructureMeshes[Stream.RandRange(0, VillageStructureMeshes.Num() - 1)];
+		if (!Mesh)
+		{
+			continue;
+		}
+
+		const float Scale = Stream.FRandRange(0.9f, 1.1f);
+		// 건축 프롭은 보통 피벗이 바닥(밑동)에 있다고 가정 — 장애물(나무)과 같은 전제, Z 오프셋 없이 그대로 지면에 심는다
+		const FVector Loc = Center + FVector(Slot.Pos.X, Slot.Pos.Y, 0.f);
+
+		if (AStaticMeshActor* Structure = SpawnMeshActor(Mesh, Loc, FRotator(0.f, Slot.FacingYaw, 0.f), FVector(Scale), nullptr))
+		{
+			Chunk.SpawnedActors.Add(Structure);
+		}
 	}
 }
 
