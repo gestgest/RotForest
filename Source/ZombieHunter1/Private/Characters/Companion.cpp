@@ -27,6 +27,9 @@ ACompanion::ACompanion()
 
 	// 머리 위 HP 바 — 생성/갱신 로직은 베이스(ACombatCharacter) 소유. 위젯 클래스는 BP_Companion에서 지정.
 	CreateHPBarComponent();
+
+	// 자동 공격 간격 폴백(베이스 소유). 동료는 플레이어보다 조금 느리게 — 직업에 값이 있으면 그쪽이 이긴다.
+	AttackInterval = 0.6f;
 }
 
 void ACompanion::BeginPlay()
@@ -42,19 +45,11 @@ void ACompanion::BeginPlay()
 		AICon = Cast<AAIController>(GetController());
 	}
 
-	// 직업 컴포넌트 생성 — 플레이어와 동일한 방식(같은 UJobComponent 재활용).
-	if (DefaultJobClass)
-	{
-		CurrentJob = NewObject<UJobComponent>(this, DefaultJobClass);
-		if (CurrentJob)
-		{
-			CurrentJob->RegisterComponent();
-			CurrentJob->InitializeForOwner(this); // 소유자 = 이 동료(ACharacter)
-			// 공격 몽타주는 이 동료(JobAttackMontages[JobName])가 자기 스켈레톤에 맞게 소유한다.
-		}
-	}
+	// 직업 컴포넌트 생성/부착은 베이스(ACombatCharacter)가 담당 — 플레이어와 완전히 같은 경로.
+	// 공격 몽타주는 이 동료(JobAttackMontages[JobType])가 자기 스켈레톤에 맞게 소유한다.
+	CreateJobComponent();
 
-	// 공격 몽타주 Notify 배선은 베이스(ACombatCharacter)가 처리한다(→ HandleAttackNotify).
+	// 공격 몽타주 Notify 배선/전달도 베이스가 처리한다(→ HandleAttackNotify → CurrentJob->OnAttackNotify).
 
 	// 의사결정 시점을 랜덤 오프셋으로 분산 — 동료 여럿이 같은 프레임에 몰려 스캔하는 스파이크 방지.
 	TimeSinceDecision = FMath::FRandRange(0.0f, DecisionInterval);
@@ -69,7 +64,6 @@ void ACompanion::Tick(float DeltaTime)
 		return; // 죽었으면 추격/공격 로직 정지
 	}
 
-	TimeSinceAttack += DeltaTime;
 	TimeSinceDecision += DeltaTime;
 
 	// 무거운 의사결정(전체 적 스캔 + 이동 명령)은 DecisionInterval마다만 실행.
@@ -80,34 +74,34 @@ void ACompanion::Tick(float DeltaTime)
 	}
 
 	// 반응성이 필요한 것만 매 프레임: 사거리 안 대상 조준 + 공격 타이밍.
-	if (IsValid(CurrentTarget) && !CurrentTarget->IsDead)
+	// "사거리 안에 살아있는 타겟이 있는가"만 판단하고, 타이머/간격/직업 호출은 베이스가 처리한다.
+	const bool bTargetInRange =
+		IsValid(CurrentTarget) && !CurrentTarget->IsDead &&
+		FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation()) <= GetEngageRange();
+
+	if (bTargetInRange)
 	{
-		const float Engage = (CurrentJob && CurrentJob->EngageRange > 0.0f) ? CurrentJob->EngageRange : AttackRange;
-		const float Dist = FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
-		if (Dist <= Engage)
+		FaceActor(CurrentTarget);
+	}
+
+	if (TickAttack(DeltaTime, bTargetInRange) && bDebugCombat)
+	{
+		// 공격을 실제로 호출하는 순간 표시(노란 선 + 메시지)
+		DrawDebugLine(GetWorld(), GetActorLocation(),
+			CurrentTarget->GetActorLocation(), FColor::Yellow, false, 0.4f, 0, 3.0f);
+		if (GEngine)
 		{
-			FaceActor(CurrentTarget);
-
-			const float Interval = (CurrentJob && CurrentJob->Stats.AttackInterval > 0.0f)
-				? CurrentJob->Stats.AttackInterval : AttackInterval;
-			if (CurrentJob && TimeSinceAttack >= Interval)
-			{
-				TimeSinceAttack = 0.0f;
-				CurrentJob->Attack(); // 직업이 공격(검 스윕/화살/파이어볼 등)
-
-				if (bDebugCombat) // 공격을 실제로 호출하는 순간 표시(노란 선 + 메시지)
-				{
-					DrawDebugLine(GetWorld(), GetActorLocation(),
-						CurrentTarget->GetActorLocation(), FColor::Yellow, false, 0.4f, 0, 3.0f);
-					if (GEngine)
-					{
-						GEngine->AddOnScreenDebugMessage(-1, 0.4f, FColor::Yellow,
-							TEXT("[Companion] Attack() 호출!"));
-					}
-				}
-			}
+			GEngine->AddOnScreenDebugMessage(-1, 0.4f, FColor::Yellow,
+				TEXT("[Companion] Attack() 호출!"));
 		}
 	}
+}
+
+// 멈춰서 공격할 거리 = 직업의 교전 사거리(근접=짧게, 원거리=길게). 직업이 없으면 동료 AttackRange로 폴백.
+// Tick(조준/공격)과 UpdateDecision(이동 명령)이 이 함수 하나를 공유해야 값이 어긋나지 않는다.
+float ACompanion::GetEngageRange() const
+{
+	return (CurrentJob && CurrentJob->EngageRange > 0.0f) ? CurrentJob->EngageRange : AttackRange;
 }
 
 // 느린 업데이트 함수 : DecisionInterval마다 호출 — 타겟 재탐색과 이동 명령만 여기서. (매 프레임 돌릴 필요 없는 것들)
@@ -121,9 +115,8 @@ void ACompanion::UpdateDecision()
 		// === 교전 ===
 		State = EState::Fighting;
 
-		// 멈춰서 공격하는 거리 = 직업의 교전 사거리(근접=짧게, 원거리=길게). 직업 없으면 동료 AttackRange로 폴백.
-		// 이게 직업의 실제 사거리와 따로 놀면, 사거리 밖에서 멈춰 영영 공격을 안 하는 버그가 생긴다.
-		const float Engage = (CurrentJob && CurrentJob->EngageRange > 0.0f) ? CurrentJob->EngageRange : AttackRange;
+		// Tick의 공격 판정과 반드시 같은 값을 써야 한다(GetEngageRange 하나로 통일).
+		const float Engage = GetEngageRange();
 
 		const float Dist = FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
 		if (bDebugCombat && GEngine)
@@ -227,13 +220,7 @@ void ACompanion::FaceActor(AActor* Target)
 	}
 }
 
-void ACompanion::HandleAttackNotify(FName NotifyName)
-{
-	if (CurrentJob)
-	{
-		CurrentJob->OnAttackNotify(NotifyName);
-	}
-}
+// HandleAttackNotify는 베이스(ACombatCharacter)의 기본 구현이 직업으로 전달한다 — 플레이어와 동일.
 
 void ACompanion::OnDeath()
 {

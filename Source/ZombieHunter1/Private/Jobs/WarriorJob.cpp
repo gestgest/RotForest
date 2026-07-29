@@ -11,6 +11,11 @@ UWarriorJob::UWarriorJob()
 {
 	JobType = EJobType::Warrior;
 
+	Stats.MaxHP = 25;
+	Stats.Damage = 1;
+	Stats.Speed = 700;
+	Stats.AttackInterval = 0.6;
+
 	// 근접: 붙어서 휘둘러야 하므로 교전 사거리를 짧게(스윕 사거리 150보다 조금 안쪽).
 	EngageRange = 130.0f;
 

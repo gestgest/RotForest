@@ -25,9 +25,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Healer")
 	int32 HealAmount = 1;
 
-	/** 이 값 이상으로는 회복하지 않음(오버힐/HUD 폭 폭주 방지). 보통 시작 체력과 동일하게. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Healer")
-	int32 MaxHP = 5;
+	// 회복 상한은 대상 캐릭터 자신의 MaxHP를 쓴다(힐러가 따로 들고 있지 않는다).
 
 	/** 전방 힐 사거리(cm) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Healer")

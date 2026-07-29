@@ -28,21 +28,18 @@ struct FJobStats
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	int32 MaxHP; //몰랐네 무조건 int32를 써야하다니
+	int32 MaxHP = 5; //몰랐네 무조건 int32를 써야하다니
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	int32 Damage;
+	int32 Damage = 1;
 
-
+	/** 이동 속도(cm/s) — 캐릭터의 CharacterMovement->MaxWalkSpeed로 적용된다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	int32 Speed;
+	int32 Speed = 600;
 
+	/** 자동 공격 간격(초). 0 이하면 캐릭터의 AttackInterval 폴백을 쓴다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	float AttackSpeed;
-
-	//공속
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	float AttackInterval;
+	float AttackInterval = 0.4f;
 };
 
 /**
@@ -76,8 +73,9 @@ public:
 
 	// 추가 데미지 => 게임이 끝나면 사라져야 하는 값
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Job|Combat")
-	int32 BonusDamage;
-	
+	int32 BonusDamage = 0;
+
+
 	/** 실제 적용 피해량 = 직업 설계값 + 강화/버프 증가분. 공격 코드는 전부 이걸 쓴다. */
 	UFUNCTION(BlueprintPure, Category = "Job|Stats")
 	int32 GetDamage() const { return Stats.Damage + BonusDamage; }

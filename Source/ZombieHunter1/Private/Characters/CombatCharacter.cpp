@@ -99,3 +99,66 @@ void ACombatCharacter::OnMontageNotifyBegin(FName NotifyName, const FBranchingPo
 {
 	HandleAttackNotify(NotifyName);
 }
+
+// 실제 타격 판정/사운드는 현재 직업이 담당한다 (전사: 근접 스윕, 궁수: 발사체 등).
+// 직업이 없는 캐릭터(AEnemy)는 이 함수를 재정의해 자기 방식으로 때린다.
+void ACombatCharacter::HandleAttackNotify(FName NotifyName)
+{
+	if (CurrentJob)
+	{
+		CurrentJob->OnAttackNotify(NotifyName);
+	}
+}
+
+// 직업 컴포넌트 생성 — 플레이어/동료가 똑같이 쓰던 코드를 여기로 모았다.
+// 스탯 적용(MaxHP/이동속도)은 InitializeForOwner 안에서 처리한다.
+void ACombatCharacter::CreateJobComponent()
+{
+	if (!DefaultJobClass)
+	{
+		return; // 직업 없는 캐릭터(적 등)
+	}
+
+	// 이미 직업이 있으면 떼어낸다 → 직업 교체에도 이 함수를 그대로 쓸 수 있다.
+	if (CurrentJob)
+	{
+		CurrentJob->DestroyComponent();
+		CurrentJob = nullptr;
+	}
+
+	CurrentJob = NewObject<UJobComponent>(this, DefaultJobClass);
+	if (CurrentJob)
+	{
+		CurrentJob->RegisterComponent();
+		CurrentJob->InitializeForOwner(this);
+	}
+}
+
+float ACombatCharacter::GetAttackInterval() const
+{
+	// 직업이 간격을 정한다. 직업이 없거나 값이 안 잡혀 있으면 캐릭터의 폴백을 쓴다.
+	// (폴백이 없으면 간격 0 → 매 프레임 공격이 되므로 반드시 0보다 큰 값을 보장한다)
+	if (CurrentJob && CurrentJob->Stats.AttackInterval > 0.0f)
+	{
+		return CurrentJob->Stats.AttackInterval;
+	}
+	return AttackInterval > 0.0f ? AttackInterval : 0.4f;
+}
+
+bool ACombatCharacter::TickAttack(float DeltaTime, bool bWantsToAttack)
+{
+	TimeSinceLastAttack += DeltaTime;
+
+	if (!bWantsToAttack || !CurrentJob || IsDead)
+	{
+		return false;
+	}
+	if (TimeSinceLastAttack < GetAttackInterval())
+	{
+		return false;
+	}
+
+	TimeSinceLastAttack = 0.0f;
+	CurrentJob->Attack(); // 직업이 공격 방식을 결정(몽타주 재생 → Notify → OnAttackNotify)
+	return true;
+}

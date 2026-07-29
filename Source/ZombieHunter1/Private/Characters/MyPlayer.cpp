@@ -237,13 +237,13 @@ void AMyPlayer::SetJob()
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::White,
             FString::Printf(TEXT("최종 결과 %s"), *GetNameSafe(DefaultJobClass)));
     }
-    CurrentJob = NewObject<UJobComponent>(this, DefaultJobClass);
+    // 직업 컴포넌트 생성/부착은 베이스(ACombatCharacter)가 담당한다 — 동료와 동일한 경로.
+    CreateJobComponent();
+
     if (CurrentJob)
     {
-        CurrentJob->RegisterComponent();
-        CurrentJob->InitializeForOwner(this);
-
         // 공격 몽타주는 캐릭터(JobAttackMontages[JobName])가 소유 — 직업으로 승계하지 않는다.
+        // 사운드만 직업이 비어 있을 때 플레이어 것을 물려준다.
         if (!CurrentJob->AttackSound)
         {
             CurrentJob->AttackSound = AttackSound;
@@ -422,19 +422,9 @@ void AMyPlayer::UpdateAimAndAttack(float DeltaTime, const FVector2D& Aim, const 
         }
     }
 
-    // 조준 중에는 일정 간격으로 자동 공격 (간격은 현재 직업이 결정)
-    const float Interval = CurrentJob ? CurrentJob->Stats.AttackInterval : AttackInterval;
-    TimeSinceLastAttack += DeltaTime;
-    if (bAiming && TimeSinceLastAttack >= Interval)
-    {
-        TimeSinceLastAttack = 0.0f;
-        if (CurrentJob)
-        {
-            // 직업이 공격을 수행(보통 몽타주 재생). 몽타주 노티파이가
-            // (베이스)HandleAttackNotify -> CurrentJob->OnAttackNotify() 로 실제 타격 판정.
-            CurrentJob->Attack();
-        }
-    }
+    // 조준 중에는 일정 간격으로 자동 공격. 타이머·간격·직업 호출은 베이스가 처리하고,
+    // 플레이어는 "지금 공격하고 싶은가"(= 조준 중인가)만 넘긴다.
+    TickAttack(DeltaTime, bAiming);
 }
 
 // 다리(하체)를 실제 이동 방향으로 돌리기 위한 yaw 오프셋을 계산한다.
@@ -780,14 +770,8 @@ void AMyPlayer::MoveTopDown(FVector2D Value)
     AddMovementInput(FVector(0.0f, 1.0f, 0.0f), Value.X);
 }
 
-void AMyPlayer::HandleAttackNotify(FName NotifyName)
-{
-    // 실제 타격 판정/사운드는 현재 직업이 담당한다 (검사: 근접 스윕, 궁수: 발사체 등).
-    if (CurrentJob)
-    {
-        CurrentJob->OnAttackNotify(NotifyName);
-    }
-}
+// HandleAttackNotify는 베이스(ACombatCharacter)의 기본 구현이 그대로 처리한다
+// (현재 직업의 OnAttackNotify로 전달) — 플레이어만의 동작이 아니라 동료와 동일해서 올렸다.
 
 void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
 {

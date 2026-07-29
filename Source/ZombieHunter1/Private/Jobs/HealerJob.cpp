@@ -5,10 +5,15 @@
 #include "Characters/Enemy.h"
 #include "Engine/World.h"
 
+// 힐러는 적을 때리지 않는다. "공격"은 힐 시전이고, 닿은 아군을 회복한다.
 UHealerJob::UHealerJob()
 {
 	JobType = EJobType::Healer;
-	// 힐러는 적을 때리지 않는다. "공격"은 힐 시전이고, 닿은 아군을 회복한다.
+
+	Stats.MaxHP = 8;
+	Stats.Damage = 1;
+	Stats.Speed = 600;
+	Stats.AttackInterval = 10;
 }
 
 void UHealerJob::Attack()
@@ -62,10 +67,12 @@ void UHealerJob::HealCharacter(ACombatCharacter* Target)
 		return;
 	}
 
+	// 상한은 "대상 자신의" 최대 체력이다. 힐러의 체력을 기준으로 삼으면
+	// 체력이 더 많은 아군은 힐이 안 먹고, 더 적은 아군은 오버힐이 난다.
 	// 최대 체력 미만일 때만 회복. SetHP가 HUD 체력바도 갱신한다.
-	if (Target->HP < MaxHP)
+	if (Target->HP < Target->MaxHP)
 	{
-		const int32 NewHP = FMath::Min(Target->HP + HealAmount, MaxHP);
+		const int32 NewHP = FMath::Min(Target->HP + HealAmount, Target->MaxHP);
 		Target->SetHP(NewHP);
 	}
 }

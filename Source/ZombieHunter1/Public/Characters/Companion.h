@@ -30,9 +30,8 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Companion")
 	AActor* Leader = nullptr;
 
-	/** 시작 시 부착할 직업 클래스. 직업 BP 서브클래스(BP_WarriorJob 등)를 지정. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion")
-	TSubclassOf<UJobComponent> DefaultJobClass;
+	// 직업(DefaultJobClass/CurrentJob)과 자동 공격 간격(AttackInterval)은 베이스(ACombatCharacter)에 있다.
+	// 플레이어와 완전히 같은 배선이라 한곳으로 모았다.
 
 	/** 적 탐지 반경(cm). 이 안에 적이 있으면 교전 상태로 전환. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion")
@@ -45,10 +44,6 @@ public:
 	/** 리더와 유지할 거리(cm). 이보다 멀어지면 따라간다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion")
 	float FollowDistance = 250.0f;
-
-	/** 자동 공격 간격(초). 직업에 값이 있으면 그쪽을 우선 사용. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion")
-	float AttackInterval = 0.6f;
 
 	/** 죽은 뒤 시체가 사라지기까지의 시간(초). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion")
@@ -77,10 +72,6 @@ public:
 
 	// 디버그 토글은 베이스(ACombatCharacter::bDebugCombat)로 올림 — 플레이어/적과 공용.
 
-	/** 런타임 생성된 직업 컴포넌트 */
-	UPROPERTY(BlueprintReadOnly, Category = "Companion")
-	UJobComponent* CurrentJob = nullptr;
-
 protected:
 	virtual void BeginPlay() override;
 
@@ -92,7 +83,7 @@ protected:
 	UPROPERTY()
 	AAIController* AICon = nullptr;
 
-	float TimeSinceAttack = 0.0f;
+	// 공격 타이머(TimeSinceLastAttack)는 베이스(ACombatCharacter::TickAttack)가 관리한다.
 
 	/** 의사결정 누적 시간. BeginPlay에서 랜덤 오프셋으로 초기화해 동료들끼리 같은 프레임에 몰리지 않게 분산. */
 	float TimeSinceDecision = 0.0f;
@@ -114,8 +105,12 @@ protected:
 	/** 대상 액터를 바라보도록 yaw 회전(공격 방향을 적에게 맞춤). */
 	void FaceActor(AActor* Target);
 
-	/** 공격 몽타주의 Notify를 직업의 OnAttackNotify로 전달(검사 근접 판정 등). 배선은 베이스가 담당. */
-	virtual void HandleAttackNotify(FName NotifyName) override;
+	/** 멈춰서 공격할 거리(cm) — 직업의 교전 사거리가 있으면 그것, 없으면 동료 AttackRange.
+	 *  Tick(조준/공격)과 UpdateDecision(이동 명령)이 반드시 같은 값을 써야 한다.
+	 *  둘이 어긋나면 사거리 밖에서 멈춰 영영 공격을 안 하는 버그가 생긴다. */
+	float GetEngageRange() const;
+
+	// 공격 Notify → 직업의 OnAttackNotify 전달은 베이스(ACombatCharacter)의 기본 구현이 처리한다.
 
 	/** 죽음 전환 — AI/공격을 끊고 잠시 후 시체를 제거한다. */
 	virtual void OnDeath() override;

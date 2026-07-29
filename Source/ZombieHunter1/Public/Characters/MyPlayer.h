@@ -59,8 +59,7 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player")
 	void CheckDeath(bool bDead);
 
-	// 공격 Notify → 현재 직업의 OnAttackNotify로 전달. 배선은 베이스(ACombatCharacter)가 담당.
-	virtual void HandleAttackNotify(FName NotifyName) override;
+	// 공격 Notify → 현재 직업의 OnAttackNotify 전달은 베이스(ACombatCharacter)의 기본 구현이 처리한다.
 
 	UFUNCTION(BlueprintCallable)
 	void SetCanvasWidget(UMyCanvas* CW);
@@ -199,7 +198,7 @@ private:
 	FVector2D TouchMove = FVector2D::ZeroVector;
 	FVector2D TouchAim = FVector2D::ZeroVector;
 
-	float TimeSinceLastAttack = 0.0f;
+	// 공격 타이머(TimeSinceLastAttack)는 베이스(ACombatCharacter::TickAttack)가 관리한다.
 
 	bool bLeftMouseHeld = false;
 	bool bRightMouseHeld = false;
@@ -320,21 +319,8 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Animation", meta = (AllowPrivateAccess = "true"))
 	float LegYawMaxAngle = 90.0f;
 
-	/** 조준 중 자동 공격 간격(초) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Combat", meta = (AllowPrivateAccess = "true"))
-	float AttackInterval = 0.4f;
-
-	// 공격 몽타주(AttackMontage)는 베이스(ACombatCharacter)로 이동. 노티파이가 직업의 OnAttackNotify() 호출.
-	//////////////////////////////////////////////////////////////////////////
-	// 직업(Job) 시스템 — 시작 시 직업 1개를 생성해 부착한다.
-
-	/** 시작 시 부착할 직업 클래스(전사/궁수/힐러/마법사). 비우면 전사로 기본 설정. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UJobComponent> DefaultJobClass;
-
-	/** 현재 부착된 직업 컴포넌트 (런타임 생성) */
-	UPROPERTY(BlueprintReadOnly, Category = "Job", meta = (AllowPrivateAccess = "true"))
-	UJobComponent* CurrentJob = nullptr;
+	// 자동 공격 간격(AttackInterval)·직업(DefaultJobClass/CurrentJob)·공격 몽타주(AttackMontage)는
+	// 모두 베이스(ACombatCharacter)로 이동했다. 동료(ACompanion)와 똑같은 배선이라 한곳에 모음.
 
 	//////////////////////////////////////////////////////////////////////////
 	// 무기 메시 교체 — 캐릭터(BP)에 이미 붙어 있는 무기 컴포넌트의 메시를 직업에 맞게 바꾼다.

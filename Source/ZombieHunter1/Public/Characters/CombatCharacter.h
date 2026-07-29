@@ -72,6 +72,36 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	UAnimMontage* GetAttackMontageForJob(EJobType JobType) const;
 
+	/////////////////////////////////////////////////////////////////////////
+	// 직업(Job) — 플레이어/동료가 공유한다. 직업이 없는 캐릭터(적)는 그냥 비워두면 된다.
+	// "무엇을 언제 칠지"는 서브클래스가 정하고(입력/AI), "어떻게 치는지"는 직업이 정한다.
+
+	/** 시작 시 부착할 직업 클래스. 비우면 직업 없이 동작한다(적 등). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job")
+	TSubclassOf<UJobComponent> DefaultJobClass;
+
+	/** 현재 부착된 직업 컴포넌트(런타임 생성). 직업 없는 캐릭터는 null. */
+	UPROPERTY(BlueprintReadOnly, Category = "Job")
+	UJobComponent* CurrentJob = nullptr;
+
+	/** DefaultJobClass로 직업 컴포넌트를 만들어 부착하고 스탯을 적용한다. 서브클래스가 BeginPlay에서 호출.
+	 *  이미 직업이 있으면 떼어내고 교체하므로, 직업 변경에도 그대로 쓸 수 있다. */
+	UFUNCTION(BlueprintCallable, Category = "Job")
+	virtual void CreateJobComponent();
+
+	/** 실제 적용할 자동 공격 간격(초). 직업 값이 유효하면 그것, 아니면 아래 AttackInterval 폴백. */
+	UFUNCTION(BlueprintPure, Category = "Combat|Stats")
+	float GetAttackInterval() const;
+
+	/** 자동 공격 타이머를 굴린다. 매 프레임 호출할 것.
+	 *  bWantsToAttack이 true이고 간격이 찼으면 현재 직업의 Attack()을 1회 실행하고 true를 반환한다.
+	 *  "공격하고 싶은가"의 판단(플레이어=조준 입력, 동료=사거리 안의 타겟)만 서브클래스가 하면 된다. */
+	bool TickAttack(float DeltaTime, bool bWantsToAttack);
+
+	/** 자동 공격 간격(초) 폴백 — 직업이 없거나 직업의 Stats.AttackInterval이 0 이하일 때 쓴다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
+	float AttackInterval = 0.4f;
+
 	/** true면 이 전투 캐릭터의 상태/공격 디버그를 화면에 그린다. 플레이어/동료/적 공용 토글. 기본 꺼짐. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Debug")
 	bool bDebugCombat = false;
@@ -112,8 +142,13 @@ protected:
 	/** 죽음 → 부활(풀 재사용 등) 전환 시 1회. 죽을 때 껐던 것들을 되돌린다. */
 	virtual void OnRevive() {}
 
-	/** 공격 몽타주 Notify가 들어왔을 때 호출. 서브클래스가 실제 타격(직업 호출/자체 hit)을 구현. */
-	virtual void HandleAttackNotify(FName NotifyName) {}
+	/** 공격 몽타주 Notify가 들어왔을 때 호출.
+	 *  기본 구현은 현재 직업의 OnAttackNotify()로 넘긴다(플레이어/동료가 쓰던 동작).
+	 *  직업이 없는 캐릭터(AEnemy)만 이걸 재정의해 자기 방식으로 타격한다. */
+	virtual void HandleAttackNotify(FName NotifyName);
+
+	/** 마지막 공격 이후 누적 시간(TickAttack이 관리). */
+	float TimeSinceLastAttack = 0.0f;
 
 private:
 	/** 메시 애님 인스턴스의 OnPlayMontageNotifyBegin에 바인딩 → HandleAttackNotify로 전달. */
