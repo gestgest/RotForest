@@ -88,8 +88,8 @@ void ACompanion::Tick(float DeltaTime)
 		{
 			FaceActor(CurrentTarget);
 
-			const float Interval = (CurrentJob && CurrentJob->AttackInterval > 0.0f)
-				? CurrentJob->AttackInterval : AttackInterval;
+			const float Interval = (CurrentJob && CurrentJob->Stats.AttackInterval > 0.0f)
+				? CurrentJob->Stats.AttackInterval : AttackInterval;
 			if (CurrentJob && TimeSinceAttack >= Interval)
 			{
 				TimeSinceAttack = 0.0f;

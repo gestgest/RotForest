@@ -109,7 +109,6 @@ void AMyPlayer::BeginPlay()
 
     //SetMoney(0);
     ReStart(); // 주의: 엔진 내장 APawn::Restart()가 아니라 우리 부활 함수(대문자 S). HP/돈 초기화 + 스타트 지점 이동.
-    Damage = 1;
 
     // 직업(Job) 컴포넌트 생성 — 시작 시 1개 고정.
     if (!DefaultJobClass)
@@ -249,7 +248,6 @@ void AMyPlayer::SetJob()
         {
             CurrentJob->AttackSound = AttackSound;
         }
-        CurrentJob->Damage = Damage;
     }
 }
 
@@ -425,7 +423,7 @@ void AMyPlayer::UpdateAimAndAttack(float DeltaTime, const FVector2D& Aim, const 
     }
 
     // 조준 중에는 일정 간격으로 자동 공격 (간격은 현재 직업이 결정)
-    const float Interval = CurrentJob ? CurrentJob->AttackInterval : AttackInterval;
+    const float Interval = CurrentJob ? CurrentJob->Stats.AttackInterval : AttackInterval;
     TimeSinceLastAttack += DeltaTime;
     if (bAiming && TimeSinceLastAttack >= Interval)
     {
@@ -645,7 +643,7 @@ void AMyPlayer::UpgradeWeapon()
     // 데미지는 직업 컴포넌트가 소유한다(검사 근접/궁수·마법사 발사체 모두 CurrentJob->Damage 사용).
     if (CurrentJob)
     {
-        CurrentJob->Damage += WeaponDamagePerLevel;
+        CurrentJob->BonusDamage += WeaponDamagePerLevel;
     }
 
     OnWeaponUpgraded(WeaponLevel); // BP: 이펙트/사운드/무기 외형 교체
@@ -654,7 +652,7 @@ void AMyPlayer::UpgradeWeapon()
     {
         GEngine->AddOnScreenDebugMessage(-1, 2.5f, FColor::Yellow,
             FString::Printf(TEXT("[Weapon] +%d강! (Damage %d)"),
-                WeaponLevel, CurrentJob ? CurrentJob->Damage : -1));
+                WeaponLevel, CurrentJob ? CurrentJob->GetDamage() : -1));
     }
 }
 
@@ -763,7 +761,7 @@ void AMyPlayer::ReStart()
     // 무기 강화도 초기화 — 강화로 올린 만큼만 되돌린다(직업 기본 Damage는 보존). 유지하고 싶으면 삭제.
     if (CurrentJob && WeaponLevel > 0)
     {
-        CurrentJob->Damage -= WeaponLevel * WeaponDamagePerLevel;
+        CurrentJob->BonusDamage -= WeaponLevel * WeaponDamagePerLevel;
     }
     WeaponLevel = 0;
     //리스폰

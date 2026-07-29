@@ -27,21 +27,28 @@ class ZOMBIEHUNTER1_API ACombatCharacter : public ACharacter
 public:
 	ACombatCharacter();
 
+
+	//Stats
 	/** 최대 체력 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	int32 MaxHP = 5;
 
 	/** 현재 체력. 0 이하가 되면 SetHP가 자동으로 IsDead=true로 만든다. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	int32 HP = 5;
 
 	/** 한 번 공격 시 주는 데미지 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	int32 Damage = 1;
 
 	/** 죽었는지 여부. HP<=0이면 true. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	bool IsDead = false;
+
+
+
+
+
 
 	/** 무장 상태 — idle/walk 블렌드스페이스(무장/비무장) 선택에 쓰인다.
 	 *  UCombatAnimInstance가 매 프레임 이 값을 bArmed 변수로 미러링해 AnimBP에 공급한다.

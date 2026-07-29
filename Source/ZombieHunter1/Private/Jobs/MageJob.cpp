@@ -7,9 +7,6 @@ UMageJob::UMageJob()
 {
 	JobType = EJobType::Mage;
 
-	// 마법사는 궁수보다 느리지만 강하게 (범위 피해 보정).
-	AttackInterval = 0.8f;
-	Damage = 2;
 
 	// 기본 발사체: 순수 AProjectile(메시 없는 구체). BP_Fireball로 바꾸면 이펙트가 보인다.
 	ProjectileClass = AProjectile::StaticClass();

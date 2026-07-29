@@ -22,6 +22,29 @@ enum class EJobType : uint8
 	Healer UMETA(DisplayName = "힐러"),
 };
 
+USTRUCT(BlueprintType)
+struct FJobStats
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
+	int32 MaxHP; //몰랐네 무조건 int32를 써야하다니
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
+	int32 Damage;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
+	int32 Speed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
+	float AttackSpeed;
+
+	//공속
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
+	float AttackInterval;
+};
+
 /**
  * 직업(Job) 베이스 컴포넌트.
  * 이동/조준은 소유 캐릭터(플레이어 또는 동료 AI)가 담당하고, "공격 방식"만 이 컴포넌트로 분리한다.
@@ -47,13 +70,17 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Job")
 	EJobType JobType = EJobType::Warrior;
 
-	// 피해량
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Combat")
-	int32 Damage = 1;
+	// 직업 상태
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Job")
+	FJobStats Stats;
 
-	/** 자동 공격 간격(초) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Combat")
-	float AttackInterval = 0.4f;
+	// 추가 데미지 => 게임이 끝나면 사라져야 하는 값
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Job|Combat")
+	int32 BonusDamage;
+	
+	/** 실제 적용 피해량 = 직업 설계값 + 강화/버프 증가분. 공격 코드는 전부 이걸 쓴다. */
+	UFUNCTION(BlueprintPure, Category = "Job|Stats")
+	int32 GetDamage() const { return Stats.Damage + BonusDamage; }
 
 	// 동료 AI 교전 사거리(cm) — 적이 이 거리 안에 들면 멈춰서 공격한다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Combat")

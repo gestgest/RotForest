@@ -33,7 +33,6 @@ void UJobComponent::EquipWeapon()
 
 void UJobComponent::Attack()
 {
-	
 	// 애니(몽타주)는 캐릭터가 자기 스켈레톤에 맞게 소유한다. 직업은 자기 JobName으로 골라 재생만 시킨다.
 	// 몽타주의 Notify는 캐릭터 베이스(ACombatCharacter)가 받아 OnAttackNotify()로 되돌려준다.
 	if (ACombatCharacter* CC = Cast<ACombatCharacter>(OwnerCharacter))
@@ -97,7 +96,7 @@ AProjectile* UJobComponent::SpawnProjectileForward(TSubclassOf<AProjectile> Proj
 	}
 	if (Projectile)
 	{
-		Projectile->Damage = Damage; // 직업의 데미지를 발사체에 전달
+		Projectile->Damage = GetDamage(); // 직업의 데미지(설계값+강화분)를 발사체에 전달
 		Projectile->bDrawDebug = bDebugAttack; // 공격 디버그가 켜져 있으면 발사체 경로/적중범위도 그린다
 		Projectile->SetInitialSpeed(Speed);
 	}

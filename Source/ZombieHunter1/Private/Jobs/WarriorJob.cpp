@@ -50,7 +50,7 @@ void UWarriorJob::OnAttackNotify(FName NotifyName)
 		if (hitEnemy)
 		{
 			UE_LOG(LogTemp, Log, TEXT("Hit Enemy!"));
-			hitEnemy->AddHP(-Damage);
+			hitEnemy->AddHP(-GetDamage());
 			const FVector force = OwnerCharacter->GetActorForwardVector() * KnockbackForce + FVector(0, 0, 100);
 			hitEnemy->LaunchCharacter(force, false, false);
 			bDidHit = true;
