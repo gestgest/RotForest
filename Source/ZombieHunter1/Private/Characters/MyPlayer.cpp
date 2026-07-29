@@ -88,7 +88,7 @@ void AMyPlayer::BeginPlay()
     //플레이어 스타팅 찾기
     if (AGameModeBase* gameMode = GetWorld()->GetAuthGameMode())
     {
-         playerStart = gameMode->FindPlayerStart(controller);
+         playerStart = gameMode->FindPlayerStart(PlayerControllerRef);
     }
 
 
@@ -148,22 +148,22 @@ void AMyPlayer::OnTopDownMode()
 
 
 
-    controller = Cast<APlayerController>(GetController());
+    PlayerControllerRef = Cast<APlayerController>(GetController());
 
     // 탑다운: 컨트롤러 yaw를 0으로 고정하고 마우스 Look 입력을 무시한다.
     // → BP의 "컨트롤 회전 기준 이동"이 월드축(+X/+Y) 고정 이동과 동일해지고,
     //   마우스 때문에 직진이 휘는 yaw 드리프트도 사라진다. (카메라는 절대회전이라 무관)
-    if (controller)
+    if (PlayerControllerRef)
     {
-        controller->SetControlRotation(FRotator(0.0f, 0.0f, 0.0f));
-        controller->SetIgnoreLookInput(true);
+        PlayerControllerRef->SetControlRotation(FRotator(0.0f, 0.0f, 0.0f));
+        PlayerControllerRef->SetIgnoreLookInput(true);
 
         // 마우스 커서 표시 + 게임/UI 동시 입력 (데스크탑에서 마우스로 조이스틱 조작)
-        controller->bShowMouseCursor = true;
+        PlayerControllerRef->bShowMouseCursor = true;
         FInputModeGameAndUI InputMode;
         InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
         InputMode.SetHideCursorDuringCapture(false);
-        controller->SetInputMode(InputMode);
+        PlayerControllerRef->SetInputMode(InputMode);
     }
 }
 
@@ -662,7 +662,7 @@ void AMyPlayer::SetHP(int32 new_hp)
     // HUD 체력바 갱신
     if (CanvasWidget)
     {
-        CanvasWidget->SetProgressUISize(FVector2D(HP * 100, 50));
+        CanvasWidget->SetProgressUISize(FVector2D(HP * 500 /MaxHP, 50)); //500
 
         // 사망 패널을 현재 죽음 상태와 동기화.
         // OnDeath/OnRevive는 "전환 시점"에만 1회 호출이라, BP BeginPlay(위젯 연결)가
@@ -701,10 +701,10 @@ void AMyPlayer::OnDeath()
     }
 
     // 죽으면 UI(사망 패널)만 조작 가능
-    if (controller)
+    if (PlayerControllerRef)
     {
-        controller->bShowMouseCursor = true;
-        controller->SetInputMode(FInputModeUIOnly());
+        PlayerControllerRef->bShowMouseCursor = true;
+        PlayerControllerRef->SetInputMode(FInputModeUIOnly());
     }
 }
 
@@ -724,16 +724,16 @@ void AMyPlayer::OnRevive()
         CanvasWidget->ShowDeathPanel(false); //사망 패널 off
     }
 
-    if (controller)
+    if (PlayerControllerRef)
     {
         // 마우스 커서를 보이게 하고, 게임+UI 입력 모드로 둠
         // → 데스크탑에서 마우스로 조이스틱을 조작할 수 있고 커서도 보임
-        controller->bShowMouseCursor = true;
+        PlayerControllerRef->bShowMouseCursor = true;
 
         FInputModeGameAndUI InputMode;
         InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
         InputMode.SetHideCursorDuringCapture(false);
-        controller->SetInputMode(InputMode);
+        PlayerControllerRef->SetInputMode(InputMode);
     }
 }
 

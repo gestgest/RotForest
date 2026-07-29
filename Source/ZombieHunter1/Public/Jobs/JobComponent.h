@@ -6,7 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "JobComponent.generated.h"
 
-class ACharacter;
+class ACombatCharacter;
 class UAnimMontage;
 class USoundBase;
 class AProjectile;
@@ -28,18 +28,18 @@ struct FJobStats
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	int32 MaxHP = 5; //몰랐네 무조건 int32를 써야하다니
+	int32 MaxHP; //몰랐네 무조건 int32를 써야하다니
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	int32 Damage = 1;
+	int32 Damage;
 
 	/** 이동 속도(cm/s) — 캐릭터의 CharacterMovement->MaxWalkSpeed로 적용된다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	int32 Speed = 600;
+	int32 Speed;
 
 	/** 자동 공격 간격(초). 0 이하면 캐릭터의 AttackInterval 폴백을 쓴다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	float AttackInterval = 0.4f;
+	float AttackInterval;
 };
 
 /**
@@ -112,7 +112,7 @@ public:
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	/** 소유 캐릭터(플레이어/동료)를 연결한다. 소유자가 컴포넌트 생성 직후 호출. */
-	void InitializeForOwner(ACharacter* Owner);
+	void InitializeForOwner(ACombatCharacter* Owner);
 
 	/** 공격 시도. 기본 구현은 소유 캐릭터의 JobName별 공격 몽타주(JobAttackMontages)를 재생한다. */
 	UFUNCTION(BlueprintCallable, Category = "Job")
@@ -133,7 +133,7 @@ public:
 protected:
 	/** 소유 캐릭터 — 플레이어 또는 동료 AI (InitializeForOwner에서 설정) */
 	UPROPERTY()
-	ACharacter* OwnerCharacter = nullptr;
+	ACombatCharacter* OwnerCharacter = nullptr;
 
 	/** 캐릭터의 기존 무기 컴포넌트 메시를 이 직업의 WeaponMesh로 교체한다. InitializeForOwner에서 호출. */
 	void EquipWeapon();

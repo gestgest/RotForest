@@ -188,9 +188,21 @@ private:
 	// Private state (순수 내부 상태 — BP/에디터 노출 없음)
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	UMyCanvas* CanvasWidget;
-	APlayerController* controller;
-	AActor* playerStart;
+	// UObject 포인터 멤버에는 반드시 UPROPERTY()를 붙인다 — 에디터 노출이 아니라 GC 추적이 목적.
+	// 없으면 GC가 "아무도 참조 안 하네" 하고 회수해버려 댕글링 포인터가 되고,
+	// if (포인터) 검사는 null이 아닌 쓰레기 주소라 통과해버려 그 안에서 크래시가 난다.
+	// (UMyCanvas::UpdateCoinText EXCEPTION_ACCESS_VIOLATION의 원인)
+
+	UPROPERTY()
+	UMyCanvas* CanvasWidget = nullptr;
+
+	// 이름을 controller로 두면 안 된다 — APawn에 이미 Controller가 있고,
+	// UHT는 프로퍼티 이름을 FName(대소문자 구분 안 함)으로 비교해 shadowing 에러를 낸다.
+	UPROPERTY()
+	APlayerController* PlayerControllerRef = nullptr;
+
+	UPROPERTY()
+	AActor* playerStart = nullptr;
 
 	// 입력 누적값 (게임패드 / 터치를 분리 저장 후 Tick에서 합성)
 	FVector2D GamepadMove = FVector2D::ZeroVector;

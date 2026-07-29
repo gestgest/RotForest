@@ -7,6 +7,8 @@
 #include "Projectiles/ProjectilePoolSubsystem.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
 
 UJobComponent::UJobComponent()
 {
@@ -14,9 +16,25 @@ UJobComponent::UJobComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-void UJobComponent::InitializeForOwner(ACharacter* Owner)
+//참조하는 곳 ACombatCharacter::CreateJobComponent()
+void UJobComponent::InitializeForOwner(ACombatCharacter* Owner)
 {
 	OwnerCharacter = Owner;
+	if (!OwnerCharacter)
+		return;
+
+	//값 전송
+	OwnerCharacter->MaxHP = Stats.MaxHP;
+	OwnerCharacter->SetHP(Stats.MaxHP);
+	OwnerCharacter->Damage = Stats.Damage;
+
+	if (UCharacterMovementComponent* Move = OwnerCharacter->GetCharacterMovement())
+	{
+		Move->MaxWalkSpeed = Stats.Speed;
+	}
+
+	//OwnerCharacter->AttackInterval = Stats.AttackInterval; => 어차피 계속 Get으로 받을 예정
+
 	EquipWeapon(); // 직업 무기를 소유자 무기 슬롯에 끼운다
 }
 
