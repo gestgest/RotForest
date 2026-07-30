@@ -70,9 +70,9 @@ void UHealerJob::HealCharacter(ACombatCharacter* Target)
 	// 상한은 "대상 자신의" 최대 체력이다. 힐러의 체력을 기준으로 삼으면
 	// 체력이 더 많은 아군은 힐이 안 먹고, 더 적은 아군은 오버힐이 난다.
 	// 최대 체력 미만일 때만 회복. SetHP가 HUD 체력바도 갱신한다.
-	if (Target->HP < Target->MaxHP)
+	if (Target->GetHP() < Target->GetMaxHP())
 	{
-		const int32 NewHP = FMath::Min(Target->HP + HealAmount, Target->MaxHP);
+		const int32 NewHP = FMath::Min(Target->GetHP() + HealAmount, Target->GetMaxHP());
 		Target->SetHP(NewHP);
 	}
 }

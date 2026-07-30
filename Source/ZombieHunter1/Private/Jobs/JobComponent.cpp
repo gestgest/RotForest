@@ -24,9 +24,7 @@ void UJobComponent::InitializeForOwner(ACombatCharacter* Owner)
 		return;
 
 	//값 전송
-	OwnerCharacter->MaxHP = Stats.MaxHP;
-	OwnerCharacter->SetHP(Stats.MaxHP);
-	OwnerCharacter->Damage = Stats.Damage;
+	OwnerCharacter->ApplyJobStats(Stats);
 
 	if (UCharacterMovementComponent* Move = OwnerCharacter->GetCharacterMovement())
 	{

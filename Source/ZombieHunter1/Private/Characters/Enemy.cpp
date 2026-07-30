@@ -98,7 +98,7 @@ void AEnemy::TrackingPlayer()
 	ACombatCharacter* target = nullptr;
 	float targetDist = FLT_MAX;
 
-	if (!myPlayer->IsDead)
+	if (!myPlayer->GetIsDead())
 	{
 		target = myPlayer;
 		targetDist = FVector::Dist2D(myLocation, myPlayer->GetActorLocation());
@@ -106,7 +106,7 @@ void AEnemy::TrackingPlayer()
 
 	for (ACompanion* companion : myPlayer->GetCompanions())
 	{
-		if (!IsValid(companion) || companion->IsDead)
+		if (!IsValid(companion) || companion->GetIsDead())
 		{
 			continue;
 		}
@@ -147,7 +147,7 @@ void AEnemy::MoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& R
 	{
 		if (CanAttack)
 		{
-			PlayAnimMontage(AttackMontage); //지속시간 매개변수 있음
+			PlayAnimMontage(DefaultAttackMontage); //지속시간 매개변수 있음
 			//UE_LOG(LogTemp, Warning, TEXT("Montage Duration: %f"), duration);
 			CanAttack = false;
 		}
@@ -245,7 +245,7 @@ bool AEnemy::hit()
 	{
 		// 아군(플레이어/동료)만 때린다 — 적(AEnemy)끼리는 무시. 둘 다 ACombatCharacter라 공용으로 처리.
 		ACombatCharacter* Victim = Cast<ACombatCharacter>(hit.GetActor());
-		if (Victim && !Victim->IsDead && !Victim->IsA(AEnemy::StaticClass()))
+		if (Victim && !Victim->GetIsDead() && !Victim->IsA(AEnemy::StaticClass()))
 		{
 			//UE_LOG(LogTemp, Log, TEXT("Hit Ally!"));
 			Victim->AddHP(-Damage);
@@ -296,7 +296,7 @@ void AEnemy::OnDeath()
 	// 처치 보상 — 죽음 "전환" 시점이라 정확히 1회만 지급된다(풀 재사용/중복 타격에도 안전).
 	// 동료가 잡아도 경험치는 플레이어에게 간다.
 	AMyPlayer* myPlayer = Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-	if (myPlayer && !myPlayer->IsDead)
+	if (myPlayer && !myPlayer->GetIsDead())
 	{
 		myPlayer->AddExp(ExpReward);
 	}

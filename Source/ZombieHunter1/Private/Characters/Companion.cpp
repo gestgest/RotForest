@@ -76,7 +76,7 @@ void ACompanion::Tick(float DeltaTime)
 	// 반응성이 필요한 것만 매 프레임: 사거리 안 대상 조준 + 공격 타이밍.
 	// "사거리 안에 살아있는 타겟이 있는가"만 판단하고, 타이머/간격/직업 호출은 베이스가 처리한다.
 	const bool bTargetInRange =
-		IsValid(CurrentTarget) && !CurrentTarget->IsDead &&
+		IsValid(CurrentTarget) && !CurrentTarget->GetIsDead() &&
 		FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation()) <= GetEngageRange();
 
 	if (bTargetInRange)
@@ -192,7 +192,7 @@ AEnemy* ACompanion::FindNearestEnemy() const
 	for (AActor* A : Enemies)
 	{
 		AEnemy* E = Cast<AEnemy>(A);
-		if (!E || E->IsDead)
+		if (!E || E->GetIsDead())
 		{
 			continue; // 죽은 적은 무시
 		}

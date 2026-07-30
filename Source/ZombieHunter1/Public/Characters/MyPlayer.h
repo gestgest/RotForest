@@ -24,24 +24,18 @@ class ZOMBIEHUNTER1_API AMyPlayer : public ACombatCharacter
 {
 	GENERATED_BODY()
 
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Unreal Event
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 public:
-	// Sets default values for this character's properties
 	AMyPlayer();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	// 살아있음 → 죽음 전환 시 베이스(SetDead)가 1회 호출. 이동/입력을 끄고 사망 UI를 켠다.
-	virtual void OnDeath() override;
+	// 이동/입력을 끄고 사망 UI를 켠다.
+	virtual void OnDeath() override; 
 
-	// 죽음 → 부활(ReStart의 SetHP) 전환 시 베이스가 1회 호출. 죽을 때 껐던 것을 되돌린다.
+	// 죽음 → 부활(ReStart의 SetHP) 
 	virtual void OnRevive() override;
+
 
 public:
 	// Called every frame
@@ -51,9 +45,17 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Function
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
 
 	// 파라미터 이름은 bDead — 베이스(ACombatCharacter)의 IsDead 멤버와 겹치면 UHT가 shadowing 에러를 냄.
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player")
@@ -61,8 +63,6 @@ public:
 
 	// 공격 Notify → 현재 직업의 OnAttackNotify 전달은 베이스(ACombatCharacter)의 기본 구현이 처리한다.
 
-	UFUNCTION(BlueprintCallable)
-	void SetCanvasWidget(UMyCanvas* CW);
 
 	//AddCoin
 	UFUNCTION(BlueprintCallable)
@@ -136,12 +136,16 @@ public:
 	FORCEINLINE UCameraComponent* GetTopDownCamera() const { return TopDownCamera; }
 
 
+
+
+
+
+
+
+
+
+
 private:
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Private functions (내부 헬퍼 — 외부/BP 직접 호출 없음)
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 	// 게임패드 아날로그 축 콜백
 	void OnMoveX(float Value);
 	void OnMoveY(float Value);
@@ -165,8 +169,6 @@ private:
 	// 마우스 커서가 가리키는 지면(플레이어 높이의 수평면) 위치. 카메라 광선과 평면의 교점.
 	bool GetCursorGroundLocation(FVector& OutLocation) const;
 
-	void CreateTouchJoysticks();
-
 	// 조이스틱 델리게이트 콜백 (→ SetMoveInput / SetAimInput 로 연결)
 	UFUNCTION()
 	void OnMoveJoystickMoved(FVector2D Value);
@@ -184,20 +186,19 @@ private:
 	void UpdateExpUI();
 
 
+
+
+
+
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Private state (순수 내부 상태 — BP/에디터 노출 없음)
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	// UObject 포인터 멤버에는 반드시 UPROPERTY()를 붙인다 — 에디터 노출이 아니라 GC 추적이 목적.
-	// 없으면 GC가 "아무도 참조 안 하네" 하고 회수해버려 댕글링 포인터가 되고,
-	// if (포인터) 검사는 null이 아닌 쓰레기 주소라 통과해버려 그 안에서 크래시가 난다.
-	// (UMyCanvas::UpdateCoinText EXCEPTION_ACCESS_VIOLATION의 원인)
 
 	UPROPERTY()
 	UMyCanvas* CanvasWidget = nullptr;
 
-	// 이름을 controller로 두면 안 된다 — APawn에 이미 Controller가 있고,
-	// UHT는 프로퍼티 이름을 FName(대소문자 구분 안 함)으로 비교해 shadowing 에러를 낸다.
 	UPROPERTY()
 	APlayerController* PlayerControllerRef = nullptr;
 
@@ -217,6 +218,11 @@ private:
 
 	// 직전 유효 커서 방향(월드, 수평). 커서 변환이 실패한 프레임에 이걸 재사용해 끊김 방지.
 	FVector LastCursorDir = FVector::ForwardVector;
+
+
+
+
+
 
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -241,6 +247,10 @@ private:
 
 	UPROPERTY()
 	UVirtualJoystick* AimJoystick;
+
+
+
+
 
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -386,4 +396,9 @@ private:
 
 	bool CheckCompanion(UWorld* World);
 	FTransform SetSpawnTransformCompanion(UWorld* World);
+
+
+
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void SetCanvasWidget(UMyCanvas* CW);
 };

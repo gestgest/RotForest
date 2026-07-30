@@ -26,6 +26,14 @@ void ACombatCharacter::BeginPlay()
 	}
 }
 
+void ACombatCharacter::ApplyJobStats(FJobStats Stats)
+{
+	MaxHP = Stats.MaxHP;
+	SetHP(Stats.MaxHP);
+	Damage = Stats.Damage;
+}
+
+
 void ACombatCharacter::AddHP(int32 add_hp)
 {
 	SetHP(HP + add_hp);
@@ -92,7 +100,7 @@ UAnimMontage* ACombatCharacter::GetAttackMontageForJob(EJobType JobType) const
 			return *Found;
 		}
 	}
-	return AttackMontage;
+	return DefaultAttackMontage;
 }
 
 void ACombatCharacter::OnMontageNotifyBegin(FName NotifyName, const FBranchingPointNotifyPayload& Payload)

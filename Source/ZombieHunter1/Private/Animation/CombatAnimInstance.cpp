@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Animation/CombatAnimInstance.h"
 #include "Characters/CombatCharacter.h"
@@ -31,7 +31,7 @@ void UCombatAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	// 전투 상태 (캐릭터 값 미러)
 	bArmed = OwnerCombatCharacter->bArmed;
-	bIsDead = OwnerCombatCharacter->IsDead;
+	bIsDead = OwnerCombatCharacter->GetIsDead();
 
 	// 하체 yaw 오프셋 — 플레이어만 계산한다(Tick의 UpdateLegYawOffset). 그 외엔 0.
 	LegYawOffset = OwnerPlayer ? OwnerPlayer->GetLegYawOffset() : 0.0f;

@@ -185,7 +185,7 @@ void AZombieSlayerGameMode::RecycleFarEnemies()
     for (AEnemy* enemy : enemyPool)
     {
         // 풀 대기 중이거나 죽어서 사망 연출 중인 적은 건드리지 않는다
-        if (!IsValid(enemy) || enemy->IsHidden() || enemy->IsDead)
+        if (!IsValid(enemy) || enemy->IsHidden() || enemy->GetIsDead())
         {
             continue;
         }
