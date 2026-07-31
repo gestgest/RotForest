@@ -93,7 +93,6 @@ protected:
 
 
 
-
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//Stats
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -135,6 +134,12 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Job")
 	UJobComponent* CurrentJob = nullptr;
 
+
+
+
+	/** 무기 ChildActor(BP_sword 등) 안의 메시 컴포넌트. BeginPlay에서 탐색해 캐시. 직업이 이 메시를 교체한다. */
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	USkeletalMeshComponent* WeaponMeshComponent = nullptr;
 
 
 
@@ -184,6 +189,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	virtual void AddHP(int32 add_hp);
+
+
+	// 무기 컴포넌트의 스켈레탈 메시를 교체한다. NewMesh가 null이면 무기를 숨긴다. JobComponent이 호출. 
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void SetWeaponMesh(USkeletalMesh* NewMesh);
 };
 
 /**

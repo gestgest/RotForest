@@ -455,25 +455,6 @@ void AMyPlayer::UpdateLegYawOffset(float DeltaTime)
 
 
 
-
-/////////////////////////////////////  Weapon   ////////////////////////////////////
-
-void AMyPlayer::SetWeaponMesh(USkeletalMesh* NewMesh)
-{
-    if (!WeaponMeshComponent)
-    {
-        return; // 무기 컴포넌트를 못 찾았으면(태그 미설정) 그냥 통과
-    }
-
-    // 기존 무기 컴포넌트의 메시만 교체. 컴포넌트 자체는 유지되므로 BP 참조가 안 깨진다.
-    WeaponMeshComponent->SetSkeletalMeshAsset(NewMesh);
-    // 무기가 없는 직업(NewMesh == null)은 컴포넌트를 숨긴다.
-    WeaponMeshComponent->SetVisibility(NewMesh != nullptr);
-}
-
-
-
-
 ////////////////////////////////       Companion         ///////////////////
 // 동료 섭외 — 플레이어 옆에 동료를 스폰해 따라다니며 싸우게 한다.
 void AMyPlayer::RecruitCompanion(TSubclassOf<UJobComponent> JobComponent)
