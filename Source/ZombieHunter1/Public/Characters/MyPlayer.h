@@ -45,55 +45,20 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+	//~ Begin Death
 	// 파라미터 이름은 bDead — 베이스(ACombatCharacter)의 IsDead 멤버와 겹치면 UHT가 shadowing 에러를 냄.
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player")
 	void CheckDeath(bool bDead);
+	//~ End Death
+
+
 
 	// 공격 Notify → 현재 직업의 OnAttackNotify 전달은 베이스(ACombatCharacter)의 기본 구현이 처리한다.
 
 
-	//AddCoin
-	UFUNCTION(BlueprintCallable)
-	void AddMoney();
 
-	// AddHP는 베이스 구현을 그대로 쓴다(내부에서 가상 SetHP를 호출 → 아래 override로 들어옴).
 
-	/** HP 설정 + HUD 체력바 갱신. 죽음/부활 "전환" 처리는 베이스가 OnDeath/OnRevive로 호출해준다. */
-	virtual void SetHP(int32 new_hp) override;
 
-	/** 죽었는지 조회만 한다(부작용 없음). 실제 죽음/부활 처리는 OnDeath/OnRevive에서. */
-	UFUNCTION(BlueprintCallable)
-	bool checkDead();
-
-	void ReStart();
-
-	/** 돈을 Amount만큼 소비 시도. 충분하면 차감하고 true, 부족하면 아무것도 안 하고 false. */
-	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
-	bool TrySpendMoney(int32 Amount);
-
-	/** 경험치 획득(적 처치 시 AEnemy::OnDeath가 호출). 레벨업 처리와 HUD 갱신까지 담당. */
-	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
-	void AddExp(int32 Amount);
-
-	/** 현재 레벨에서 다음 레벨까지 필요한 경험치 총량 (= ExpBase + (Level-1) × ExpGrowth) */
-	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
-	int32 GetExpToNextLevel() const;
-
-	/** 레벨업 순간 1회 호출 — BP에서 이펙트/사운드/스탯 상승 등을 구현. 여러 레벨을 한 번에 오르면 레벨마다 호출. */
-	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Stats")
-	void OnLevelUp(int32 NewLevel);
 
 	/** 무기 강화(강화 발판 AWeaponUpgradeZone이 호출) — WeaponLevel 증가 + 현재 직업의 Damage 상승. */
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapon")
@@ -140,12 +105,35 @@ public:
 
 
 
+	//AddCoin
+	UFUNCTION(BlueprintCallable)
+	void AddMoney();
 
 
 
 
 
 private:
+
+	// 입력 누적값 (게임패드 / 터치를 분리 저장 후 Tick에서 합성)
+	FVector2D GamepadMove = FVector2D::ZeroVector;
+	FVector2D GamepadAim = FVector2D::ZeroVector;
+	FVector2D TouchMove = FVector2D::ZeroVector;
+	FVector2D TouchAim = FVector2D::ZeroVector;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	// 게임패드 아날로그 축 콜백
 	void OnMoveX(float Value);
 	void OnMoveY(float Value);
@@ -186,10 +174,33 @@ private:
 	void UpdateExpUI();
 
 
+	/*
+
+	1. 생명주기 — 생성자, BeginPlay, Tick, SetupPlayerInputComponent
+		2. 카메라(TopDown) — TopDownBoom, TopDownCamera, 게터, CameraPitch, CameraDistance, OnTopDownMode()
+		3. 입력 — MoveTopDown, SetMoveInput / SetAimInput, OnMoveX~OnAimY, 마우스 4종 + MouseInput / GetCursorGroundLocation,
+		조이스틱 콜백 / 인스턴스 / 텍스처, Gamepad·Touch 누적값, InputDeadzone
+		4. 이동·회전·다리 애니메이션 — UpdateMovement, UpdateAimAndAttack, UpdateLegYawOffset, GetLegYawOffset, LegYaw * 3개,
+		TurnInterpSpeed, CursorStopRadius
+		5. 죽음 / 부활 — OnDeath, OnRevive, SetHP, checkDead, CheckDeath, ReStart, playerStart
+		6. 성장(돈 / 경험치 / 레벨) — AddMoney, TrySpendMoney, SetMoney, AddExp, GetExpToNextLevel, OnLevelUp, UpdateExpUI,
+		Money / Level / Exp / ExpBase / ExpGrowth
+		7. 무기 — UpgradeWeapon, OnWeaponUpgraded, SetWeaponMesh, ReplaceWeapon, WeaponLevel, WeaponDamagePerLevel,
+		WeaponComponentTag, WeaponMeshComponent
+		8. 동료 — RecruitCompanion, GetCompanions, CheckCompanion, SetSpawnTransformCompanion, CompanionClass, MaxCompanions,
+		CompanionSpawnOffset, Companions
+		9. UI / HUD — SetCanvasWidget, CanvasWidget
+		10. 기타 / 디버그 — NavInvoker, PlayerControllerRef, SetJob, bShowSpeedDebug, bDebugAddMoneyKey
 
 
-
-
+		여담으로 get set같은 프로퍼티와 부품 함수라면 밑 public에 넣어라.
+		1. 핵심 메인 함수
+		2. 핵심 메인 변수
+		3. 부품 변수
+		4. 부품 함수
+		
+		private도 변수는 앞에
+	*/
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Private state (순수 내부 상태 — BP/에디터 노출 없음)
@@ -205,11 +216,6 @@ private:
 	UPROPERTY()
 	AActor* playerStart = nullptr;
 
-	// 입력 누적값 (게임패드 / 터치를 분리 저장 후 Tick에서 합성)
-	FVector2D GamepadMove = FVector2D::ZeroVector;
-	FVector2D GamepadAim = FVector2D::ZeroVector;
-	FVector2D TouchMove = FVector2D::ZeroVector;
-	FVector2D TouchAim = FVector2D::ZeroVector;
 
 	// 공격 타이머(TimeSinceLastAttack)는 베이스(ACombatCharacter::TickAttack)가 관리한다.
 
@@ -401,4 +407,50 @@ private:
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void SetCanvasWidget(UMyCanvas* CW);
+
+
+
+
+	//아마 부활할때 넣을듯 => ReVived랑 비교해
+	void ReStart();
+
+
+
+
+public: //PROPERTY FUNCTION
+
+	// HUD 체력바 갱신.
+	virtual void SetHP(int32 new_hp) override; //  죽음/부활 "전환" 처리는 베이스가 OnDeath/OnRevive로 호출해준다.
+
+
+	//차감 성공하면 true
+	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
+	bool TrySpendMoney(int32 Amount);
+
+
+	// 레벨업 처리와 HUD 갱신까지 담당.
+	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
+	void AddExp(int32 Amount);
+
+
+	// 죽었는지
+	UFUNCTION(BlueprintCallable)
+	bool GetIsDead();
+
+
+
+
+
+
+
+
+	// ~ Begin Growth Function
+	// 현재 레벨에서 다음 레벨까지 필요한 경험치 총량
+	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
+	int32 GetExpToNextLevel() const;
+
+	//BP에서 이펙트/사운드/스탯 상승 등을 구현할 예정.
+	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Stats")
+	void OnLevelUp(int32 NewLevel);
+	// ~ End Growth Function
 };

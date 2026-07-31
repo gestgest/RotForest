@@ -675,7 +675,7 @@ void AMyPlayer::SetHP(int32 new_hp)
     CheckDeath(IsDead);
 }
 
-bool AMyPlayer::checkDead()
+bool AMyPlayer::GetIsDead()
 {
     // 조회 전용 — 예전처럼 이동/입력 모드를 건드리지 않는다(그건 OnDeath/OnRevive가 전환 시 1회씩).
     return IsDead;
