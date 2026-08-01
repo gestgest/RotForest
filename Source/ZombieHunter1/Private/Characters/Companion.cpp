@@ -101,7 +101,7 @@ void ACompanion::Tick(float DeltaTime)
 // Tick(조준/공격)과 UpdateDecision(이동 명령)이 이 함수 하나를 공유해야 값이 어긋나지 않는다.
 float ACompanion::GetEngageRange() const
 {
-	return (CurrentJob && CurrentJob->EngageRange > 0.0f) ? CurrentJob->EngageRange : AttackRange;
+	return (CurrentJob && CurrentJob->GetEngageRange() > 0.0f) ? CurrentJob->GetEngageRange() : AttackRange;
 }
 
 // 느린 업데이트 함수 : DecisionInterval마다 호출 — 타겟 재탐색과 이동 명령만 여기서. (매 프레임 돌릴 필요 없는 것들)

@@ -26,7 +26,7 @@ void ACompanionSpawnZone::ChangeIconMesh()
 	TSubclassOf<UJobComponent> JobClass = GetJobComponent();
 	if (JobClass && IconMeshComp)
 	{
-		IconMeshComp->SetSkeletalMeshAsset(JobClass.GetDefaultObject()->WeaponMesh);
+		IconMeshComp->SetSkeletalMeshAsset(JobClass.GetDefaultObject()->GetWeaponMesh());
 	}
 }
 

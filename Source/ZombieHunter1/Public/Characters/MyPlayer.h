@@ -332,7 +332,6 @@ private: //평범한 변수 및 함수
 
 	// 초기 셋업 / 내부 헬퍼 (BeginPlay 등 내부에서만 호출)
 	void OnTopDownMode();
-	void ReplaceWeapon();
 	void SetJob();
 	void SetMoney(int Money);
 
@@ -340,13 +339,6 @@ private: //평범한 변수 및 함수
 	// AddExp와 SetCanvasWidget(초기 표시)에서 호출. => 경험치 HUD(텍스트/바) 갱신.
 	void UpdateExpUI();
 
-
-
-
-	//무기 ChildActorComponent(예: Weapon_BP)를 고를 때 쓰는 태그. 여러 개일 때 그 컴포넌트 Details에서 달면 우선 선택됨.
-	//  하나뿐이면 태그 없어도 자동으로 잡힌다. 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
-	FName WeaponComponentTag = TEXT("Weapon");
 
 
 	//아마 부활할때 넣을듯 => ReVived랑 비교해

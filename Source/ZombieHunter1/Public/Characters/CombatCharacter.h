@@ -87,6 +87,8 @@ protected:
 	virtual void HandleAttackNotify(FName NotifyName);
 
 
+	//초반에 호출
+	void InitWeaponSlot();
 
 
 
@@ -111,6 +113,10 @@ protected:
 	bool IsDead = false;
 
 
+
+	//무기 ChildActorComponent(예: Weapon_BP)를 고를 때 쓰는 태그. 여러 개일 때 그 컴포넌트 Details에서 달면 우선 선택됨.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+	FName WeaponComponentTag = TEXT("Weapon");
 
 
 
@@ -166,12 +172,11 @@ protected:
 	bool bDebugCombat = false;
 
 
+
 private:
 	/** 메시 애님 인스턴스의 OnPlayMontageNotifyBegin에 바인딩 → HandleAttackNotify로 전달. */
 	UFUNCTION()
 	void OnMontageNotifyBegin(FName NotifyName, const FBranchingPointNotifyPayload& Payload);
-
-
 
 
 public: 
@@ -193,7 +198,7 @@ public:
 
 	// 무기 컴포넌트의 스켈레탈 메시를 교체한다. NewMesh가 null이면 무기를 숨긴다. JobComponent이 호출. 
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	void SetWeaponMesh(USkeletalMesh* NewMesh);
+	void EquipWeapon(USkeletalMesh* NewMesh);
 };
 
 /**

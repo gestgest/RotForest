@@ -33,18 +33,14 @@ void UJobComponent::InitializeForOwner(ACombatCharacter* Owner)
 
 	//OwnerCharacter->AttackInterval = Stats.AttackInterval; => 어차피 계속 Get으로 받을 예정
 
-	EquipWeapon(); // 직업 무기를 소유자 무기 슬롯에 끼운다
+	EquipWeapon(); 
 }
 
+// 직업 무기를 소유자 무기 슬롯에 끼운다
 void UJobComponent::EquipWeapon()
 {
-	// 무기 메시 교체는 플레이어의 무기 슬롯(ChildActor) 시스템 전용이다.
-	// 동료(ACompanion)는 자기 BP 메시를 그대로 쓰므로 여기서 건드리지 않는다.
-	// WeaponMesh가 null이면 무기가 숨겨진다(예: 지팡이 없는 마법사).
-	if (AMyPlayer* Player = Cast<AMyPlayer>(OwnerCharacter))
-	{
-		Player->SetWeaponMesh(WeaponMesh);
-	}
+
+	OwnerCharacter->EquipWeapon(WeaponMesh);
 }
 
 void UJobComponent::Attack()

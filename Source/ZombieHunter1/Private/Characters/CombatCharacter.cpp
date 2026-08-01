@@ -15,6 +15,8 @@ void ACombatCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	InitWeaponSlot();
+
 	// 공격 몽타주 Notify → HandleAttackNotify (서브클래스가 실제 공격을 처리).
 	// 플레이어/동료/적이 똑같이 쓰던 배선을 여기로 모았다.
 	if (USkeletalMeshComponent* MeshComp = GetMesh())
@@ -34,7 +36,47 @@ void ACombatCharacter::ApplyJobStats(FJobStats Stats)
 }
 
 
-void ACombatCharacter::SetWeaponMesh(USkeletalMesh* NewMesh)
+void ACombatCharacter::InitWeaponSlot()
+{
+	TArray<UChildActorComponent*> ChildComps;
+	GetComponents<UChildActorComponent>(ChildComps);
+	for (UChildActorComponent* CAC : ChildComps)
+	{
+		if (!CAC)
+		{
+			continue;
+		}
+		AActor* Child = CAC->GetChildActor();
+		if (!Child)
+		{
+			continue;
+		}
+		USkeletalMeshComponent* InnerMesh = Child->FindComponentByClass<USkeletalMeshComponent>();
+		if (!InnerMesh)
+		{
+			continue;
+		}
+
+		// 'Weapon' 태그가 붙은 ChildActorComponent를 우선 사용, 없으면 첫 번째를 폴백으로.
+		if (CAC->ComponentHasTag(WeaponComponentTag))
+		{
+			WeaponMeshComponent = InnerMesh;
+			break;
+		}
+		if (!WeaponMeshComponent)
+		{
+			WeaponMeshComponent = InnerMesh;
+		}
+	}
+	if (!WeaponMeshComponent)
+	{
+		UE_LOG(LogTemp, Log, TEXT("SkeletalMeshComponent"));
+	}
+}
+
+
+//무기 교체하는 함수
+void ACombatCharacter::EquipWeapon(USkeletalMesh* NewMesh)
 {
 	if (!WeaponMeshComponent)
 	{

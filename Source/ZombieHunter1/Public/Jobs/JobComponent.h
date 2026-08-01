@@ -73,6 +73,19 @@ protected:
 	UPROPERTY()
 	ACombatCharacter* OwnerCharacter = nullptr;
 
+
+	// 동료 AI 교전 사거리(cm) — 적이 이 거리 안에 들면 멈춰서 공격한다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Combat")
+	float EngageRange = 500.0f;
+
+
+	//직업의 공격 판정 범위를 화면에 그린다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Debug")
+	bool bDebugAttack = false;
+
+
+
+
 	// 따로 지정된 WeaponMesh 무기를 장착한다.
 	void EquipWeapon();
 
@@ -92,9 +105,6 @@ protected:
 	AProjectile* SpawnProjectileForward(TSubclassOf<AProjectile> ProjectileClass, float Speed, float MuzzleOffset, float MuzzleHeight);
 
 private:
-	// 동료 AI 교전 사거리(cm) — 적이 이 거리 안에 들면 멈춰서 공격한다.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Combat")
-	float EngageRange = 500.0f;
 
 	// 공격 적중 시 재생할 사운드
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Combat")
@@ -107,9 +117,6 @@ private:
 
 
 
-	//직업의 공격 판정 범위를 화면에 그린다.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Debug")
-	bool bDebugAttack = false;
 
 public:
 
@@ -137,7 +144,10 @@ public:
 	int32 GetDamage() const { return Stats.Damage + BonusDamage; }
 
 	USkeletalMesh* GetWeaponMesh() { return WeaponMesh; }
+	float GetEngageRange() { return EngageRange; }
 
+	USoundBase* GetAttackSound() { return AttackSound; }
+	void SetAttackSound(USoundBase* Value) { AttackSound = Value; }
 };
 
 

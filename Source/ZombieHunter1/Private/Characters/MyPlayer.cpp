@@ -104,8 +104,6 @@ void AMyPlayer::BeginPlay()
         animInstance->SetRootMotionMode(ERootMotionMode::IgnoreRootMotion);
     }
 
-    ReplaceWeapon();
-
 
     //SetMoney(0);
     ReStart(); // 주의: 엔진 내장 APawn::Restart()가 아니라 우리 부활 함수(대문자 S). HP/돈 초기화 + 스타트 지점 이동.
@@ -168,46 +166,6 @@ void AMyPlayer::OnTopDownMode()
 }
 
 
-// 무기는 ChildActorComponent(Weapon_BP) → BP_sword 액터 → 그 안의 SkeletalMeshComponent 구조다.
-// 그 안쪽 메시 컴포넌트를 찾아 캐시한다(직업이 이 메시만 교체). 직업 생성보다 먼저 찾아둬야 함.
-void AMyPlayer::ReplaceWeapon()
-{
-    TArray<UChildActorComponent*> ChildComps;
-    GetComponents<UChildActorComponent>(ChildComps);
-    for (UChildActorComponent* CAC : ChildComps)
-    {
-        if (!CAC)
-        {
-            continue;
-        }
-        AActor* Child = CAC->GetChildActor();
-        if (!Child)
-        {
-            continue;
-        }
-        USkeletalMeshComponent* InnerMesh = Child->FindComponentByClass<USkeletalMeshComponent>();
-        if (!InnerMesh)
-        {
-            continue;
-        }
-        // 'Weapon' 태그가 붙은 ChildActorComponent를 우선 사용, 없으면 첫 번째를 폴백으로.
-        if (CAC->ComponentHasTag(WeaponComponentTag))
-        {
-            WeaponMeshComponent = InnerMesh;
-            break;
-        }
-        if (!WeaponMeshComponent)
-        {
-            WeaponMeshComponent = InnerMesh;
-        }
-    }
-    if (!WeaponMeshComponent && GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Orange,
-            TEXT("[Weapon] 무기 ChildActor(예: Weapon_BP) 안의 SkeletalMeshComponent를 못 찾음"));
-    }
-}
-
 void AMyPlayer::SetJob()
 {
     // 직업 선택 씬에서 고른 직업이 GameInstance에 실려 왔으면 그걸 우선 사용한다.
@@ -244,9 +202,9 @@ void AMyPlayer::SetJob()
     {
         // 공격 몽타주는 캐릭터(JobAttackMontages[JobName])가 소유 — 직업으로 승계하지 않는다.
         // 사운드만 직업이 비어 있을 때 플레이어 것을 물려준다.
-        if (!CurrentJob->AttackSound)
+        if (!CurrentJob->GetAttackSound())
         {
-            CurrentJob->AttackSound = AttackSound;
+            CurrentJob->SetAttackSound(AttackSound);
         }
     }
 }
