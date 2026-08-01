@@ -114,3 +114,4 @@ AProjectile* UJobComponent::SpawnProjectileForward(TSubclassOf<AProjectile> Proj
 	}
 	return Projectile;
 }
+

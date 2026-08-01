@@ -124,6 +124,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Job")
 	virtual void OnAttackNotify(FName NotifyName);
 
+	// 공격 몽타주가 끝까지 재생됐을 때. 기본 구현 없음.
+	virtual void OnAttackMontageEnded() {}
 
 	////////////////////////////////////////////////////////////////////////
 	//Variables

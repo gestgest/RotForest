@@ -1,9 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Jobs/JobComponent.h"
+#include "Characters/CombatCharacter.h"          
+#include "Components/SkeletalMeshComponent.h"    
+#include "Animation/AnimSingleNodeInstance.h"
 #include "ArcherJob.generated.h"
 
 class AProjectile;
@@ -19,6 +22,8 @@ class ZOMBIEHUNTER1_API UArcherJob : public UJobComponent
 
 public:
 	UArcherJob();
+
+	 void OnAttackMontageEnded() override;
 
 	/** 발사할 화살 액터 클래스. BP에서 메시 달린 BP_Arrow를 지정하면 보임. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Archer")
@@ -41,4 +46,18 @@ public:
 protected:
 	/** 전방으로 화살 1발 발사 */
 	void FireArrow();
+	void PlayBowDraw();
+
+
+
+	// UArcherJob — 미세조정용. 1.0보다 크면 살짝 먼저 다 당겨진다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Job|Archer")
+	float BowDrawRateScale = 1.05f;
+private:
+	void ResetBow();
+
+	// 활 시위 당김 애니(활 스켈레톤용). 무기 컴포넌트에서 재생된다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Archer")
+	UAnimSequence* BowDrawAnim = nullptr;
+
 };

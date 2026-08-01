@@ -24,8 +24,10 @@ void ACombatCharacter::BeginPlay()
 		if (UAnimInstance* Anim = MeshComp->GetAnimInstance())
 		{
 			Anim->OnPlayMontageNotifyBegin.AddDynamic(this, &ACombatCharacter::OnMontageNotifyBegin);
+			Anim->OnMontageEnded.AddDynamic(this, &ACombatCharacter::OnAttackMontageEnded);
 		}
 	}
+
 }
 
 void ACombatCharacter::ApplyJobStats(FJobStats Stats)
@@ -225,4 +227,20 @@ bool ACombatCharacter::TickAttack(float DeltaTime, bool bWantsToAttack)
 	TimeSinceLastAttack = 0.0f;
 	CurrentJob->Attack(); // 직업이 공격 방식을 결정(몽타주 재생 → Notify → OnAttackNotify)
 	return true;
+}
+
+
+
+// 공격 몽타주가 끝나는 순간 = 활시위를 놓는 순간(애니 마지막 프레임)인 직업용.
+// 전사처럼 중간에 타격하는 직업은 Notify를 쓰므로 여기 반응하지 않는다.
+void ACombatCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (bInterrupted)
+	{
+		return; // 취소된 공격은 발사하지 않는다
+	}
+	if (CurrentJob)
+	{
+		CurrentJob->OnAttackMontageEnded();
+	}
 }

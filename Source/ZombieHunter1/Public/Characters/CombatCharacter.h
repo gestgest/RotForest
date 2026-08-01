@@ -65,6 +65,12 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+
+
+
+
+
+
 	// 반드시 서브클래스 생성자에서만 호출할 것 => Companion 같은 생성자
 	// 컴포넌트 이름은 "HPBar" 
 	void CreateHPBarComponent();
@@ -75,11 +81,17 @@ protected:
 	/** HP 변화에 따라 IsDead를 바꾸고 OnDeath/OnRevive 훅을 전환 시점에 1회씩 호출. */
 	void SetDead(bool bNewDead);
 
+
+	//초반에 호출
+	void InitWeaponSlot();
+
 	/** 살아있음 → 죽음 전환 시 1회. 서브클래스가 AI 정지/콜리전 해제/연출 등을 구현. */
 	virtual void OnDeath() {}
 
 	/** 죽음 → 부활(풀 재사용 등) 전환 시 1회. 죽을 때 껐던 것들을 되돌린다. */
 	virtual void OnRevive() {}
+
+
 
 	/** 공격 몽타주 Notify가 들어왔을 때 호출.
 	 *  기본 구현은 현재 직업의 OnAttackNotify()로 넘긴다(플레이어/동료가 쓰던 동작).
@@ -87,9 +99,8 @@ protected:
 	virtual void HandleAttackNotify(FName NotifyName);
 
 
-	//초반에 호출
-	void InitWeaponSlot();
-
+	UFUNCTION()
+	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 
 
@@ -187,6 +198,7 @@ public:
 	int32 GetDamage() { return Damage; }
 	bool GetIsDead() { return IsDead; }
 
+	USkeletalMeshComponent* GetWeaponMeshComponent() const { return WeaponMeshComponent; }
 
 	/** 죽음 상태, HP바 갱신 */
 	UFUNCTION(BlueprintCallable, Category = "Combat")
