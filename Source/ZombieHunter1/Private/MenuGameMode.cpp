@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "MenuGameMode.h"
@@ -24,6 +24,7 @@ void AMenuGameMode::BeginPlay()
 		MenuWidget = CreateWidget<UUserWidget>(GetWorld(), MenuWidgetClass);
 		if (MenuWidget)
 		{
+			MenuWidget->SetIsFocusable(true);   // ← AddToViewport 전에 호출해야 먹는다
 			MenuWidget->AddToViewport();
 		}
 	}

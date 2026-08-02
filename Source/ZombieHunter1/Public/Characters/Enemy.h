@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -61,6 +61,11 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	//UFUNCTION(BlueprintCallable)
+	//추격을 완료했다면 => Attack
+	void MoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result);
+
+
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
@@ -97,8 +102,6 @@ public:
 	void TrackingPlayer();
 
 
-	//UFUNCTION(BlueprintCallable)
-	void MoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result);
 
 	UFUNCTION() //몽타주의 delegate에 추가하려면 필수다.
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
