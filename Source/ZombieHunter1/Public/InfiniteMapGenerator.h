@@ -199,16 +199,16 @@ protected:
 
 	/** 마을 중심 청크에 스폰할 발판 클래스 (기본: BP_CompanionSpawnZone — 랜덤 직업 동료 소환). 비우면 발판 없이 바닥만 깐다.
 	 *  청크 액터 묶음에 들어가므로 언로드 시 함께 제거된다 — 게이지 진행도 영속은 후속 과제(FPOIState). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI")
 	TSubclassOf<AActor> VillagePadClass;
 
 	/** 마을 경비병 클래스 (기본: BP_Companion — 경비 모드로 스폰됨). 비우면 경비병 없음.
 	 *  언로드 시 제거되고 재방문 시 풀피로 재생성된다 (경비병 생사 영속은 후속 과제). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI")
 	TSubclassOf<ACompanion> VillageGuardClass;
 
 	/** 마을 중심 청크에 배치할 경비병 수. 발판 주변 고정 자리에 선다. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI", meta = (ClampMin = "0", ClampMax = "4"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI", meta = (ClampMin = "0", ClampMax = "4"))
 	int32 VillageGuardCount = 2;
 
 	/** 마을 주민(비전투 NPC) 클래스. BP_Villager(부모: Villager)를 만들어 지정 — 비우면 주민 없음.

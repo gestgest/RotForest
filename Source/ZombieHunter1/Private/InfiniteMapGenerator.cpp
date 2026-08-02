@@ -41,20 +41,6 @@ AInfiniteMapGenerator::AInfiniteMapGenerator()
 	{
 		ZombieVillageFloorMaterial = ZombieVillageMatFinder.Object;
 	}
-
-	// 마을 중심 발판: 랜덤 직업 동료 소환존 BP를 기본 지정 (에디터 Details에서 교체/해제 가능)
-	static ConstructorHelpers::FClassFinder<AActor> VillagePadFinder(TEXT("/Game/BP/GameObject/BP_CompanionSpawnZone"));
-	if (VillagePadFinder.Succeeded())
-	{
-		VillagePadClass = VillagePadFinder.Class;
-	}
-
-	// 마을 경비병: 동료 BP를 기본 지정 — 스폰 시 경비 모드(bGuardHome)로 전환해서 사용
-	static ConstructorHelpers::FClassFinder<ACompanion> VillageGuardFinder(TEXT("/Game/Characters/Companion/BP_Companion"));
-	if (VillageGuardFinder.Succeeded())
-	{
-		VillageGuardClass = VillageGuardFinder.Class;
-	}
 }
 
 void AInfiniteMapGenerator::BeginPlay()
