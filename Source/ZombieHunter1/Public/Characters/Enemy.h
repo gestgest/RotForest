@@ -23,23 +23,6 @@ class ZOMBIEHUNTER1_API AEnemy : public ACombatCharacter
 {
 	GENERATED_BODY()
 
-	bool hit();
-	void DebugHPShow();
-
-	// UPROPERTY — 컨트롤러가 파괴되면 자동 null. 안 그러면 OnDeath 등에서 댕글링 역참조 위험.
-	UPROPERTY()
-	AAIController* aiController = nullptr;
-
-	float attackRange = 100.0f;
-	int enemy_id;
-	bool CanAttack;
-
-	/** 다음 추격 갱신이 허용되는 월드 시간(초). TrackingPlayer가 이 시간 전 호출되면 무시. */
-	float NextTrackTime = 0.0f;
-
-	/** 시간 정지(플레이어 사망 연출) 중인지. CustomTimeDilation=0이어도 틱은 dt=0으로 계속 돌기 때문에
-	 *  TrackingPlayer 같은 로직은 이 플래그로 직접 막아야 한다. */
-	bool bFrozen = false;
 
 public:
 	// Sets default values for this character's properties
@@ -129,5 +112,24 @@ public:
 
 
 	void SetAIController();
+private:
+
+	bool hit();
+	void DebugHPShow();
+
+	// UPROPERTY — 컨트롤러가 파괴되면 자동 null. 안 그러면 OnDeath 등에서 댕글링 역참조 위험.
+	UPROPERTY()
+	AAIController* aiController = nullptr;
+
+	float attackRange = 100.0f;
+	int enemy_id;
+	bool CanAttack;
+
+	/** 다음 추격 갱신이 허용되는 월드 시간(초). TrackingPlayer가 이 시간 전 호출되면 무시. */
+	float NextTrackTime = 0.0f;
+
+	/** 시간 정지(플레이어 사망 연출) 중인지. CustomTimeDilation=0이어도 틱은 dt=0으로 계속 돌기 때문에
+	 *  TrackingPlayer 같은 로직은 이 플래그로 직접 막아야 한다. */
+	bool bFrozen = false;
 
 };
