@@ -6,6 +6,23 @@
 #include "Animation/AnimInstance.h"
 #include "Components/WidgetComponent.h" //머리 위 HP 바
 #include "UI/EnemyHPBarWidget.h"
+#include "Engine/Engine.h" //화면 디버그 메시지(AddOnScreenDebugMessage)
+
+DEFINE_LOG_CATEGORY(LogWeapon);
+
+namespace
+{
+	// 무기 슬롯 상태를 화면 좌상단에 색으로 띄운다.
+	// 출력 로그는 verbosity로만 색이 정해지지만(Error=빨강/Warning=노랑), 화면 메시지는 색을 마음대로 줄 수 있다.
+	// 캐릭터가 여럿일 때 어느 BP 문제인지 바로 알 수 있게 액터 이름을 앞에 붙인다.
+	void WeaponScreenMsg(const AActor* Owner, const FColor& Color, const FString& Msg)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 10.0f, Color, FString::Printf(TEXT("[%s] %s"), *GetNameSafe(Owner), *Msg));
+		}
+	}
+}
 
 ACombatCharacter::ACombatCharacter()
 {
@@ -62,47 +79,79 @@ void ACombatCharacter::InitWeaponSlot()
 		return;
 	}
 
+	// WeaponActorClass를 비워둔 건 "이 캐릭터는 무기 슬롯을 안 쓴다"는 선언이다(적 등).
+	// 잘못된 설정이 아니므로 소켓 검사도, 경고도 하지 않고 조용히 빠진다.
+	if (!WeaponActorClass)
+	{
+		UE_LOG(LogWeapon, Verbose, TEXT("[%s] 무기 슬롯 미사용(WeaponActorClass 없음)."), *GetName());
+		return;
+	}
+
 	// 슬롯 하나를 세우는 절차는 좌우가 완전히 같다 — 소켓 이름만 다르다.
-	auto SetupSlot = [&](UChildActorComponent* Slot, FName SocketName) -> USkeletalMeshComponent*
+	// 실패 지점(소켓/클래스/메시)마다 무엇이 잘못됐고 어디를 고쳐야 하는지까지 로그로 남긴다.
+	auto SetupSlot = [&](UChildActorComponent* Slot, FName SocketName, const TCHAR* HandLabel) -> USkeletalMeshComponent*
 	{
 		if (!Slot)
 		{
+			UE_LOG(LogWeapon, Error, TEXT("[%s] %s 슬롯 컴포넌트 자체가 없다(C++ 생성 실패)."), *GetName(), HandLabel);
+			WeaponScreenMsg(this, FColor::Red, FString::Printf(TEXT("%s 슬롯 컴포넌트 없음"), HandLabel));
 			return nullptr;
 		}
 
-		// 소켓 확인 — 없는 소켓에 붙이면 에러 없이 캐릭터 원점(발밑)에 붙어버려서 원인 찾기가 고약하다.
+		// 소켓 확인 — 없는 이름에 붙이면 에러 없이 캐릭터 원점(발밑)에 붙어버려서 원인 찾기가 고약하다.
 		if (MeshComp->DoesSocketExist(SocketName))
 		{
-			Slot->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
+			// KeepRelativeTransform: 슬롯 컴포넌트에 설정해둔 Relative Location/Rotation을 유지한 채 붙인다.
+			// 무기를 잡는 각도는 이 상대 회전으로 맞춘다 — 캐릭터 BP의 WeaponRight/WeaponLeft Details에서 조정.
+			// (SnapToTarget을 쓰면 상대 트랜스폼이 리셋돼서 BP에서 맞춘 각도가 통째로 날아간다)
+			Slot->AttachToComponent(MeshComp, FAttachmentTransformRules::KeepRelativeTransform, SocketName);
+			UE_LOG(LogWeapon, Log, TEXT("[%s] %s: 소켓 '%s' 부착 OK"), *GetName(), HandLabel, *SocketName.ToString());
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[%s] 소켓 '%s'이(가) 스켈레톤에 없다. 스켈레톤 에디터에서 소켓을 추가할 것."),
-				*GetName(), *SocketName.ToString());
+			// 스켈레톤에 소켓도 본도 그 이름이 없다 → BP의 Right/Left Hand Socket 값 또는 스켈레톤 소켓을 고쳐야 함.
+			UE_LOG(LogWeapon, Error, TEXT("[%s] %s: 소켓/본 '%s'이(가) '%s' 스켈레톤에 없다. BP의 %s Hand Socket 값을 확인할 것."),
+				*GetName(), HandLabel, *SocketName.ToString(), *GetNameSafe(MeshComp->GetSkinnedAsset()),
+				HandLabel);
+			WeaponScreenMsg(this, FColor::Red, FString::Printf(TEXT("%s: 소켓 '%s' 없음"), HandLabel, *SocketName.ToString()));
 		}
 
 		// 무기 액터(Weapon_BP)를 이 슬롯에 스폰. 양손이 같은 클래스를 쓴다(빈 껍데기이므로).
-		if (WeaponActorClass && Slot->GetChildActorClass() != WeaponActorClass)
+		// WeaponActorClass가 유효한 건 위에서 이미 보장됐다.
+		if (Slot->GetChildActorClass() != WeaponActorClass)
 		{
 			Slot->SetChildActorClass(WeaponActorClass);
 		}
 
 		AActor* Child = Slot->GetChildActor();
-		USkeletalMeshComponent* InnerMesh = Child ? Child->FindComponentByClass<USkeletalMeshComponent>() : nullptr;
-		if (InnerMesh)
+		if (!Child)
 		{
-			InnerMesh->SetVisibility(false); // 직업이 장착할 때까지는 숨김
+			UE_LOG(LogWeapon, Error, TEXT("[%s] %s: '%s' 액터 스폰 실패."), *GetName(), HandLabel, *GetNameSafe(WeaponActorClass));
+			WeaponScreenMsg(this, FColor::Red, FString::Printf(TEXT("%s: 무기 액터 스폰 실패"), HandLabel));
+			return nullptr;
+		}
+
+		USkeletalMeshComponent* InnerMesh = Child->FindComponentByClass<USkeletalMeshComponent>();
+		if (!InnerMesh)
+		{
+			// Weapon_BP 안에 StaticMesh만 있는 경우가 흔한 원인. 무기는 SkeletalMesh여야 한다(활 시위 애니 때문).
+			UE_LOG(LogWeapon, Error, TEXT("[%s] %s: '%s' 안에 SkeletalMeshComponent가 없다."),
+				*GetName(), HandLabel, *GetNameSafe(WeaponActorClass));
+			WeaponScreenMsg(this, FColor::Red, FString::Printf(TEXT("%s: 무기 BP에 SkeletalMesh 없음"), HandLabel));
+			return nullptr;
+		}
+
+		InnerMesh->SetVisibility(false); // 직업이 장착할 때까지는 숨김
+		UE_LOG(LogWeapon, Log, TEXT("[%s] %s: 슬롯 준비 완료"), *GetName(), HandLabel);
+		if (bDebugCombat)
+		{
+			WeaponScreenMsg(this, FColor::Green, FString::Printf(TEXT("%s 슬롯 준비 완료 (%s)"), HandLabel, *SocketName.ToString()));
 		}
 		return InnerMesh;
 	};
 
-	WeaponRightMesh = SetupSlot(WeaponRight, RightHandSocket);
-	WeaponLeftMesh = SetupSlot(WeaponLeft, LeftHandSocket);
-
-	if (!WeaponRightMesh && !WeaponLeftMesh)
-	{
-		UE_LOG(LogTemp, Log, TEXT("[%s] 무기 슬롯이 비어 있다(WeaponActorClass 미지정이면 정상)."), *GetName());
-	}
+	WeaponRightMesh = SetupSlot(WeaponRight, RightHandSocket, TEXT("오른손"));
+	WeaponLeftMesh = SetupSlot(WeaponLeft, LeftHandSocket, TEXT("왼손"));
 }
 
 
@@ -114,11 +163,14 @@ void ACombatCharacter::EquipWeaponInHand(USkeletalMesh* NewMesh, EWeaponHand Han
 	USkeletalMeshComponent* TargetMesh = bLeft ? WeaponLeftMesh : WeaponRightMesh;
 	USkeletalMeshComponent* OtherMesh = bLeft ? WeaponRightMesh : WeaponLeftMesh;
 
+	const TCHAR* HandLabel = bLeft ? TEXT("왼손") : TEXT("오른손");
+
 	if (!TargetMesh && OtherMesh)
 	{
 		// 쓰려는 손 슬롯이 없다(소켓이 없어 스폰 실패 등). 무기를 못 들게 하느니 반대 손에라도 들린다.
-		UE_LOG(LogTemp, Warning, TEXT("[%s] %s 무기 슬롯이 없어 반대 손으로 대체한다."),
-			*GetName(), bLeft ? TEXT("왼손") : TEXT("오른손"));
+		UE_LOG(LogWeapon, Error, TEXT("[%s] %s 슬롯이 준비 안 돼 반대 손으로 대체한다. 위쪽 %s 슬롯 에러를 먼저 볼 것."),
+			*GetName(), HandLabel, HandLabel);
+		WeaponScreenMsg(this, FColor::Red, FString::Printf(TEXT("%s 슬롯 없음 → 반대 손으로 장착"), HandLabel));
 		Swap(TargetMesh, OtherMesh);
 	}
 
@@ -133,6 +185,14 @@ void ACombatCharacter::EquipWeaponInHand(USkeletalMesh* NewMesh, EWeaponHand Han
 	WeaponMeshComponent = TargetMesh;
 	if (!TargetMesh)
 	{
+		// 슬롯이 아예 없는 캐릭터에 무기를 든 직업이 붙은 경우 — 이건 진짜 설정 실수다.
+		// (무기 없는 직업이면 NewMesh도 null이므로 조용히 넘어간다)
+		if (NewMesh)
+		{
+			UE_LOG(LogWeapon, Error, TEXT("[%s] 무기 '%s'을(를) 줄 슬롯이 없다. 캐릭터 BP에 Weapon Actor Class를 지정할 것."),
+				*GetName(), *GetNameSafe(NewMesh));
+			WeaponScreenMsg(this, FColor::Red, TEXT("무기 슬롯 없음 — Weapon Actor Class 미지정"));
+		}
 		return;
 	}
 
@@ -140,6 +200,12 @@ void ACombatCharacter::EquipWeaponInHand(USkeletalMesh* NewMesh, EWeaponHand Han
 	TargetMesh->SetSkeletalMeshAsset(NewMesh);
 	// 무기가 없는 직업(NewMesh == null)은 숨긴다.
 	TargetMesh->SetVisibility(NewMesh != nullptr);
+
+	UE_LOG(LogWeapon, Log, TEXT("[%s] %s에 무기 '%s' 장착"), *GetName(), HandLabel, *GetNameSafe(NewMesh));
+	if (bDebugCombat)
+	{
+		WeaponScreenMsg(this, FColor::Green, FString::Printf(TEXT("%s에 '%s' 장착"), HandLabel, *GetNameSafe(NewMesh)));
+	}
 }
 
 // 오른손 단축형

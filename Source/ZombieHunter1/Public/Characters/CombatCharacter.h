@@ -12,6 +12,11 @@ struct FBranchingPointNotifyPayload;
 class UWidgetComponent;
 class UChildActorComponent;
 
+/** 무기 슬롯 전용 로그 카테고리.
+ *  출력 로그 창 → Categories 드롭다운에서 'LogWeapon'만 체크하면 무기 관련 로그만 볼 수 있다.
+ *  (LogTemp에 섞어 쓰면 다른 노란 경고에 묻힌다) */
+DECLARE_LOG_CATEGORY_EXTERN(LogWeapon, Log, All);
+
 UCLASS(Abstract)
 class ZOMBIEHUNTER1_API ACombatCharacter : public ACharacter
 {
@@ -164,11 +169,13 @@ protected:
 
 
 
-	/** 오른손 무기 슬롯 — 생성자에서 만들어 RightHandSocket에 붙는다. BP에서 추가할 필요 없음. */
+	/** 오른손 무기 슬롯 — 생성자에서 만들어 RightHandSocket에 붙는다. BP에서 추가할 필요 없음.
+	 *  ★ 무기를 잡는 각도/위치는 이 컴포넌트의 Relative Rotation/Location으로 맞춘다.
+	 *    (소켓이 아니라 여기서 맞추는 이유: 부착이 KeepRelativeTransform이라 이 값이 그대로 유지된다) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	UChildActorComponent* WeaponRight = nullptr;
 
-	/** 왼손 무기 슬롯 — 생성자에서 만들어 LeftHandSocket에 붙는다. */
+	/** 왼손 무기 슬롯 — 생성자에서 만들어 LeftHandSocket에 붙는다. 각도 조정은 WeaponRight와 동일. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	UChildActorComponent* WeaponLeft = nullptr;
 
