@@ -10,6 +10,7 @@
 class UAnimMontage;
 struct FBranchingPointNotifyPayload;
 class UWidgetComponent;
+class UChildActorComponent;
 
 UCLASS(Abstract)
 class ZOMBIEHUNTER1_API ACombatCharacter : public ACharacter
@@ -125,9 +126,18 @@ protected:
 
 
 
-	//무기 ChildActorComponent(예: Weapon_BP)를 고를 때 쓰는 태그. 여러 개일 때 그 컴포넌트 Details에서 달면 우선 선택됨.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
-	FName WeaponComponentTag = TEXT("Weapon");
+	/** 무기 슬롯이 스폰할 액터 클래스(Weapon_BP). 양손 슬롯이 같은 클래스를 쓴다 —
+	 *  무기 액터는 빈 껍데기이고, 안의 메시는 직업이 런타임에 갈아끼우기 때문. 캐릭터 BP에서 지정. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	TSubclassOf<AActor> WeaponActorClass;
+
+	/** 오른손 무기가 붙을 스켈레톤 소켓 이름. 캐릭터마다 스켈레톤이 다르면 BP에서 바꾼다. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	FName RightHandSocket = TEXT("weapon_r");
+
+	/** 왼손 무기가 붙을 스켈레톤 소켓 이름(활처럼 왼손으로 드는 무기용). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	FName LeftHandSocket = TEXT("weapon_l");
 
 
 
@@ -154,7 +164,23 @@ protected:
 
 
 
-	/** 무기 ChildActor(BP_sword 등) 안의 메시 컴포넌트. BeginPlay에서 탐색해 캐시. 직업이 이 메시를 교체한다. */
+	/** 오른손 무기 슬롯 — 생성자에서 만들어 RightHandSocket에 붙는다. BP에서 추가할 필요 없음. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+	UChildActorComponent* WeaponRight = nullptr;
+
+	/** 왼손 무기 슬롯 — 생성자에서 만들어 LeftHandSocket에 붙는다. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+	UChildActorComponent* WeaponLeft = nullptr;
+
+	/** 각 슬롯의 Weapon_BP 안에 있는 스켈레탈 메시 컴포넌트. BeginPlay(InitWeaponSlot)에서 캐시. */
+	UPROPERTY()
+	USkeletalMeshComponent* WeaponRightMesh = nullptr;
+
+	UPROPERTY()
+	USkeletalMeshComponent* WeaponLeftMesh = nullptr;
+
+	/** 지금 장착 중인 손의 메시 컴포넌트. EquipWeaponInHand가 갱신한다.
+	 *  (궁수의 활 시위 애니처럼) 무기 메시를 직접 만져야 하는 직업이 이걸 집어간다. */
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	USkeletalMeshComponent* WeaponMeshComponent = nullptr;
 
@@ -208,7 +234,12 @@ public:
 	virtual void AddHP(int32 add_hp);
 
 
-	// 무기 컴포넌트의 스켈레탈 메시를 교체한다. NewMesh가 null이면 무기를 숨긴다. JobComponent이 호출. 
+	/** Hand 쪽 손에 무기 메시를 끼우고 반대 손은 숨긴다. JobComponent가 호출.
+	 *  NewMesh가 null이면 양손 다 숨긴다(무기 없는 직업). */
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void EquipWeaponInHand(USkeletalMesh* NewMesh, EWeaponHand Hand);
+
+	// 오른손에 끼우는 단축형.
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void EquipWeapon(USkeletalMesh* NewMesh);
 };

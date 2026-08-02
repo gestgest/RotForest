@@ -36,11 +36,16 @@ void UJobComponent::InitializeForOwner(ACombatCharacter* Owner)
 	EquipWeapon(); 
 }
 
-// 직업 무기를 소유자 무기 슬롯에 끼운다
+// 직업 무기를 소유자의 무기 슬롯에 끼운다.
+// 어느 손에 끼울지도 직업이 정한다 — 궁수는 왼손, 나머지는 오른손.
 void UJobComponent::EquipWeapon()
 {
+	if (!OwnerCharacter)
+	{
+		return;
+	}
 
-	OwnerCharacter->EquipWeapon(WeaponMesh);
+	OwnerCharacter->EquipWeaponInHand(WeaponMesh, WeaponHand);
 }
 
 void UJobComponent::Attack()

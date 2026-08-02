@@ -23,6 +23,16 @@ enum class EJobType : uint8
 };
 
 
+/** 무기를 드는 손. 직업이 이 값을 들고 있고, 캐릭터는 이 값만 보고 슬롯을 고른다.
+ *  → 캐릭터 코드가 직업 종류(EJobType)를 알 필요가 없다. 직업이 늘어도 분기는 손 개수(2)로 고정. */
+UENUM(BlueprintType)
+enum class EWeaponHand : uint8
+{
+	Right UMETA(DisplayName = "오른손"),
+	Left  UMETA(DisplayName = "왼손"),
+};
+
+
 
 
 USTRUCT(BlueprintType)
@@ -86,7 +96,13 @@ protected:
 
 
 
-	// 따로 지정된 WeaponMesh 무기를 장착한다.
+	/** 이 직업이 무기를 드는 손. 활은 왼손으로 들고 오른손으로 시위를 당기므로 궁수는 Left.
+	 *  직업 BP에서 바꿀 수 있다(왼손잡이 검사 등). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Job|Weapon")
+	EWeaponHand WeaponHand = EWeaponHand::Right;
+
+
+	// 따로 지정된 WeaponMesh 무기를 WeaponHand 쪽 슬롯에 장착한다.
 	void EquipWeapon();
 
 	/** 공격 사운드를 소유자 위치에서 재생 */
@@ -146,6 +162,7 @@ public:
 	int32 GetDamage() const { return Stats.Damage + BonusDamage; }
 
 	USkeletalMesh* GetWeaponMesh() { return WeaponMesh; }
+	EWeaponHand GetWeaponHand() const { return WeaponHand; }
 	float GetEngageRange() { return EngageRange; }
 
 	USoundBase* GetAttackSound() { return AttackSound; }
