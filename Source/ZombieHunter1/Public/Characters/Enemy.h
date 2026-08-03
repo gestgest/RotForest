@@ -41,8 +41,9 @@ protected:
 	virtual void OnRevive() override;
 
 public:
-	// Called every frame
+	
 	virtual void Tick(float DeltaTime) override;
+	//ㄴ TrackingPlayer
 
 	//UFUNCTION(BlueprintCallable)
 	//추격을 완료했다면 => Attack
@@ -80,9 +81,6 @@ public:
 	float TrackFarDistance = 2000.0f;
 
 
-	//함수
-	UFUNCTION(BlueprintCallable)
-	void TrackingPlayer();
 
 
 
@@ -111,7 +109,8 @@ public:
 	void DeadEnemySignal(int index);
 
 
-	void SetAIController();
+	//Enemy를 깨우는 함수?
+	void OnAIController();
 private:
 
 	bool hit();
@@ -132,4 +131,5 @@ private:
 	 *  TrackingPlayer 같은 로직은 이 플래그로 직접 막아야 한다. */
 	bool bFrozen = false;
 
+	void TrackingPlayer();
 };

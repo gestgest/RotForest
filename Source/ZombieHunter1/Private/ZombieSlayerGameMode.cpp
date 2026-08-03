@@ -156,7 +156,7 @@ void AZombieSlayerGameMode::SpawnEnemy()
 
         if (!enemy->GetController())
         {
-            enemy->SetAIController();
+            enemy->OnAIController();
         }
 
         //왜인지 모르지만 정 가운데가 pivot이라 +90을 해야한다.

@@ -15,6 +15,9 @@
 ACompanion::ACompanion()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	
+	//디폴트 설정
+	TeamType = ETeam::Ally;
 
 	// 따라다닐 땐 이동 방향으로 자연스럽게 회전. 공격 시엔 코드(FaceActor)로 적을 바라보게 덮어쓴다.
 	bUseControllerRotationYaw = false;

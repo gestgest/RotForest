@@ -18,12 +18,17 @@ AEnemy::AEnemy()
 {
 	PrimaryActorTick.bCanEverTick = true; //update
 
+	//default
+	TeamType = ETeam::Enemy;
+
 	// 기본 AI 컨트롤러 클래스 지정 — SpawnDefaultController()가 항상 생성할 대상을 갖도록.
 	// (BP에서 None으로 비워두면 SpawnDefaultController가 아무것도 안 만들어 크래시 위험)
 	AIControllerClass = AAIController::StaticClass();
 
 	// 머리 위 HP 바 — 생성/갱신 로직은 베이스(ACombatCharacter) 소유. 위젯 클래스는 BP_Enemy에서 지정.
 	CreateHPBarComponent();
+
+
 }
 
 // Called when the game starts or when spawned
@@ -56,6 +61,7 @@ void AEnemy::BeginPlay()
 void AEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	TrackingPlayer();
 }
 
 // Called to bind functionality to input
@@ -69,7 +75,6 @@ void AEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 void AEnemy::TrackingPlayer()
 {
 	// 시간 정지 중(플레이어 사망 연출)에는 추격 갱신 자체를 하지 않는다.
-	// CustomTimeDilation=0이어도 틱은 dt=0으로 계속 돌아서 여기가 매 프레임 불릴 수 있다.
 	if (bFrozen)
 	{
 		return;
@@ -109,7 +114,7 @@ void AEnemy::TrackingPlayer()
 		if (!IsValid(companion) || companion->GetIsDead())
 		{
 			continue;
-		}
+		}	
 		const float dist = FVector::Dist2D(myLocation, companion->GetActorLocation());
 		if (dist < targetDist)
 		{
@@ -396,7 +401,7 @@ void AEnemy::SetFrozen(bool bNewFrozen)
 	// 해제 시에는 아무것도 안 해도 된다 — 다음 TrackingPlayer가 추격을 다시 잡는다.
 }
 
-void AEnemy::SetAIController()
+void AEnemy::OnAIController()
 {
 	// 이미 AI 컨트롤러에 빙의돼 있으면 그대로 재사용
 	aiController = Cast<AAIController>(GetController());
@@ -434,6 +439,7 @@ void AEnemy::SetAIController()
 
 	if (UPathFollowingComponent* PFC = aiController->GetPathFollowingComponent())
 	{
+		PFC->OnRequestFinished.RemoveAll(this);   // ← 추가: 이미 걸려 있으면 제거 후 재등록
 		PFC->OnRequestFinished.AddUObject(this, &AEnemy::MoveCompleted);
 	}
 }

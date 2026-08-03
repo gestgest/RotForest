@@ -17,6 +17,15 @@ class UChildActorComponent;
  *  (LogTemp에 섞어 쓰면 다른 노란 경고에 묻힌다) */
 DECLARE_LOG_CATEGORY_EXTERN(LogWeapon, Log, All);
 
+
+UENUM(BlueprintType)
+enum class ETeam : uint8
+{
+	Ally     UMETA(DisplayName = "아군"),   // 플레이어, 동료
+	Enemy    UMETA(DisplayName = "적"),
+	Neutral  UMETA(DisplayName = "중립"),  
+};
+
 UCLASS(Abstract)
 class ZOMBIEHUNTER1_API ACombatCharacter : public ACharacter
 {
@@ -27,11 +36,6 @@ public:
 
 	void ApplyJobStats(FJobStats Stats);
 	
-
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//Combat
-	//////////////////////////////////////////////////////////////////////////////////////////
-
 	// 공격 몽타주를 반환. => 대체로 공격할때 호출
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	UAnimMontage* GetAttackMontageForJob(EJobType JobType) const;
@@ -66,7 +70,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	bool bArmed = true;
 	
-
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
+	ETeam TeamType;
 
 protected:
 	virtual void BeginPlay() override;

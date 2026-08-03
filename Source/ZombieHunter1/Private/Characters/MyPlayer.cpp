@@ -46,6 +46,9 @@ AMyPlayer::AMyPlayer()
  	// Tick() 업데이트 키는 변수
 	PrimaryActorTick.bCanEverTick = true;
 
+    //디폴트 설정
+    TeamType = ETeam::Ally;
+
 	// 컨트롤러 회전이 캐릭터를 돌리지 않게 함 (조준 방향으로 직접 회전시킴)
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
