@@ -12,6 +12,7 @@
 #include "AITypes.h"
 #include "GameFramework/CharacterMovementComponent.h" //죽을 때 이동 정지
 #include "Components/CapsuleComponent.h"             //죽을 때 충돌 해제
+#include <Characters/CombatRegistrySubsystem.h>
 
 // Sets default values
 AEnemy::AEnemy()
@@ -87,41 +88,19 @@ void AEnemy::TrackingPlayer()
 	{
 		return;
 	}
-
-	AMyPlayer* myPlayer = Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-
-	// 플레이어가 없거나(레벨 전환 등) 내가 죽었으면 추격 안 함.
-	// IsDead를 조회만 한다 — 예전 checkDead()는 입력모드 재설정 같은 부작용이 있어 여기서 부르면 안 됐다.
-	if (!myPlayer || IsDead)
+	if(IsDead)
 	{
 		return;
 	}
-
-	// 타겟 선정: 플레이어 + 살아있는 동료들 중 가장 가까운 대상.
-	// (예전엔 무조건 플레이어만 쫓아서, 동료는 지나가다 스윕에 얻어걸릴 때만 맞았다)
 	const FVector myLocation = GetActorLocation();
-	ACombatCharacter* target = nullptr;
-	float targetDist = FLT_MAX;
-
-	if (!myPlayer->GetIsDead())
+	UCombatRegistrySubsystem* Reg = GetWorld()->GetSubsystem<UCombatRegistrySubsystem>();
+	if (!Reg)
 	{
-		target = myPlayer;
-		targetDist = FVector::Dist2D(myLocation, myPlayer->GetActorLocation());
+		return;
 	}
+	
+	ACombatCharacter * target = Reg->FindNearestOfEnemy(myLocation, ETeam::Ally, 2500);
 
-	for (ACompanion* companion : myPlayer->GetCompanions())
-	{
-		if (!IsValid(companion) || companion->GetIsDead())
-		{
-			continue;
-		}	
-		const float dist = FVector::Dist2D(myLocation, companion->GetActorLocation());
-		if (dist < targetDist)
-		{
-			target = companion;
-			targetDist = dist;
-		}
-	}
 
 	// 전원 사망 → 쫓을 대상 없음
 	if (!target)
@@ -129,7 +108,8 @@ void AEnemy::TrackingPlayer()
 		return;
 	}
 
-	// 거리 LOD: 멀리 있는 적일수록 갱신을 드물게. ±10% 지터로 여러 적이 같은 프레임에 몰리지 않게 분산.
+	const float targetDist = FVector::Dist2D(myLocation, target->GetActorLocation());
+
 	const float Interval = (targetDist > TrackFarDistance) ? TrackFarInterval : TrackNearInterval;
 	NextTrackTime = Now + Interval * FMath::FRandRange(0.9f, 1.1f);
 

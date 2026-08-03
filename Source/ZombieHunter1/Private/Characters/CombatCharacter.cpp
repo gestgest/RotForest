@@ -6,6 +6,8 @@
 #include "Animation/AnimInstance.h"
 #include "Components/WidgetComponent.h" //머리 위 HP 바
 #include "UI/EnemyHPBarWidget.h"
+#include "Characters/CombatRegistrySubsystem.h"
+
 #include "Engine/Engine.h" //화면 디버그 메시지(AddOnScreenDebugMessage)
 
 DEFINE_LOG_CATEGORY(LogWeapon);
@@ -42,6 +44,10 @@ void ACombatCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (UCombatRegistrySubsystem* Reg = GetWorld()->GetSubsystem<UCombatRegistrySubsystem>())
+	{
+		Reg->Register(this);
+	}
 	InitWeaponSlot();
 
 	// 공격 몽타주 Notify → HandleAttackNotify (서브클래스가 실제 공격을 처리).
@@ -55,6 +61,17 @@ void ACombatCharacter::BeginPlay()
 		}
 	}
 
+}
+
+void ACombatCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	//제거
+	if (UCombatRegistrySubsystem* Reg = GetWorld()->GetSubsystem<UCombatRegistrySubsystem>())
+	{
+		Reg->Unregister(this);
+	}
+	
+	Super::EndPlay(EndPlayReason);
 }
 
 void ACombatCharacter::ApplyJobStats(FJobStats Stats)
