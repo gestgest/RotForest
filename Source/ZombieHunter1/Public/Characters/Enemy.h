@@ -120,7 +120,6 @@ private:
 	UPROPERTY()
 	AAIController* aiController = nullptr;
 
-	float attackRange = 100.0f;
 	int enemy_id;
 	bool CanAttack;
 

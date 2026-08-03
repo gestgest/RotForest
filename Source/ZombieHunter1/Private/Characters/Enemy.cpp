@@ -36,9 +36,7 @@ AEnemy::AEnemy()
 void AEnemy::BeginPlay()
 {
 	Super::BeginPlay();
-	SetHP(5);
 	CanAttack = true;
-	Damage = 1;
 	
 	UAnimInstance* animInstance = Cast<UAnimInstance>(GetMesh()->GetAnimInstance());
 	aiController = Cast<AAIController>(GetController());
@@ -116,7 +114,7 @@ void AEnemy::TrackingPlayer()
 	if (aiController)
 	{
 		aiController->SetFocus(target);
-		aiController->MoveToActor(target, attackRange);
+		aiController->MoveToActor(target, AttackRange);
 	}
 }
 
@@ -187,10 +185,10 @@ bool AEnemy::hit()
 	//여기에 함수 죄다 넣어야 함
 	TArray<FHitResult> hitResults;
 	FVector start = GetActorLocation();
-	FVector end = start + (GetActorForwardVector() * attackRange);
+	FVector end = start + (GetActorForwardVector() * AttackRange);
 	
 
-	FCollisionShape sphere = FCollisionShape::MakeSphere(attackRange);
+	FCollisionShape sphere = FCollisionShape::MakeSphere(AttackRange);
 	FCollisionQueryParams queryParams;
 	queryParams.AddIgnoredActor(this);
 
@@ -207,7 +205,7 @@ bool AEnemy::hit()
 	//DrawDebugSphere(
 	//	GetWorld(),
 	//	end,
-	//	attackRange,
+	//	AttackRange,
 	//	32,
 	//	FColor::Green,
 	//	false,

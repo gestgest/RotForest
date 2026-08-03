@@ -41,7 +41,6 @@ public:
 	UAnimMontage* GetAttackMontageForJob(EJobType JobType) const;
 
 
-
 	/////////////////////////////////////////////////////////////////////////////////////////
 	// 직업(Job)
 	//  — 플레이어/동료가 공유한다. 직업이 없는 캐릭터(적)는 그냥 비워두면 된다.
@@ -117,24 +116,6 @@ protected:
 
 
 
-
-
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//Stats
-	//////////////////////////////////////////////////////////////////////////////////////////
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
-	int32 MaxHP = 5;
-
-	// SetHP로만 소통하자
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
-	int32 HP = 5;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
-	int32 Damage = 1;
-
-	/** 죽었는지 여부. HP<=0이면 true. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
-	bool IsDead = false;
 
 
 
@@ -229,6 +210,23 @@ private:
 	UFUNCTION()
 	void OnMontageNotifyBegin(FName NotifyName, const FBranchingPointNotifyPayload& Payload);
 
+protected:
+	// SetHP로만 소통하자
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	int32 HP = 5;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	int32 Damage = 1;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	int32 MaxHP = 5;
+
+	/** 죽었는지 여부. HP<=0이면 true. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	bool IsDead = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float AttackRange = 100.0f;
 
 public: 
 	//property

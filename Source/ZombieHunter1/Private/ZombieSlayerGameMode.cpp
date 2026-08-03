@@ -48,12 +48,11 @@ void AZombieSlayerGameMode::init()
     enemy_size = 0;
     coin_size = 0;
 
-
-    for (int i = 0; i < MAX_ENEMY_SIZE; i++)
+    for (int i = 0; i < Max_Enemy_Size; i++)
     {
         initEnemy(i);
     }
-    for (int i = 0; i < MAX_COIN_SIZE; i++)
+    for (int i = 0; i < Max_Coin_Size; i++)
     {
         initCoin(i);
     }
@@ -162,7 +161,7 @@ void AZombieSlayerGameMode::SpawnEnemy()
         //왜인지 모르지만 정 가운데가 pivot이라 +90을 해야한다.
         enemy->SetActorLocation(resultLocation.Location + upVector); 
         enemy->WakeFromPool();  // 숨김 해제 + 콜리전/이동/틱 복구
-        enemy->SetHP(5);        // 죽었던 적이면 부활 전환(OnRevive)까지 발동
+        enemy->SetHP(enemy->GetMaxHP());        // 죽었던 적이면 부활 전환(OnRevive)까지 발동
 
         enemy_size++;
     }

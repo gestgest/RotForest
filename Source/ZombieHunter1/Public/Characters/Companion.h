@@ -37,10 +37,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion")
 	float DetectRadius = 900.0f;
 
-	/** 공격 사거리(cm). 적이 이 거리 안이면 멈춰서 공격한다. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion")
-	float AttackRange = 160.0f;
-
 	/** 리더와 유지할 거리(cm). 이보다 멀어지면 따라간다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion")
 	float FollowDistance = 250.0f;
