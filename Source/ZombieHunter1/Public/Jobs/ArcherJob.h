@@ -23,6 +23,7 @@ class ZOMBIEHUNTER1_API UArcherJob : public UJobComponent
 public:
 	UArcherJob();
 
+	//사실 궁수가 특이한거지 원래 몽타주가 끝나면 공격함수가 호출을 안한다.
 	 void OnAttackMontageEnded() override;
 
 	/** 발사할 화살 액터 클래스. BP에서 메시 달린 BP_Arrow를 지정하면 보임. */

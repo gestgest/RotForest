@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -20,6 +20,9 @@ class ZOMBIEHUNTER1_API UMageJob : public UJobComponent
 
 public:
 	UMageJob();
+	
+	virtual void OnAttackNotify(FName NotifyName) override;
+
 
 	/** 발사할 마법 발사체 클래스. BP에서 이펙트 달린 BP_Fireball을 지정하면 보임. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Mage")
