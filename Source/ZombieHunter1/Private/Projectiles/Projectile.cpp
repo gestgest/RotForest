@@ -3,11 +3,12 @@
 #include "Characters/Enemy.h"
 #include "TimerManager.h"
 #include "Components/SphereComponent.h"
-#include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Engine/OverlapResult.h" // FOverlapResult (범위 폭발 오버랩 결과)
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h" // 디버그 범위 시각화
+#include "NiagaraFunctionLibrary.h" 
+
 
 //투사체
 AProjectile::AProjectile()
@@ -22,9 +23,9 @@ AProjectile::AProjectile()
 	RootComponent = CollisionSphere;
 
 	// 시각 메시 (BP에서 화살 메시를 지정). 충돌은 구체가 담당하므로 메시는 충돌 끔.
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	Mesh->SetupAttachment(RootComponent);
-	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	VisualRoot = CreateDefaultSubobject<USceneComponent>(TEXT("VisualRoot"));
+	VisualRoot->SetupAttachment(RootComponent);
+	//VisualRoot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// 직선 비행
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
@@ -41,6 +42,13 @@ void AProjectile::BeginPlay()
 	Super::BeginPlay();
 
 	CollisionSphere->OnComponentBeginOverlap.AddDynamic(this, &AProjectile::OnSphereOverlap);
+
+	// BP가 VisualRoot 아래에 붙인 시각 컴포넌트를 한 번만 수집해 캐시.
+	// 첫 인자 true = 손자 컴포넌트까지 전부 포함.
+	if (VisualRoot)
+	{
+		VisualRoot->GetChildrenComponents(true, CachedVisuals);
+	}
 }
 
 void AProjectile::ActivateFromPool()
@@ -70,6 +78,15 @@ void AProjectile::ActivateFromPool()
 		ProjectileMovement->Activate(true);
 	}
 
+	// BP가 붙인 시각 컴포넌트를 켠다. Activate는 자식으로 전파되지 않아 직접 순회한다.
+	for (USceneComponent* Visual : CachedVisuals)
+	{
+		if (Visual)
+		{
+			Visual->Activate(/*bReset=*/true); // true = 나이아가라를 처음부터 다시 재생
+		}
+	}
+
 	// 디버그 사거리 라인 기준점 기록 (발사 지점/방향)
 	SpawnLocation = GetActorLocation();
 	SpawnForward = GetActorForwardVector();
@@ -92,6 +109,16 @@ void AProjectile::DeactivateForPool()
 	{
 		ProjectileMovement->StopMovementImmediately();
 		ProjectileMovement->Deactivate();
+	}
+
+
+	// 시각 컴포넌트 정지. 숨기기(SetActorHiddenInGame)만으로는 파티클 시뮬레이션이 안 멈춘다.
+	for (USceneComponent* Visual : CachedVisuals)
+	{
+		if (Visual)
+		{
+			Visual->Deactivate();
+		}
 	}
 }
 
@@ -136,7 +163,7 @@ void AProjectile::Tick(float DeltaSeconds)
 
 	// 최대 사거리 = 속도 × 수명. 발사 지점에서 진행 방향으로 라인 + 끝점 표시.
 	const float Speed = ProjectileMovement ? ProjectileMovement->MaxSpeed : 0.0f;
-	const float MaxRange = Speed * InitialLifeSpan;
+	const float MaxRange = Speed * LifeSeconds;
 	if (MaxRange > 0.0f)
 	{
 		const FVector EndPoint = SpawnLocation + SpawnForward * MaxRange;
@@ -156,6 +183,7 @@ void AProjectile::SetInitialSpeed(float Speed)
 	}
 }
 
+//적이 투사체를 맞춘다면
 void AProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
 	bool bFromSweep, const FHitResult& SweepResult)
@@ -204,6 +232,11 @@ void AProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* O
 	{
 		// 단일 대상 (화살 등)
 		ApplyHit(HitEnemy);
+	}
+
+	if (HitEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, HitEffect, GetActorLocation());
 	}
 
 	if (HitSound)

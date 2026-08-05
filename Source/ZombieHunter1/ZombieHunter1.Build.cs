@@ -17,7 +17,8 @@ public class ZombieHunter1 : ModuleRules
             "Slate",        // 슬레이트 UI (FSlateBrush 등)
             "SlateCore",    // 슬레이트 코어
             "AIModule",
-            "NavigationSystem"  // 경로 찾기 기능
+            "NavigationSystem",  // 경로 찾기 기능
+            "Niagara"
         });
     }
 }

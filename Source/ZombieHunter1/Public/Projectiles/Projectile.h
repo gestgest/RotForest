@@ -7,9 +7,9 @@
 #include "Projectile.generated.h"
 
 class USphereComponent;
-class UStaticMeshComponent;
 class UProjectileMovementComponent;
 class USoundBase;
+class UNiagaraSystem;
 
 /**
  * 화살/투사체 액터.
@@ -25,7 +25,7 @@ public:
 	AProjectile();
 
 	/** 적중 시 가하는 피해량. 스폰한 직업이 설정한다. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
 	int32 Damage = 1;
 
 	/** 적중 시 적을 밀어내는 힘 */
@@ -35,10 +35,6 @@ public:
 	/** >0이면 적중 지점 주변 이 반경(cm) 안의 모든 적에게 피해(범위 폭발). 0이면 단일 대상. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
 	float ExplosionRadius = 0.0f;
-
-	/** 적중 시 재생할 사운드 (선택) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
-	USoundBase* HitSound = nullptr;
 
 	/** 디버깅 범위 표시 => 어차피 job에서 설정해준다. */
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile|Debug")
@@ -57,9 +53,37 @@ public:
 	/** 적중·수명만료 시 자신을 비활성화하고 풀로 반환한다. 풀이 없으면 Destroy로 폴백. */
 	void ReturnToPool();
 
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
+
+
+	// 변수
+	// 발사체 시각 메시 (BP에서 메시 지정)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
+	USceneComponent* VisualRoot;
+
+	// VisualRoot 아래에 BP가 붙인 시각 컴포넌트들. BeginPlay에서 한 번 모아두고
+	// 풀 활성/비활성 때 순회한다. (Activate/Deactivate는 자식으로 전파되지 않는다)
+	UPROPERTY()
+	TArray<USceneComponent*> CachedVisuals;
+
+
+	// 적중 시 터뜨릴 이펙트
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
+	UNiagaraSystem* HitEffect = nullptr;     // ← 추가
+
+
+	// 적중 시 재생할 사운드 (선택)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
+	USoundBase* HitSound = nullptr;
+
+
+
+
+
+
 
 	/** 풀에서 쉬는 동안 보이지 않게 + 충돌/이동/틱 정지. */
 	void DeactivateForPool();
@@ -77,9 +101,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	USphereComponent* CollisionSphere;
 
-	/** 화살 시각 메시 (BP에서 메시 지정) */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
-	UStaticMeshComponent* Mesh;
 
 	/** 직선 비행 이동 컴포넌트 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
