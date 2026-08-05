@@ -52,15 +52,6 @@ Plugins/**/Binaries/*
 # Builds
 Build/*
 
-# Resource
-# large files => SVN
-Content/Characters/*
-Content/StarterContent/*
-Content/ElfArden/*
-Content/SKnight_modular/*
-Content/Assassin/*
-Content/Necropolis/*
-Content/FreeModularMagicSFX/*
 
 
 # Whitelist PakBlacklist-<BuildConfiguration>.txt files
@@ -89,3 +80,31 @@ UpgradeLog*.htm
 Backup/
 Backup*/
 _UpgradeReport_Files/
+
+
+# Resource
+# large files => SVN
+
+#나중에 AS 폴더 옮기면 AS만 ignore
+#Content/Characters/Companion/* 이거는
+
+#ElfArden => BP와 ABP AM은 무시안함
+Content/Characters/ElfArden/Animations/AS
+Content/Characters/ElfArden/Animations/UE5_EpicSkeleton
+Content/Characters/ElfArden/BaseMesh/*
+Content/Characters/ElfArden/Blueprint/Rig/*
+Content/Characters/ElfArden/Demo/*
+Content/Characters/ElfArden/Input/*
+Content/Characters/ElfArden/Materials/*
+Content/Characters/ElfArden/Textures/*
+
+Content/Characters/Mannequin_UE4/*
+Content/Characters/Mannequins/*
+Content/Characters/SKnight_modular/*
+#Content/Characters/Wizard/*
+
+Content/StarterContent/*
+Content/SKnight_modular/*
+Content/Assassin/*
+Content/Necropolis/*
+Content/VFX_Magic/*
