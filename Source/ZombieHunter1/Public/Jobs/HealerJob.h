@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -39,6 +39,8 @@ public:
 	virtual void Attack() override;
 
 protected:
+	virtual void TickJob(float DeltaTime) override;
+
 	/** 대상 아군(플레이어/동료)을 MaxHP까지 회복 */
 	void HealCharacter(ACombatCharacter* Target);
 };

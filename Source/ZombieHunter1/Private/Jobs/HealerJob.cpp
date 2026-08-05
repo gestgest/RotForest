@@ -4,6 +4,8 @@
 #include "Characters/CombatCharacter.h"
 #include "Characters/Enemy.h"
 #include "Engine/World.h"
+#include "DrawDebugHelpers.h" // 힐 범위 디버그
+
 
 // 힐러는 적을 때리지 않는다. "공격"은 힐 시전이고, 닿은 아군을 회복한다.
 UHealerJob::UHealerJob()
@@ -39,6 +41,7 @@ void UHealerJob::Attack()
 		return;
 	}
 
+	bool bDidHeal = false;
 	TArray<FHitResult> Hits;
 	const FVector Start = OwnerCharacter->GetActorLocation();
 	const FVector End = Start + OwnerCharacter->GetActorForwardVector() * HealRange;
@@ -58,6 +61,16 @@ void UHealerJob::Attack()
 			HealCharacter(Ally);
 		}
 	}
+
+	// 시전 순간: 아군이 잡혔으면 초록으로 한 번 강조(상시 표시는 TickJob에서)
+	if (bDebugAttack)
+	{
+		const FColor Color = bDidHeal ? FColor::Green : FColor::Silver;
+		DrawDebugSphere(World, Start, HealRadius, 12, Color, false, 1.0f, 0, 3.0f);
+		DrawDebugSphere(World, End, HealRadius, 12, Color, false, 1.0f, 0, 3.0f);
+		DrawDebugLine(World, Start, End, Color, false, 1.0f, 0, 3.0f);
+	}
+
 }
 
 void UHealerJob::HealCharacter(ACombatCharacter* Target)
@@ -75,4 +88,33 @@ void UHealerJob::HealCharacter(ACombatCharacter* Target)
 		const int32 NewHP = FMath::Min(Target->GetHP() + HealAmount, Target->GetMaxHP());
 		Target->SetHP(NewHP);
 	}
+}
+
+
+// 힐은 10초에 한 번이라 Attack()에서만 그리면 거의 안 보인다. 매 프레임 현재 힐 범위를 그린다.
+void UHealerJob::TickJob(float DeltaTime)
+{
+	Super::TickJob(DeltaTime);
+
+	if (!bDebugAttack || !OwnerCharacter)
+	{
+		return;
+	}
+
+	UWorld* World = OwnerCharacter->GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const FVector Start = OwnerCharacter->GetActorLocation();
+	const FVector End = Start + OwnerCharacter->GetActorForwardVector() * HealRange;
+	const FColor Color = FColor::Cyan; // 힐 범위는 청록 — 전사 공격(초록/빨강)과 구분
+
+	DrawDebugSphere(World, Start, HealRadius, 12, Color, false, -1.0f, 0, 1.0f);
+	DrawDebugSphere(World, End, HealRadius, 12, Color, false, -1.0f, 0, 1.0f);
+	DrawDebugLine(World, Start, End, Color, false, -1.0f, 0, 1.0f);
+
+	// 자힐은 스윕에서 자신을 무시하므로 별도 표시
+	DrawDebugSphere(World, Start, 40.0f, 8, FColor::Blue, false, -1.0f, 0, 1.0f);
 }
