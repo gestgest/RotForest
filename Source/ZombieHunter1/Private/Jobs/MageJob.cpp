@@ -19,7 +19,6 @@ void UMageJob::Attack()
 {
 	// 공격 몽타주가 있으면 재생(시전 모션). 발사체는 곧바로 발사.
 	Super::Attack();
-	//CastSpell();
 }
 
 void UMageJob::CastSpell()
@@ -32,7 +31,6 @@ void UMageJob::CastSpell()
 	}
 }
 
-//여기서 이제 todo
 void UMageJob::OnAttackNotify(FName NotifyName)
 {
 	if(NotifyName == "Attack")

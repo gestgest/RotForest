@@ -22,6 +22,7 @@ public:
 	UMageJob();
 	
 	virtual void OnAttackNotify(FName NotifyName) override;
+	virtual void Attack() override;
 
 
 	/** 발사할 마법 발사체 클래스. BP에서 이펙트 달린 BP_Fireball을 지정하면 보임. */
@@ -44,7 +45,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Mage")
 	float MuzzleHeight = 50.0f;
 
-	virtual void Attack() override;
 
 protected:
 	/** 전방으로 폭발 마법 발사체 1발 발사 */

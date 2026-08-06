@@ -21,7 +21,10 @@ class ZOMBIEHUNTER1_API UHealerJob : public UJobComponent
 public:
 	UHealerJob();
 
-	/** 한 번에 회복하는 체력 */
+	virtual void OnAttackNotify(FName NotifyName) override ;
+	void Heal();
+
+	// 한 번에 회복하는 체력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Healer")
 	int32 HealAmount = 1;
 
@@ -33,7 +36,7 @@ public:
 
 	/** 힐 범위 반경(cm) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Healer")
-	float HealRadius = 80.0f;
+	float HealRadius = 500.0f;
 
 	/** 공격 대신 힐을 시전한다 */
 	virtual void Attack() override;

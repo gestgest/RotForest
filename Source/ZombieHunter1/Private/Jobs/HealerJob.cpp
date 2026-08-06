@@ -4,6 +4,7 @@
 #include "Characters/CombatCharacter.h"
 #include "Characters/Enemy.h"
 #include "Engine/World.h"
+#include "Engine/OverlapResult.h" 
 #include "DrawDebugHelpers.h" // 힐 범위 디버그
 
 
@@ -18,59 +19,12 @@ UHealerJob::UHealerJob()
 	Stats.AttackInterval = 10;
 }
 
+//힐하는 거임
 void UHealerJob::Attack()
 {
 	// 힐 시전 모션(몽타주)이 있으면 재생. 힐 자체는 아래에서 즉시 처리한다.
 	Super::Attack();
-
-	if (!OwnerCharacter)
-	{
-		return;
-	}
-
-	// 1) 시전자 자신 회복 — HP는 이제 공용 베이스(ACombatCharacter)에 있어 플레이어/동료 모두 가능.
-	if (ACombatCharacter* Self = Cast<ACombatCharacter>(OwnerCharacter))
-	{
-		HealCharacter(Self);
-	}
-
-	// 2) 전방 범위의 아군(동료)도 회복 — 동료 시스템용
-	UWorld* World = OwnerCharacter->GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	bool bDidHeal = false;
-	TArray<FHitResult> Hits;
-	const FVector Start = OwnerCharacter->GetActorLocation();
-	const FVector End = Start + OwnerCharacter->GetActorForwardVector() * HealRange;
-
-	FCollisionShape Sphere = FCollisionShape::MakeSphere(HealRadius);
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(OwnerCharacter); // 자신은 위에서 이미 회복
-
-	World->SweepMultiByChannel(Hits, Start, End, FQuat::Identity, ECC_Pawn, Sphere, Params);
-
-	for (const FHitResult& Hit : Hits)
-	{
-		// 아군(플레이어/동료)만 회복한다 — 적(AEnemy)은 제외.
-		ACombatCharacter* Ally = Cast<ACombatCharacter>(Hit.GetActor());
-		if (Ally && !Ally->IsA(AEnemy::StaticClass()))
-		{
-			HealCharacter(Ally);
-		}
-	}
-
-	// 시전 순간: 아군이 잡혔으면 초록으로 한 번 강조(상시 표시는 TickJob에서)
-	if (bDebugAttack)
-	{
-		const FColor Color = bDidHeal ? FColor::Green : FColor::Silver;
-		DrawDebugSphere(World, Start, HealRadius, 12, Color, false, 1.0f, 0, 3.0f);
-		DrawDebugSphere(World, End, HealRadius, 12, Color, false, 1.0f, 0, 3.0f);
-		DrawDebugLine(World, Start, End, Color, false, 1.0f, 0, 3.0f);
-	}
-
+	//Heal();
 }
 
 void UHealerJob::HealCharacter(ACombatCharacter* Target)
@@ -91,7 +45,8 @@ void UHealerJob::HealCharacter(ACombatCharacter* Target)
 }
 
 
-// 힐은 10초에 한 번이라 Attack()에서만 그리면 거의 안 보인다. 매 프레임 현재 힐 범위를 그린다.
+// 힐은 10초에 한 번이라 Attack()에서만 그리면 거의 안 보인다. 매 프레임 현재 힐 범위를 그린다. 
+//= > 미안하다 이거 이제 범위 표시가 필요없다.
 void UHealerJob::TickJob(float DeltaTime)
 {
 	Super::TickJob(DeltaTime);
@@ -107,14 +62,64 @@ void UHealerJob::TickJob(float DeltaTime)
 		return;
 	}
 
-	const FVector Start = OwnerCharacter->GetActorLocation();
-	const FVector End = Start + OwnerCharacter->GetActorForwardVector() * HealRange;
-	const FColor Color = FColor::Cyan; // 힐 범위는 청록 — 전사 공격(초록/빨강)과 구분
+	//const FVector Start = OwnerCharacter->GetActorLocation();
+	//const FVector End = Start + OwnerCharacter->GetActorForwardVector() * HealRange;
+	//const FColor Color = FColor::Cyan; // 힐 범위는 청록 — 전사 공격(초록/빨강)과 구분
 
-	DrawDebugSphere(World, Start, HealRadius, 12, Color, false, -1.0f, 0, 1.0f);
-	DrawDebugSphere(World, End, HealRadius, 12, Color, false, -1.0f, 0, 1.0f);
-	DrawDebugLine(World, Start, End, Color, false, -1.0f, 0, 1.0f);
+	//DrawDebugCircle(World, Start, HealRadius, 12, Color, false, -1.0f, 0, 1.0f);
+}
 
-	// 자힐은 스윕에서 자신을 무시하므로 별도 표시
-	DrawDebugSphere(World, Start, 40.0f, 8, FColor::Blue, false, -1.0f, 0, 1.0f);
+
+
+void UHealerJob::OnAttackNotify(FName NotifyName)
+{
+	if (NotifyName == "Attack")
+		Heal();
+}
+
+void UHealerJob::Heal()
+{
+	if (!OwnerCharacter)
+	{
+		return;
+	}
+
+	// 1) 시전자 자신 회복 — HP는 이제 공용 베이스(ACombatCharacter)에 있어 플레이어/동료 모두 가능.
+	if (ACombatCharacter* Self = Cast<ACombatCharacter>(OwnerCharacter))
+	{
+		HealCharacter(Self);
+	}
+
+	UWorld* World = OwnerCharacter->GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// 2) 전방 범위의 아군(동료)도 회복 — 동료 시스템용
+	bool bDidHeal = false;
+	const FVector Center = OwnerCharacter->GetActorLocation();
+
+	TArray<FOverlapResult> Overlaps;
+
+	World->OverlapMultiByChannel(Overlaps, Center, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(HealRange));
+
+	for (const FOverlapResult& Overlap : Overlaps)
+	{
+		// 아군(플레이어/동료)만 회복한다 — 적(AEnemy)은 제외.
+		ACombatCharacter* Ally = Cast<ACombatCharacter>(Overlap.GetActor());
+		if (Ally && !Ally->IsA(AEnemy::StaticClass()))
+		{
+			HealCharacter(Ally);
+			bDidHeal = true;
+		}
+	}
+
+	// 시전 순간: 아군이 잡혔으면 초록으로 한 번 강조(상시 표시는 TickJob에서)
+	if (bDebugAttack)
+	{
+		const FColor Color = bDidHeal ? FColor::Green : FColor::Silver;
+		DrawDebugCircle(World, Center, HealRadius, 32, Color, false, 2.0f, 0, 1.0f,
+			FVector(1, 0, 0), FVector(0, 1, 0), false);
+	}
 }
