@@ -40,10 +40,9 @@ struct FPOIInfo
 	bool bIsCenter = false;	// GetPOIAtChunk가 채움: 질의한 청크가 POI 중심 청크인지 (건물/NPC 스폰은 중심에서 한 번만)
 };
 
-/**
- * 플레이어를 따라다니며 주변 청크를 동적으로 생성/제거하는 무한 맵 생성기.
- * 레벨에 하나 배치하고 Details 패널에서 바닥/장애물 메시를 지정해 사용한다.
- */
+// 플레이어를 따라다니며 주변 청크를 동적으로 생성/제거하는 무한 맵 생성기.
+// 레벨에 하나 배치하고 Details 패널에서 바닥/장애물 메시를 지정해 사용한다.
+
 UCLASS()
 class ZOMBIEHUNTER1_API AInfiniteMapGenerator : public AActor
 {
@@ -53,34 +52,52 @@ public:
 	AInfiniteMapGenerator();
 	virtual void Tick(float DeltaTime) override;
 
-	/** 월드 좌표가 "마을" 발자국 안인지 (적 스폰 제외 등 외부 질의용. 좀비마을은 해당 안 됨) */
-	bool IsLocationInVillage(const FVector& WorldLocation) const;
+
+private:
+	void UpdateChunks(const FIntPoint& Center);
+	void GenerateChunk(const FIntPoint& Coord);
+	void SpawnObstacles(FRandomStream& Stream, FMapChunk& Chunk, FVector Origin, bool bIsPOIChunk);
+	void UnloadChunk(const FIntPoint& Coord);
 
 protected:
 	virtual void BeginPlay() override;
 
-	/** 레벨을 떠날 때(메뉴 복귀/PIE 종료) 아직 로드 중인 청크는 UnloadChunk를 안 거치므로,
-	 *  그 안의 발판 상태를 여기서 마지막으로 저장한다. */
+	// 레벨을 떠날 때(메뉴 복귀/PIE 종료) 아직 로드 중인 청크는 UnloadChunk를 안 거치므로,
+	// 그 안의 발판 상태를 여기서 마지막으로 저장한다. 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	//////////////////////////////////////////////////////////////////////////
-	// [디버그]
-	//////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////┐
+	//Generate 함수
+	//청크가 생성될때 실행된다.
+	void SetupFloor(const FVector& Center, FMapChunk& Chunk, UMaterialInterface* FloorMat);
+	void SpawnFog(const FVector& Center, FMapChunk& Chunk);
+	void SetupVillege(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
+	void SpawnVillageGuards(const FVector& Center, FMapChunk& Chunk);
+	void SpawnVillagers(const FVector& Center, FMapChunk& Chunk);
 
-	//켜면 청크 생성/갱신을 전부 멈춤. 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Debug")
-	bool debugDisableGeneration = false;
+	// 마을 외곽 링(고정 슬롯 6곳)에 구조물 배치 — 스폰존 방향과 그 반대쪽은 비워서 길처럼 보이게 함.
+	//  슬롯 좌표는 고정이고, 슬롯당 메시 선택/스케일만 청크 시드로 살짝 흔든다.
+	void SpawnVillageStructures(const FVector& Center, FMapChunk& Chunk, FRandomStream& Stream);
+	AStaticMeshActor* SpawnObstacleMesh(UStaticMesh* Mesh, const FVector& Location,
+		const FRotator& Rotation, const FVector& Scale, UMaterialInterface* OverrideMat);
+	//////////////////////////////////////////////////////////////////////////┘
 
 
 
 
 
 
-	//////////////////////////////////////////////////////////////////////////
-	// 기본 설정
-	//////////////////////////////////////////////////////////////////////////
 
-	/** 청크 한 변의 길이(cm) */
+
+
+
+
+
+
+
+	//////////////////////////////////////////////////////////////////////////┐
+	// 청크 기본 설정
+	// 청크 한 변의 길이(cm) 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map")
 	float ChunkSize = 2000.f;
 
@@ -93,28 +110,22 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map")
 	float UpdateInterval = 0.25f;
 
-	/** 켜면 NavMeshBoundsVolume를 플레이어 따라 옮겨, 무한맵 어디로 가도 그 주변에 NavMesh가 깔리게 한다.
-	 *  (볼륨은 인보커 반경 + 여유를 덮을 정도면 충분 — 너무 거대하게 둘 필요 없음) */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|Navigation")
-	bool bFollowNavBounds = true;
-
 	/** 전역 시드. 같은 시드+같은 청크 좌표면 항상 동일하게 생성됨 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map")
 	int32 GlobalSeed = 1337;
+	//////////////////////////////////////////////////////////////////////////┘
 
 
 
 
 
-	//////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////┐
 	// 바닥
-	//////////////////////////////////////////////////////////////////////////
-
-	/** 바닥 타일 메시 (예: LevelPrototyping/Meshes/SM_Cube) */
+	// 바닥 타일 메시
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|Floor")
 	TObjectPtr<UStaticMesh> FloorMesh;
 
-	/** 바닥에 덮어씌울 머티리얼(선택) */
+	// 바닥에 덮어씌울 머티리얼
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|Floor")
 	TObjectPtr<UMaterialInterface> FloorMaterial;
 
@@ -125,19 +136,15 @@ protected:
 	/** 바닥 두께(cm). 윗면이 Z=0에 오도록 배치됨 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|Floor")
 	float FloorThickness = 20.f;
+	//////////////////////////////////////////////////////////////////////////┘
 
 
 
 
 
-
-
-	//////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////┐
 	// 장애물
-	//////////////////////////////////////////////////////////////////////////
-
-
-	/** 장애물 후보 메시들 (랜덤으로 골라 배치) */
+	// 장애물 후보 메시들 (랜덤으로 골라 배치) 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|Obstacles")
 	TArray<TObjectPtr<UStaticMesh>> ObstacleMeshes;
 
@@ -157,18 +164,29 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|Obstacles")
 	float ObstacleMaxScale = 2.0f;
 
-	/** 장애물이 청크 가장자리에서 떨어질 여백(cm) */
+	// 장애물이 청크 가장자리에서 떨어질 여백(cm) 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|Obstacles")
 	float ChunkEdgeMargin = 150.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Fog")
+	TSubclassOf<AActor> FogClass;
+
+	//안개 높이 cm
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Fog")
+	float FogSizeHeight = 200;
+		
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Fog")
+	float FogBaseSize = 100.f;
+	//////////////////////////////////////////////////////////////////////////┘
 
 
 
 
 
-	////////////////////////////////////////////////////////////////////////////////////////////////
+
+	//////////////////////////////////////////////////////////////////////////┐
 	// POI (마을/좀비마을 — 특수 지역)
-	////////////////////////////////////////////////////////////////////////////////////////////////
 	// 청크를 리전(RegionSizeInChunks²) 단위로 묶고, 리전마다 시드 해시로 최대 1개의 POI를 정한다.
 
 	//그러니까 8x8청크에 하나의 리전 존재
@@ -228,17 +246,25 @@ protected:
 	/** 외곽 링 슬롯 6개 중 앞에서부터 몇 개나 채울지. 낮추면 구조물 빈도가 줄어든다. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI", meta = (ClampMin = "0", ClampMax = "6"))
 	int32 VillageStructureCount = 6;
+	//////////////////////////////////////////////////////////////////////////┘
 
-	/** 켜면 POI 청크 생성 시 경계 박스(마을=초록, 좀비마을=빨강)와 로그를 남긴다. */
+
+
+	//////////////////////////////////////////////////////////////////////////┐
+	// 디버깅
+	// 켜면 POI 청크 생성 시 경계 박스(마을=초록, 좀비마을=빨강)와 로그를 남긴다. 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI|Debug")
 	bool bDebugDrawPOI = true;
 
-
+	//켜면 청크 생성/갱신을 전부 멈춤. 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Debug")
+	bool debugDisableGeneration = false;
+	//////////////////////////////////////////////////////////////////////////┘
 
 
 
 private:
-	/** 현재 로드된 청크들 (좌표 → 스폰 액터들) */
+	// 현재 로드된 청크들 (좌표 → 스폰 액터들)
 	UPROPERTY()
 	TMap<FIntPoint, FMapChunk> LoadedChunks;
 
@@ -256,15 +282,7 @@ private:
 	/** NavMeshBoundsVolume를 플레이어 위치로 옮기고 내비 시스템에 갱신을 통지 */
 	void UpdateNavBoundsToPlayer();
 
-
-
-
-
 	FIntPoint WorldToChunk(const FVector& WorldLocation) const;
-	void UpdateChunks(const FIntPoint& Center);
-	void GenerateChunk(const FIntPoint& Coord);
-	void SpawnObstacles(FRandomStream& Stream, FMapChunk& Chunk, FVector Origin, bool bIsPOIChunk);
-	void UnloadChunk(const FIntPoint& Coord);
 
 
 
@@ -283,27 +301,16 @@ private:
 	/** POI 발자국 반경(청크 수). 발자국 한 변 = 2R+1. 리전을 벗어나지 않게 제한된 값 */
 	int32 GetPOIRadiusInChunks() const;
 
-	AStaticMeshActor* SpawnMeshActor(UStaticMesh* Mesh, const FVector& Location,
-		const FRotator& Rotation, const FVector& Scale, UMaterialInterface* OverrideMat);
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////
-	/// Villege
-	///////////////////////////////////////////////////////////////////////////////////////////////////
 
-	void SetupVillege(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
 
-	/** 경비병: 발판 주변 고정 자리(대각선 네 모서리)에 경비 모드로 스폰 */
-	void SpawnVillageGuards(const FVector& Center, FMapChunk& Chunk);
-
-	/** 주민(비전투): 발판과 안 겹치는 고정 자리에서 시작해 마을 중심 주변을 배회 */
-	void SpawnVillagers(const FVector& Center, FMapChunk& Chunk);
-
-	/** 마을 외곽 링(고정 슬롯 6곳)에 구조물 배치 — 스폰존 방향과 그 반대쪽은 비워서 길처럼 보이게 함.
-	 *  슬롯 좌표는 고정이고, 슬롯당 메시 선택/스케일만 청크 시드로 살짝 흔든다. */
-	void SpawnVillageStructures(const FVector& Center, FMapChunk& Chunk, FRandomStream& Stream);
 
 	/** 발판 상태가 기본값과 다르면 GameInstance에 저장 (UnloadChunk와 EndPlay 두 출구에서 호출).
 	 *  기본값 그대로면 저장 스킵 — 시드가 재생성하는 값은 기억할 필요 없다(delta만 저장). */
 	void SavePadStateIfChanged(const FIntPoint& Coord, class AMoneyPadZone* Pad) const;
 
+
+public:
+	// 월드 좌표가 "마을" 발자국 안인지 (적 스폰 제외 등 외부 질의용. 좀비마을은 해당 안 됨) 
+	bool IsLocationInVillage(const FVector& WorldLocation) const;
 };

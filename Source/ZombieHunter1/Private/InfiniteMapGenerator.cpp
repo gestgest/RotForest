@@ -65,23 +65,20 @@ void AInfiniteMapGenerator::BeginPlay()
 
 	//플레이어 추격
 	// NavMeshBoundsVolume를 레벨에서 찾아 캐시하고, 플레이어 위치로 한 번 맞춰둔다.
-	if (bFollowNavBounds)
+	TArray<AActor*> Found;
+	UGameplayStatics::GetAllActorsOfClass(this, ANavMeshBoundsVolume::StaticClass(), Found);
+	if (Found.Num() > 0)
 	{
-		TArray<AActor*> Found;
-		UGameplayStatics::GetAllActorsOfClass(this, ANavMeshBoundsVolume::StaticClass(), Found);
-		if (Found.Num() > 0)
-		{
-			NavBoundsVolume = Cast<ANavMeshBoundsVolume>(Found[0]);
+		NavBoundsVolume = Cast<ANavMeshBoundsVolume>(Found[0]);
 
-			// 런타임에 SetActorLocation으로 옮기려면 브러시(루트) 컴포넌트가 Movable이어야 한다.
-			// (기본은 Static이라 "무버블이어야 합니다" 에러가 나고 이동이 무시됨)
-			if (NavBoundsVolume && NavBoundsVolume->GetRootComponent())
-			{
-				NavBoundsVolume->GetRootComponent()->SetMobility(EComponentMobility::Movable);
-			}
+		// 런타임에 SetActorLocation으로 옮기려면 브러시(루트) 컴포넌트가 Movable이어야 한다.
+		// (기본은 Static이라 "무버블이어야 합니다" 에러가 나고 이동이 무시됨)
+		if (NavBoundsVolume && NavBoundsVolume->GetRootComponent())
+		{
+			NavBoundsVolume->GetRootComponent()->SetMobility(EComponentMobility::Movable);
 		}
-		UpdateNavBoundsToPlayer();
 	}
+	UpdateNavBoundsToPlayer();
 }
 
 
@@ -122,10 +119,7 @@ void AInfiniteMapGenerator::Tick(float DeltaTime)
 
 		// 청크가 바뀐 시점에만(=플레이어가 한 청크 이동) NavMesh 경계도 플레이어로 따라 옮긴다.
 		// 매 프레임이 아니라 이 시점에만 해서 내비 리빌드 부담을 줄인다.
-		if (bFollowNavBounds)
-		{
-			UpdateNavBoundsToPlayer();
-		}
+		UpdateNavBoundsToPlayer();
 	}
 }
 
@@ -263,21 +257,8 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 		}
 	}
 	
-	if (FloorMesh) //바닥 깔기 : 마을 실질적으로 까는 건 이때쯤
-	{
-		const float Base = FMath::Max(1.f, FloorMeshBaseSize);
-		const float XYScale = ChunkSize / Base;
-		const float ZScale = FloorThickness / Base;
-		const FVector FloorScale(XYScale, XYScale, ZScale);
-		const FVector FloorLoc = Center - FVector(0.f, 0.f, FloorThickness * 0.5f);
-
-		//마을 깔기
-		if (AStaticMeshActor* Floor = SpawnMeshActor(FloorMesh, FloorLoc, FRotator::ZeroRotator, FloorScale, FloorMat))
-		{
-			Chunk.SpawnedActors.Add(Floor);
-		}
-	}
-
+	SetupFloor(Center, Chunk, FloorMat);
+	SpawnFog(Center, Chunk);
 	SetupVillege(bIsPOIChunk, POI, Center, Chunk, Stream);
 
 	//POI : 마을이나 좀비마을 와이어 박스 만듬
@@ -294,7 +275,6 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 	}
 
 	SpawnObstacles(Stream, Chunk, Origin, bIsPOIChunk);
-
 	LoadedChunks.Add(Coord, MoveTemp(Chunk));
 }
 
@@ -321,7 +301,7 @@ void AInfiniteMapGenerator::SpawnObstacles(FRandomStream & Stream, FMapChunk & C
 			//const float HalfHeight = (ObstacleMeshBaseSize * Scale) * 0.5f;
 			const FVector Loc = Origin + FVector(LocalX, LocalY, 0);
 
-			if (AStaticMeshActor* Obstacle = SpawnMeshActor(Mesh, Loc, FRotator(0.f, Yaw, 0.f), FVector(Scale), nullptr))
+			if (AStaticMeshActor* Obstacle = SpawnObstacleMesh(Mesh, Loc, FRotator(0.f, Yaw, 0.f), FVector(Scale), nullptr))
 			{
 				Chunk.SpawnedActors.Add(Obstacle);
 			}
@@ -455,10 +435,7 @@ FPOIInfo AInfiniteMapGenerator::GetPOIForRegion(const FIntPoint& RegionCoord) co
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //Villege
-//////////////////////////////////////////////////////////////////////////////////////////////
-
 // 마을 v1: 마을 안의 오브젝트 생성 (무기고, npc 같은거)
-// todo : 게이지 진행도는 언로드되면 초기화됨 — 상태 영속(FPOIState)은 후속 과제.
 void AInfiniteMapGenerator::SetupVillege(bool bIsPOIChunk, FPOIInfo & POI, const FVector Center, FMapChunk & Chunk, FRandomStream & Stream)
 {
 	if (bIsPOIChunk && POI.bIsCenter && POI.Type == EPOIType::Village && VillagePadClass && GetWorld())
@@ -619,7 +596,7 @@ void AInfiniteMapGenerator::SpawnVillageStructures(const FVector& Center, FMapCh
 		// 건축 프롭은 보통 피벗이 바닥(밑동)에 있다고 가정 — 장애물(나무)과 같은 전제, Z 오프셋 없이 그대로 지면에 심는다
 		const FVector Loc = Center + FVector(Slot.Pos.X, Slot.Pos.Y, 0.f);
 
-		if (AStaticMeshActor* Structure = SpawnMeshActor(Mesh, Loc, FRotator(0.f, Slot.FacingYaw, 0.f), FVector(Scale), nullptr))
+		if (AStaticMeshActor* Structure = SpawnObstacleMesh(Mesh, Loc, FRotator(0.f, Slot.FacingYaw, 0.f), FVector(Scale), nullptr))
 		{
 			Chunk.SpawnedActors.Add(Structure);
 		}
@@ -668,7 +645,7 @@ void AInfiniteMapGenerator::SavePadStateIfChanged(const FIntPoint& Coord, AMoney
 
 
 //오브젝트 배치라고 생각하면 됨
-AStaticMeshActor* AInfiniteMapGenerator::SpawnMeshActor(UStaticMesh* Mesh, const FVector& Location,
+AStaticMeshActor* AInfiniteMapGenerator::SpawnObstacleMesh(UStaticMesh* Mesh, const FVector& Location,
 	const FRotator& Rotation, const FVector& Scale, UMaterialInterface* OverrideMat)
 {
 	if (!Mesh || !GetWorld())
@@ -716,4 +693,48 @@ AStaticMeshActor* AInfiniteMapGenerator::SpawnMeshActor(UStaticMesh* Mesh, const
 	}
 
 	return Actor;
+}
+
+
+void AInfiniteMapGenerator::SpawnFog(const FVector & Center, FMapChunk& Chunk)
+{
+	if (FogClass && GetWorld())
+	{
+		const float Base = FMath::Max(1.f, FogBaseSize);;
+		FActorSpawnParameters FogParams;
+		FogParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		FogParams.Owner = this;
+
+		const FVector FogLoc = Center + FVector(0.f, 0.f, FogSizeHeight / 2);
+
+		//회전, 위치, 사이즈
+		const FTransform FogTransform(FRotator::ZeroRotator, FogLoc, FVector(ChunkSize / Base, ChunkSize / Base, FogSizeHeight / Base));
+
+		if (AActor* Fog = GetWorld()->SpawnActor<AActor>(FogClass, FogTransform, FogParams))
+		{
+#if WITH_EDITOR
+			Fog->SetFolderPath(TEXT("Spawned/Map"));
+#endif
+			Chunk.SpawnedActors.Add(Fog);
+		}
+	}
+}
+
+void AInfiniteMapGenerator::SetupFloor(const FVector & Center, FMapChunk & Chunk, UMaterialInterface* FloorMat)
+{
+	if (FloorMesh)
+	{
+		const float Base = FMath::Max(1.f, FloorMeshBaseSize);
+		const float XYScale = ChunkSize / Base;
+		const float ZScale = FloorThickness / Base;
+		const FVector FloorScale(XYScale, XYScale, ZScale);
+		const FVector FloorLoc = Center - FVector(0.f, 0.f, FloorThickness * 0.5f);
+
+		//바닥 깔기
+		if (AStaticMeshActor* Floor = SpawnObstacleMesh(FloorMesh, FloorLoc, FRotator::ZeroRotator, FloorScale, FloorMat))
+		{
+			Chunk.SpawnedActors.Add(Floor);
+		}
+
+	}
 }
