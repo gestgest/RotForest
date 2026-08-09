@@ -173,7 +173,7 @@ protected:
 
 	//안개 높이 cm
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Fog")
-	float FogSizeHeight = 200;
+	float FogSizeHeight = 10.f; 
 		
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Fog")
