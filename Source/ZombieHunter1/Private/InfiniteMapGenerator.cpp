@@ -700,7 +700,7 @@ void AInfiniteMapGenerator::SpawnFog(const FVector & Center, FMapChunk& Chunk)
 {
 	if (FogClass && GetWorld())
 	{
-		const float Base = FMath::Max(1.f, FogBaseSize);;
+		const float Base = FMath::Max(1.f, FogBaseSize);
 		FActorSpawnParameters FogParams;
 		FogParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		FogParams.Owner = this;
