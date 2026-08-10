@@ -153,10 +153,7 @@ void AZombieSlayerGameMode::SpawnEnemy()
             continue;  // 이번엔 실패, 다음 spawn() 주기에 재시도
         }
 
-        if (!enemy->GetController())
-        {
-            enemy->OnAIController();
-        }
+        enemy->OnAIController();
 
         //왜인지 모르지만 정 가운데가 pivot이라 +90을 해야한다.
         enemy->SetActorLocation(resultLocation.Location + upVector); 

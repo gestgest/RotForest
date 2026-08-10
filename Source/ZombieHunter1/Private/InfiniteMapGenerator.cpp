@@ -14,6 +14,7 @@
 #include "ZombieGameInstance.h" // POI 상태 영속 저장소 (직업 선택도 실어 나르는 프로젝트 공용 GameInstance)
 #include "Characters/Companion.h" // 마을 경비병 (경비 모드로 스폰)
 #include "Characters/Villager.h" // 마을 주민 (비전투 배회 NPC)
+#include "Characters/Boss.h" 
 
 
 //초기
@@ -246,20 +247,15 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 	FPOIInfo POI;
 	const bool bIsPOIChunk = GetPOIAtChunk(Coord, POI);
 
-	// POI 청크는 전용 머티리얼로 구분 (마을=파랑, 좀비마을=어두움)
-	UMaterialInterface* FloorMat = FloorMaterial;
-	if (bIsPOIChunk)
+	if (!GetWorld())
 	{
-		UMaterialInterface* POIMat = (POI.Type == EPOIType::Village) ? VillageFloorMaterial : ZombieVillageFloorMaterial;
-		if (POIMat)
-		{
-			FloorMat = POIMat;
-		}
+		return;
 	}
 	
-	SetupFloor(Center, Chunk, FloorMat);
+	SetupFloor(Center, Chunk, POI, bIsPOIChunk);
 	SpawnFog(Center, Chunk);
 	SetupVillege(bIsPOIChunk, POI, Center, Chunk, Stream);
+	SetupZombieVillege(bIsPOIChunk, POI, Center, Chunk, Stream);
 
 	//POI : 마을이나 좀비마을 와이어 박스 만듬
 	if (bIsPOIChunk && bDebugDrawPOI && POI.bIsCenter)
@@ -438,7 +434,7 @@ FPOIInfo AInfiniteMapGenerator::GetPOIForRegion(const FIntPoint& RegionCoord) co
 // 마을 v1: 마을 안의 오브젝트 생성 (무기고, npc 같은거)
 void AInfiniteMapGenerator::SetupVillege(bool bIsPOIChunk, FPOIInfo & POI, const FVector Center, FMapChunk & Chunk, FRandomStream & Stream)
 {
-	if (bIsPOIChunk && POI.bIsCenter && POI.Type == EPOIType::Village && VillagePadClass && GetWorld())
+	if (bIsPOIChunk && POI.bIsCenter && POI.Type == EPOIType::Village && VillagePadClass)
 	{
 		FActorSpawnParameters PadParams;
 		PadParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -698,7 +694,7 @@ AStaticMeshActor* AInfiniteMapGenerator::SpawnObstacleMesh(UStaticMesh* Mesh, co
 
 void AInfiniteMapGenerator::SpawnFog(const FVector & Center, FMapChunk& Chunk)
 {
-	if (FogClass && GetWorld())
+	if (FogClass)
 	{
 		const float Base = FMath::Max(1.f, FogBaseSize);
 		FActorSpawnParameters FogParams;
@@ -720,8 +716,18 @@ void AInfiniteMapGenerator::SpawnFog(const FVector & Center, FMapChunk& Chunk)
 	}
 }
 
-void AInfiniteMapGenerator::SetupFloor(const FVector & Center, FMapChunk & Chunk, UMaterialInterface* FloorMat)
+void AInfiniteMapGenerator::SetupFloor(const FVector & Center, FMapChunk & Chunk, FPOIInfo & POI, bool bIsPOIChunk)
 {
+	// POI 청크는 전용 머티리얼로 구분 (마을=파랑, 좀비마을=어두움)
+	UMaterialInterface* FloorMat = FloorMaterial;
+	if (bIsPOIChunk)
+	{
+		UMaterialInterface* POIMat = (POI.Type == EPOIType::Village) ? VillageFloorMaterial : ZombieVillageFloorMaterial;
+		if (POIMat)
+		{
+			FloorMat = POIMat;
+		}
+	}
 	if (FloorMesh)
 	{
 		const float Base = FMath::Max(1.f, FloorMeshBaseSize);
@@ -736,5 +742,27 @@ void AInfiniteMapGenerator::SetupFloor(const FVector & Center, FMapChunk & Chunk
 			Chunk.SpawnedActors.Add(Floor);
 		}
 
+	}
+}
+
+//보스 나오는 구역 생성
+void AInfiniteMapGenerator::SetupZombieVillege(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream)
+{
+	if (bIsPOIChunk && POI.bIsCenter && POI.Type == EPOIType::ZombieVillage&& BossClass)
+	{
+		FActorSpawnParameters VillagerParams;
+		VillagerParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+		VillagerParams.Owner = this;
+
+		ABoss* Boss = GetWorld()->SpawnActor<ABoss>(BossClass, Center, FRotator::ZeroRotator, VillagerParams);
+
+#if WITH_EDITOR
+		Boss->SetFolderPath(TEXT("Spawned/Enemies"));
+#endif
+
+		//플레이어 추적 기능.
+		Boss->OnAIController();
+
+		Chunk.SpawnedActors.Add(Boss); // 청크와 함께 언로드/재생성
 	}
 }

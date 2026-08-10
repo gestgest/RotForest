@@ -72,7 +72,7 @@ protected:
 
 	// 적중 시 터뜨릴 이펙트
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
-	UNiagaraSystem* HitEffect = nullptr;     // ← 추가
+	UNiagaraSystem* HitEffect = nullptr;     
 
 
 	// 적중 시 재생할 사운드 (선택)

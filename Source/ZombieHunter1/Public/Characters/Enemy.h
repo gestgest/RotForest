@@ -120,7 +120,7 @@ private:
 	UPROPERTY()
 	AAIController* aiController = nullptr;
 
-	int enemy_id;
+	int enemy_id = -1;
 	bool CanAttack;
 
 	/** 다음 추격 갱신이 허용되는 월드 시간(초). TrackingPlayer가 이 시간 전 호출되면 무시. */

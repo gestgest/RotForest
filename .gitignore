@@ -100,11 +100,21 @@ Content/Characters/ElfArden/Textures/*
 
 Content/Characters/Mannequin_UE4/*
 Content/Characters/Mannequins/*
-Content/Characters/SKnight_modular/*
+
+Content/Characters/Enemy/Animations/AS/*
+Content/Characters/Enemy/Showcase/*
+Content/Characters/Enemy/Skeleton/*
+Content/Characters/Enemy/Skeleton_Knight_01/*
+Content/Characters/Enemy/Skeleton_Knight_02/*
+Content/Characters/Enemy/Skeleton_Knight_03/*
+Content/Characters/Enemy/Skeleton_Knight_04/*
+Content/Characters/Enemy/Skeleton_Knight_05/*
+Content/Characters/Enemy/Skeleton_Knight_06/*
+Content/Characters/Enemy/Skeleton_Knight_07/*
+
 #Content/Characters/Wizard/*
 
 Content/StarterContent/*
-Content/SKnight_modular/*
 Content/Assassin/*
 Content/Necropolis/*
 Content/VFX_Magic/*

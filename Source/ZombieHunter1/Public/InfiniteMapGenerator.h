@@ -55,7 +55,7 @@ public:
 
 private:
 	void UpdateChunks(const FIntPoint& Center);
-	void GenerateChunk(const FIntPoint& Coord);
+	void GenerateChunk(const FIntPoint& Coord); //핵심
 	void SpawnObstacles(FRandomStream& Stream, FMapChunk& Chunk, FVector Origin, bool bIsPOIChunk);
 	void UnloadChunk(const FIntPoint& Coord);
 
@@ -69,11 +69,12 @@ protected:
 	//////////////////////////////////////////////////////////////////////////┐
 	//Generate 함수
 	//청크가 생성될때 실행된다.
-	void SetupFloor(const FVector& Center, FMapChunk& Chunk, UMaterialInterface* FloorMat);
+	void SetupFloor(const FVector& Center, FMapChunk& Chunk, FPOIInfo & POI, bool bIsPOIChunk);
 	void SpawnFog(const FVector& Center, FMapChunk& Chunk);
 	void SetupVillege(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
 	void SpawnVillageGuards(const FVector& Center, FMapChunk& Chunk);
 	void SpawnVillagers(const FVector& Center, FMapChunk& Chunk);
+	void SetupZombieVillege(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
 
 	// 마을 외곽 링(고정 슬롯 6곳)에 구조물 배치 — 스폰존 방향과 그 반대쪽은 비워서 길처럼 보이게 함.
 	//  슬롯 좌표는 고정이고, 슬롯당 메시 선택/스케일만 청크 시드로 살짝 흔든다.
@@ -207,6 +208,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float VillageRatio = 0.8f;
 
+	//여기서 부턴 오브젝트
 	/** 마을 청크의 바닥 머티리얼. 기본값: MI_Solid_Blue (파란 바닥 = 마을) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI")
 	TObjectPtr<UMaterialInterface> VillageFloorMaterial;
@@ -231,21 +233,24 @@ protected:
 
 	/** 마을 주민(비전투 NPC) 클래스. BP_Villager(부모: Villager)를 만들어 지정 — 비우면 주민 없음.
 	 *  마을 중심 주변을 배회하며, 언로드 시 제거되고 재방문 시 재생성된다. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI")
 	TSubclassOf<AVillager> VillagerClass;
 
 	/** 마을 중심 청크에 배치할 주민 수. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI", meta = (ClampMin = "0", ClampMax = "6"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI", meta = (ClampMin = "0", ClampMax = "6"))
 	int32 VillagerCount = 3;
 
 	/** 마을 외곽 링에 놓을 건축 구조물 후보("집" 대용 — 네크로폴리스 팩의 납골당/예배당류 추천: SM_crypt_small_01/02, SM_chapel_01).
 	 *  슬롯마다 이 중 하나를 랜덤으로 골라 배치. 비어있으면 구조물 없이 스킵. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI")
 	TArray<TObjectPtr<UStaticMesh>> VillageStructureMeshes;
 
 	/** 외곽 링 슬롯 6개 중 앞에서부터 몇 개나 채울지. 낮추면 구조물 빈도가 줄어든다. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI", meta = (ClampMin = "0", ClampMax = "6"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI", meta = (ClampMin = "0", ClampMax = "6"))
 	int32 VillageStructureCount = 6;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI")
+	TSubclassOf<AActor> BossClass;
 	//////////////////////////////////////////////////////////////////////////┘
 
 
