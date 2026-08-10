@@ -293,6 +293,11 @@ void AZombieSlayerGameMode::spawnCoin()
 //signal을 받아야지 될듯
 void AZombieSlayerGameMode::DieEnemy(int index)
 {
+    //범위 검사 || null 검사
+    if (!enemyPool.IsValidIndex(index) || !IsValid(enemyPool[index]))
+    {
+        return;                      // 풀 소속이 아닌 적(보스)은 여기서 걸러짐
+    }
     enemy_size--;
     if (enemyPool.IsValidIndex(index) && IsValid(enemyPool[index]))
     {

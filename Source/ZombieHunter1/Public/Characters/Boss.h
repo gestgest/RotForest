@@ -10,5 +10,5 @@ class ZOMBIEHUNTER1_API ABoss : public AEnemy
 	GENERATED_BODY()
 	
 public:
-
+	virtual void OnDeath() override;
 };
