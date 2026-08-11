@@ -739,6 +739,10 @@ void AInfiniteMapGenerator::SetupZombieVillege(bool bIsPOIChunk, FPOIInfo& POI, 
 {
 	if (bIsPOIChunk && POI.bIsCenter && POI.Type == EPOIType::ZombieVillage&& BossClass)
 	{
+		//아마 전리품이나 구조는 이런곳에?
+
+
+		// todo : 나중에 보스 따로 함수 만들어야 함
 		// 이미 이번 판에 클리어한 좀비마을이면 보스를 다시 세우지 않는다.
 		// (없으면 보스를 죽이고 멀리 갔다 오는 것만으로 풀피 보스가 부활한다)
 		if (POIStateStore.IsBossKilled(POI.CenterChunk))
