@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "POIState.h" 
 #include "InfiniteMapGenerator.generated.h"
 
 class UStaticMesh;
@@ -61,10 +62,6 @@ private:
 
 protected:
 	virtual void BeginPlay() override;
-
-	// 레벨을 떠날 때(메뉴 복귀/PIE 종료) 아직 로드 중인 청크는 UnloadChunk를 안 거치므로,
-	// 그 안의 발판 상태를 여기서 마지막으로 저장한다. 
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	//////////////////////////////////////////////////////////////////////////┐
 	//Generate 함수
@@ -218,7 +215,7 @@ protected:
 	TObjectPtr<UMaterialInterface> ZombieVillageFloorMaterial;
 
 	/** 마을 중심 청크에 스폰할 발판 클래스 (기본: BP_CompanionSpawnZone — 랜덤 직업 동료 소환). 비우면 발판 없이 바닥만 깐다.
-	 *  청크 액터 묶음에 들어가므로 언로드 시 함께 제거된다 — 게이지 진행도 영속은 후속 과제(FPOIState). */
+	 *  청크 액터 묶음에 들어가므로 언로드 시 함께 제거되지만, 게이지 진행도는 FPOIStateStore로 보존된다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI")
 	TSubclassOf<AActor> VillagePadClass;
 
@@ -310,12 +307,21 @@ private:
 
 
 
-	/** 발판 상태가 기본값과 다르면 GameInstance에 저장 (UnloadChunk와 EndPlay 두 출구에서 호출).
+	/** 발판 상태가 기본값과 다르면 POIStates에 저장 (청크가 죽는 유일한 출구인 UnloadChunk에서 호출).
 	 *  기본값 그대로면 저장 스킵 — 시드가 재생성하는 값은 기억할 필요 없다(delta만 저장). */
-	void SavePadStateIfChanged(const FIntPoint& Coord, class AMoneyPadZone* Pad) const;
+	void SavePadStateIfChanged(const FIntPoint& Coord, class AMoneyPadZone* Pad);
+
+	/** POI 중심 청크 좌표 → 이번 판의 상태. 청크 언로드 시 저장하고 재생성 시 복원한다.
+	 *  기본값과 같은 상태는 저장하지 않으므로 "플레이어가 손댄 POI"만큼만 자란다. */
+	UPROPERTY()
+	FPOIStateStore POIStateStore;
 
 
 public:
-	// 월드 좌표가 "마을" 발자국 안인지 (적 스폰 제외 등 외부 질의용. 좀비마을은 해당 안 됨) 
+	// 월드 좌표가 "마을" 발자국 안인지 (적 스폰 제외 등 외부 질의용. 좀비마을은 해당 안 됨)
 	bool IsLocationInVillage(const FVector& WorldLocation) const;
+
+	/** 좀비마을 보스가 죽었음을 기록한다 (ABoss::OnDeath가 호출).
+	 *  청크가 언로드됐다 재생성돼도 이 마을에는 보스가 다시 서지 않는다. */
+	void MarkBossKilled(const FIntPoint& CenterChunk);
 };

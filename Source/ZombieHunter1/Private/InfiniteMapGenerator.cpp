@@ -11,7 +11,6 @@
 #include "NavMesh/NavMeshBoundsVolume.h" // 플레이어 따라 옮길 나비 경계 볼륨
 #include "DrawDebugHelpers.h" // POI 청크 디버그 박스
 #include "MoneyPadZone.h" // 마을 발판 상태 저장/복원
-#include "ZombieGameInstance.h" // POI 상태 영속 저장소 (직업 선택도 실어 나르는 프로젝트 공용 GameInstance)
 #include "Characters/Companion.h" // 마을 경비병 (경비 모드로 스폰)
 #include "Characters/Villager.h" // 마을 주민 (비전투 배회 NPC)
 #include "Characters/Boss.h" 
@@ -197,7 +196,7 @@ void AInfiniteMapGenerator::UnloadChunk(const FIntPoint& Coord)
 	{
 		for (AActor* Actor : Chunk->SpawnedActors)
 		{
-			// 발판은 Destroy로 상태(넣은 돈)가 사라지므로, 죽기 직전에 GameInstance로 대피시킨다
+			// 발판은 Destroy로 상태(넣은 돈)가 사라지므로, 죽기 직전에 POIStates로 대피시킨다
 			if (AMoneyPadZone* Pad = Cast<AMoneyPadZone>(Actor))
 			{
 				SavePadStateIfChanged(Coord, Pad);
@@ -212,23 +211,10 @@ void AInfiniteMapGenerator::UnloadChunk(const FIntPoint& Coord)
 	}
 }
 
-// 레벨을 떠날 때(메뉴 복귀/PIE 종료)의 마지막 저장 출구.
-// 이 시점의 청크들은 UnloadChunk 없이 월드째 파괴되므로, 여기서 안 지키면 마을 안에서 넣던 돈이 증발한다.
-void AInfiniteMapGenerator::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	for (const TPair<FIntPoint, FMapChunk>& Pair : LoadedChunks)
-	{
-		for (AActor* Actor : Pair.Value.SpawnedActors)
-		{
-			if (AMoneyPadZone* Pad = Cast<AMoneyPadZone>(Actor))
-			{
-				SavePadStateIfChanged(Pair.Key, Pad);
-			}
-		}
-	}
-
-	Super::EndPlay(EndPlayReason);
-}
+// 예전엔 여기(EndPlay)서도 발판 상태를 저장했다 — 저장소가 GameInstance라 레벨보다 오래 살았기 때문.
+// 지금은 저장소가 이 액터의 멤버(POIStates)라 레벨을 떠나면 어차피 같이 사라지므로,
+// 떠나기 직전에 저장하는 건 의미가 없어서 EndPlay 오버라이드를 제거했다.
+// (판을 넘어 살아남을 저장이 필요해지면 여기서 SaveGame으로 내리면 된다)
 
 
 //여기서 장애물, 마을, 좀비마을 
@@ -453,14 +439,12 @@ void AInfiniteMapGenerator::SetupVillege(bool bIsPOIChunk, FPOIInfo & POI, const
 			// 없으면 그대로 둠 — 처음 발견한 마을과 동일한 기본값.
 			if (AMoneyPadZone* PadZone = Cast<AMoneyPadZone>(Pad))
 			{
-				if (UZombieGameInstance* GI = Cast<UZombieGameInstance>(GetGameInstance()))
+				FVillageState Saved;
+				if (POIStateStore.TryGetPad(POI.CenterChunk, Saved))
 				{
-					if (const FPOIState* Saved = GI->POIStates.Find(POI.CenterChunk))
-					{
-						PadZone->RestorePadState(Saved->PaidMoney, Saved->MaxMoney, Saved->bConsumed);
-						UE_LOG(LogTemp, Log, TEXT("[POIState] 복원: 청크(%d, %d) Paid %d / Max %d"),
-							POI.CenterChunk.X, POI.CenterChunk.Y, Saved->PaidMoney, Saved->MaxMoney);
-					}
+					PadZone->RestorePadState(Saved.PaidMoney, Saved.MaxMoney, Saved.bConsumed);
+					UE_LOG(LogTemp, Log, TEXT("[POIState] 복원: 청크(%d, %d) Paid %d / Max %d"),
+						POI.CenterChunk.X, POI.CenterChunk.Y, Saved.PaidMoney, Saved.MaxMoney);
 				}
 			}
 		}
@@ -599,44 +583,49 @@ void AInfiniteMapGenerator::SpawnVillageStructures(const FVector& Center, FMapCh
 	}
 }
 
-// 발판 상태를 GameInstance에 저장 (UnloadChunk와 EndPlay 두 출구에서 호출).
+// 발판 상태를 POIStates에 저장 (청크가 죽는 유일한 출구인 UnloadChunk에서 호출).
 // 기본값(CDO)과 같으면 저장하지 않는다 — 시드가 어차피 그대로 재생성하는 값이라 기억할 필요 없음.
 // 덕분에 저장소는 탐색량이 아니라 "플레이어가 실제로 손댄 발판 수"만큼만 자란다.
-void AInfiniteMapGenerator::SavePadStateIfChanged(const FIntPoint& Coord, AMoneyPadZone* Pad) const
+void AInfiniteMapGenerator::SavePadStateIfChanged(const FIntPoint& Coord, AMoneyPadZone* Pad)
 {
 	if (!IsValid(Pad))
 	{
 		return;
 	}
 
-	UZombieGameInstance* GI = Cast<UZombieGameInstance>(GetGameInstance());
-	if (!GI)
-	{
-		// 프로젝트 세팅에서 GameInstance 클래스 미지정 — 영속 없이 기존과 동일하게 동작
-		UE_LOG(LogTemp, Warning, TEXT("[POIState] GameInstance가 ZombieGameInstance가 아님 — Project Settings > Maps & Modes > Game Instance Class 확인 필요. 발판 상태가 저장되지 않는다."));
-		return;
-	}
-
-	// 기본값 비교 상대는 CDO(클래스 기본 객체) — BP에서 MaxMoney 등을 바꿔도 그 값이 기준이 된다
 	const AMoneyPadZone* Defaults = Pad->GetClass()->GetDefaultObject<AMoneyPadZone>();
+
+
+	//만약 안 바뀌었으면 그냥 무시.
 	const bool bIsDefault =
 		Pad->PaidMoney == Defaults->PaidMoney &&
 		Pad->MaxMoney == Defaults->MaxMoney &&
 		Pad->IsConsumed() == Defaults->IsConsumed();
 
+	FVillageState Existing;
 	// 기본값이고 기존 저장분도 없으면 스킵. (기존 엔트리가 있으면 갱신해서 낡은 값이 남지 않게 한다)
-	if (bIsDefault && !GI->POIStates.Contains(Coord))
+	if (bIsDefault && !POIStateStore.TryGetPad(Coord, Existing))
 	{
 		return;
 	}
 
-	FPOIState& State = GI->POIStates.FindOrAdd(Coord);
-	State.PaidMoney = Pad->PaidMoney;
-	State.MaxMoney = Pad->MaxMoney;
-	State.bConsumed = Pad->IsConsumed();
+
+	//todo POIStateStore.SavePad ...?
+	// 발판 세 필드만 덮어쓴다 — 같은 엔트리에 들어있는 bBossKilled는 건드리지 않는다.
+	// (마을과 좀비마을은 서로 다른 중심 청크라 실제로 섞일 일은 없지만, 그래도 남의 필드는 안 만진다)
+	POIStateStore.SavePad(Coord, Pad->PaidMoney, Pad->MaxMoney, Pad->IsConsumed());
 
 	UE_LOG(LogTemp, Log, TEXT("[POIState] 저장: 청크(%d, %d) Paid %d / Max %d"),
-		Coord.X, Coord.Y, State.PaidMoney, State.MaxMoney);
+		Coord.X, Coord.Y, Pad->PaidMoney, Pad->MaxMoney);
+}
+
+// 보스 처치 기록 — 보스가 죽는 순간 자기 소속 마을 좌표를 들고 여기로 온다.
+void AInfiniteMapGenerator::MarkBossKilled(const FIntPoint& CenterChunk)
+{
+	POIStateStore.MarkBossKilled(CenterChunk);
+
+	UE_LOG(LogTemp, Log, TEXT("[POIState] 좀비마을(%d, %d) 보스 처치 기록 — 재방문해도 다시 스폰되지 않는다"),
+		CenterChunk.X, CenterChunk.Y);
 }
 
 
@@ -750,15 +739,32 @@ void AInfiniteMapGenerator::SetupZombieVillege(bool bIsPOIChunk, FPOIInfo& POI, 
 {
 	if (bIsPOIChunk && POI.bIsCenter && POI.Type == EPOIType::ZombieVillage&& BossClass)
 	{
+		// 이미 이번 판에 클리어한 좀비마을이면 보스를 다시 세우지 않는다.
+		// (없으면 보스를 죽이고 멀리 갔다 오는 것만으로 풀피 보스가 부활한다)
+		if (POIStateStore.IsBossKilled(POI.CenterChunk))
+		{
+			return;
+		}
+
 		FActorSpawnParameters VillagerParams;
 		VillagerParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 		VillagerParams.Owner = this;
 
 		ABoss* Boss = GetWorld()->SpawnActor<ABoss>(BossClass, Center, FRotator::ZeroRotator, VillagerParams);
+		if (!Boss)
+		{
+			// BossClass가 ABoss 계열이 아니거나 스폰이 막힌 경우 — 아래에서 널 역참조로 죽지 않게 막는다
+			UE_LOG(LogTemp, Warning, TEXT("[POI] 좀비마을(%d, %d) 보스 스폰 실패 — BossClass 확인 필요"),
+				POI.CenterChunk.X, POI.CenterChunk.Y);
+			return;
+		}
 
 #if WITH_EDITOR
 		Boss->SetFolderPath(TEXT("Spawned/Enemies"));
 #endif
+
+		// 죽을 때 "어느 마을을 클리어했는지" 스스로 기록할 수 있게 소속을 알려준다
+		Boss->SetHome(this, POI.CenterChunk);
 
 		//플레이어 추적 기능.
 		Boss->OnAIController();
