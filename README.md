@@ -1,5 +1,5 @@
-# ZombieHunter
-언리얼 엔진 5로 제작된 3인칭 서바이벌 아케이드 게임입니다. 플레이어는 좀비 떼가 배회하는 위험한 공간에서 살아남으며 최대한 많은 자금을 수집해야 합니다. 좀비들의 추격을 피하면서 전략적으로 움직여 돈을 획득하는 긴장감 넘치는 게임플레이를 제공합니다.
+# RotForest
+언리얼 엔진 5로 제작된 3인칭 서바이벌 아케이드 게임입니다. 플레이어는 적이 배회하는 위험한 공간에서 살아남으며 최대한 많은 자금을 수집해야 합니다. 적들의 추격을 피하면서 전략적으로 움직여 돈을 획득하는 긴장감 넘치는 게임플레이를 제공합니다.
 
 [유튜브 링크](https://youtu.be/MZv_oC9dAoc?si=nLq2Tmy80-yx6WsR)
 
@@ -11,17 +11,19 @@
 - 코인, 적 pooling 시스템
 
 ### 기간
-2026년 12월 15일 ~ 2월 14일 (2개월)
+2025년 12월 15일 ~ 2026년 2월 14일 (2개월)
+2026년 6월 15일 ~ 8월 12일 ing (2개월)
 
 ### 인원
 1인 개발
 
 ---
-# SVN 목록
-- Content/Characters/*
-- Content/StarterContent/*
-- Content/ElfArden/*
-- Content/SKnight_modular/*
+# 에셋 목록
+
+- Content/StarterContent
+- Content/ElfArden
+- Content/SKnight_modular
+
 
 
 ---
