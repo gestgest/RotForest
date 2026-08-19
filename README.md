@@ -11,7 +11,7 @@
 - 코인, 적 pooling 시스템
 
 ### 기간
-2025년 12월 15일 ~ 2026년 2월 14일 (2개월)
+2025년 12월 15일 ~ 2026년 2월 14일 (2개월) <br>
 2026년 6월 15일 ~ 8월 12일 ing (2개월)
 
 ### 인원
@@ -34,57 +34,6 @@
 - 공격에 피격될 때 마다 HP가 1씩 줄어듭니다. 체력 게이지를 통해 실시간으로 생존 상태를 확인할 수 있습니다.
 - 좀비들은 플레이어와 마주치면 따라갑니다.
 
-```
-bool AEnemy::hit()
-{
-	bool isAttack = false;
-
-	TArray<FHitResult> hitResults;
-	FVector start = GetActorLocation();
-	FVector end = start + (GetActorForwardVector() * attackRange);
-	
-
-	FCollisionShape sphere = FCollisionShape::MakeSphere(attackRange);
-	FCollisionQueryParams queryParams;
-	queryParams.AddIgnoredActor(this);
-
-	bool bHit = GetWorld()->SweepMultiByChannel(
-		hitResults,
-		start,
-		end,
-		FQuat::Identity,
-		ECC_Pawn, //TraceChannel
-		sphere,
-		queryParams
-	);
-
-	// Sweep 경로를 선으로 연결
-	DrawDebugLine(
-		GetWorld(),
-		start,
-		end,
-		FColor::Red,
-		false,
-		2.0f,
-		0,
-		2.0f
-	);
-
-	for (const FHitResult& hit : hitResults)
-	{
-		AMyPlayer* hitCharacter = Cast<AMyPlayer>(hit.GetActor());
-		if (hitCharacter && hitCharacter->IsPlayerControlled())
-		{
-			//UE_LOG(LogTemp, Log, TEXT("Hit Player!"));
-			hitCharacter->AddHP(-Damage);
-			FVector force = GetActorForwardVector() * 500 + FVector(0, 0, 100);
-			hitCharacter->LaunchCharacter(force, false, false);
-			isAttack = true;
-		}
-	}
-	return isAttack;
-}
-```
 
 ### 코인 수집
 ![bandicam 2025-12-14 21-58-13-948 (1)](https://github.com/user-attachments/assets/0637a540-b307-41fb-8c95-13b5a1e2f602)
@@ -103,91 +52,6 @@ bool AEnemy::hit()
 ### 적, 코인 생성
  ![bandicam 2026-02-13 00-58-35-815_success](https://github.com/user-attachments/assets/f7958179-a355-402e-aa4b-c12fcf40be96)<br>
 오브젝트 pooling 알고리즘을 활용해서 적과 코인을 주변에 생성합니다.
-```
-
-//초기 메모리 생성
-void AZombieSlayerGameMode::initEnemy(int index)
-{
-    FVector SpawnLocation = FVector(0, 0, 90);
-    FRotator SpawnRotation = FRotator::ZeroRotator;
-
-    // SpawnParameters 설정
-    FActorSpawnParameters spawnParams;
-    spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-    // Enemy 스폰
-    AEnemy* newEnemy = GetWorld()->SpawnActor<AEnemy>(
-        EnemyClass,
-        SpawnLocation,
-        SpawnRotation,
-        spawnParams
-    );
-
-    newEnemy->SetID(index);
-
-    if (newEnemy)
-    {
-        enemyPool.Add(newEnemy);  // 풀에 추가
-
-        newEnemy->SetActorHiddenInGame(true);  // 비활성화
-    }
-}
-
-//적 생성 코드
-void AZombieSlayerGameMode::SpawnEnemy()
-{
-    int i = 0;
-
-    for (; i < enemyPool.Num(); i++)
-    {
-        if (enemyPool[i]->IsHidden())
-        {
-            break;
-        }
-    }
-    //Max
-    if (i == enemyPool.Num())
-    {
-        return;
-    }
-
-    AEnemy *enemy = enemyPool[i];
-
-    if (!enemy->GetController())
-    {
-        enemy->SetAIController();
-    }
-
-    UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
- 
-    float radius = 500;
-
-
-    AMyPlayer* myPlayer =
-        Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-
-    FVector playerLocation = myPlayer->GetActorLocation();
-    FNavLocation resultLocation;
-
-    // 플레이어 주변 Radius 내 랜덤 도달가능 위치 찾기
-    bool bSuccess = NavSys->GetRandomReachablePointInRadius(playerLocation, radius, resultLocation);
-
-    FVector upVector(0, 0, 90.0f);
-
-    if (bSuccess)
-    {
-        enemy->SetActorLocation(resultLocation.Location + upVector);
-        enemy->SetActorHiddenInGame(false);
-        enemy->SetHP(5);
-    }
-    else
-    {
-        return;
-    }
-
-    enemy_size++;
-}
-```
 
 ### 공격
 ![bandicam 2026-01-09 02-46-22-305](https://github.com/user-attachments/assets/404c3035-8a47-4845-8f66-2f201bcc42a2)
