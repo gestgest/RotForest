@@ -212,17 +212,20 @@ bool AEnemy::hit()
 	//	2.0f
 	//);
 
-	// Sweep 경로를 선으로 연결
-	DrawDebugLine(
-		GetWorld(),
-		start,
-		end,
-		FColor::Red,
-		false,
-		2.0f,
-		0,
-		2.0f
-	);
+	if (bDebugCombat)
+	{
+		// Sweep 경로를 선으로 연결
+		DrawDebugLine(
+			GetWorld(),
+			start,
+			end,
+			FColor::Red,
+			false,
+			2.0f,
+			0,
+			2.0f
+		);
+	}
 
 	for (const FHitResult& hit : hitResults)
 	{

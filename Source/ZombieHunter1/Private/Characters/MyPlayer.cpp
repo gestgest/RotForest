@@ -175,29 +175,14 @@ void AMyPlayer::SetJob()
     // 선택이 없거나(None) GameInstance 클래스를 아직 지정 안 했으면(캐스트 실패)
     // 기존 DefaultJobClass 그대로 — 에디터 셋업 전에도 동작이 바뀌지 않는다.
 
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::White,
-            FString::Printf(TEXT("선택했어!")));
-    }
     if (UZombieGameInstance* GI = Cast<UZombieGameInstance>(GetGameInstance()))
     {
         if (GI->SelectedJobClass)
         {
-            if (GEngine)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::White,
-                    FString::Printf(TEXT("선택한 직업 : %s"), *GetNameSafe(GI->SelectedJobClass)));
-            }
             DefaultJobClass = GI->SelectedJobClass;
         }
     }
 
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::White,
-            FString::Printf(TEXT("최종 결과 %s"), *GetNameSafe(DefaultJobClass)));
-    }
     // 직업 컴포넌트 생성/부착은 베이스(ACombatCharacter)가 담당한다 — 동료와 동일한 경로.
     CreateJobComponent();
 
