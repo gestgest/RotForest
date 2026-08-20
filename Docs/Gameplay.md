@@ -19,11 +19,6 @@
 
 플레이어가 죽으면 화면 속 적들의 시간이 멈춥니다.
 게임모드가 풀의 모든 적에 `CustomTimeDilation = 0`을 걸고 스폰·리쉬 타이머까지 일시정지시킨 뒤 사망 패널을 띄웁니다.
-부활 버튼을 누르면 체력이 가득 찬 채로 다시 시작되고 적들의 시간도 함께 풀립니다.
-
-<img width="773" height="365" alt="image" src="https://github.com/user-attachments/assets/37c655aa-f767-4b2a-8e35-d2fc87c951bc" /><br>
-- 이후 버튼을 누르면 HP가 가득 채워진 채 부활합니다.
-
 
 ### 적, 코인 생성
  ![bandicam 2026-02-13 00-58-35-815_success](https://github.com/user-attachments/assets/f7958179-a355-402e-aa4b-c12fcf40be96)<br>
