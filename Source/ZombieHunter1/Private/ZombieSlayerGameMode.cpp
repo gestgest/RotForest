@@ -3,6 +3,7 @@
 
 #include "ZombieSlayerGameMode.h"
 #include "InfiniteMapGenerator.h"
+#include "Characters/CombatRegistrySubsystem.h" // 보스까지 포함해 적 전체를 훑기 위해
 
 
 //begin
@@ -320,11 +321,19 @@ void AZombieSlayerGameMode::DestroyCoin(int index)
 // 부활하면(OnRevive) 다시 흐르게 한다. 플레이어 자신은 안 얼리므로 죽음 애니메이션은 그대로 재생된다.
 void AZombieSlayerGameMode::SetEnemiesFrozen(bool bFrozen)
 {
-    for (AEnemy* enemy : enemyPool)
+    // 풀(enemyPool)이 아니라 레지스트리를 도는 이유: 보스는 맵 생성기가 스폰하므로 풀에 없다.
+    // 풀에서 꺼내지 않는 적이 앞으로 더 생겨도 이 함수는 그대로 두면 된다.
+    if (UCombatRegistrySubsystem* Registry = GetWorld()->GetSubsystem<UCombatRegistrySubsystem>())
     {
-        if (IsValid(enemy))
+        TArray<ACombatCharacter*> Enemies;
+        Registry->GetAllOfTeam(ETeam::Enemy, Enemies);
+
+        for (ACombatCharacter* Character : Enemies)
         {
-            enemy->SetFrozen(bFrozen);
+            if (AEnemy* Enemy = Cast<AEnemy>(Character))
+            {
+                Enemy->SetFrozen(bFrozen);
+            }
         }
     }
 

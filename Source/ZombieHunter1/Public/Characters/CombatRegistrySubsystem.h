@@ -22,6 +22,11 @@ public:
 
     ACombatCharacter* FindNearestOfEnemy(const FVector& From, ETeam Team, float MaxDistance) const;
 
+    /** 팀이 일치하는 등록 캐릭터를 전부 모은다(Out은 덮어쓴다).
+     *  죽음/숨김은 거르지 않는다 — 그 판단은 호출자가 한다.
+     *  풀에 없는 적(생성기가 스폰한 보스 등)까지 한 번에 훑어야 할 때 쓴다. */
+    void GetAllOfTeam(ETeam Team, TArray<ACombatCharacter*>& Out) const;
+
     void Register(ACombatCharacter* Character);
     void Unregister(ACombatCharacter* Character);
 

@@ -41,6 +41,23 @@ void UCombatRegistrySubsystem::Unregister(ACombatCharacter* Character)
 }
 
 
+void UCombatRegistrySubsystem::GetAllOfTeam(ETeam Team, TArray<ACombatCharacter*>& Out) const
+{
+    Out.Reset();
+    Out.Reserve(Characters.Num());
+
+    for (const TWeakObjectPtr<ACombatCharacter>& Weak : Characters)
+    {
+        ACombatCharacter* Candidate = Weak.Get();
+
+        if (IsValid(Candidate) && Candidate->TeamType == Team)
+        {
+            Out.Add(Candidate);
+        }
+    }
+}
+
+
 ACombatCharacter* UCombatRegistrySubsystem::FindNearestOfEnemy(const FVector& From, ETeam Team, float MaxDistance) const
 {
     ACombatCharacter* Best = nullptr;

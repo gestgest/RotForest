@@ -211,12 +211,6 @@ void AInfiniteMapGenerator::UnloadChunk(const FIntPoint& Coord)
 	}
 }
 
-// 예전엔 여기(EndPlay)서도 발판 상태를 저장했다 — 저장소가 GameInstance라 레벨보다 오래 살았기 때문.
-// 지금은 저장소가 이 액터의 멤버(POIStates)라 레벨을 떠나면 어차피 같이 사라지므로,
-// 떠나기 직전에 저장하는 건 의미가 없어서 EndPlay 오버라이드를 제거했다.
-// (판을 넘어 살아남을 저장이 필요해지면 여기서 SaveGame으로 내리면 된다)
-
-
 //여기서 장애물, 마을, 좀비마을 
 void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 {
