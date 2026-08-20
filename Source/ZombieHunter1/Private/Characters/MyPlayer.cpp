@@ -425,25 +425,12 @@ void AMyPlayer::RecruitCompanion(TSubclassOf<UJobComponent> JobComponent)
 
     Companion->Leader = this;
 
-    if (GEngine)
-    {
-        UJobComponent* JobCDO = JobComponent.GetDefaultObject();
-        const FString JobTypeStr = JobCDO ? UEnum::GetValueAsString(JobCDO->JobType) : TEXT("None(맵에 없음)");
-
-        GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green,
-            FString::Printf(TEXT("[Companion] JobComponent : %s"), *JobTypeStr));
-    }
     Companion->DefaultJobClass = JobComponent; //직업 셋팅
 
     UGameplayStatics::FinishSpawningActor(Companion, SpawnTM);
 
     Companions.Add(Companion);
 
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green,
-            FString::Printf(TEXT("[Companion] 동료 섭외 완료! (현재 %d명)"), Companions.Num()));
-    }
 }
 
 
@@ -507,11 +494,7 @@ void AMyPlayer::SetMoney(int value)
     {
         CanvasWidget->UpdateCoinText(this->Money);
     }
-    else
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red,
-            FString::Printf(TEXT("CanvasWidget is null")));
-    }
+
 }
 
 bool AMyPlayer::TrySpendMoney(int32 Amount)
@@ -565,12 +548,6 @@ void AMyPlayer::UpgradeWeapon()
 
     OnWeaponUpgraded(WeaponLevel); // BP: 이펙트/사운드/무기 외형 교체
 
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 2.5f, FColor::Yellow,
-            FString::Printf(TEXT("[Weapon] +%d강! (Damage %d)"),
-                WeaponLevel, CurrentJob ? CurrentJob->GetDamage() : -1));
-    }
 }
 
 void AMyPlayer::UpdateExpUI()
@@ -756,11 +733,6 @@ bool AMyPlayer::CheckCompanion(UWorld* World)
     Companions.RemoveAll([](const ACompanion* C) { return !IsValid(C); });
     if (Companions.Num() >= MaxCompanions)
     {
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Yellow,
-                FString::Printf(TEXT("[Companion] 최대 인원(%d명) 도달 - 더 섭외 불가"), MaxCompanions));
-        }
         return false;
     }
     return true;

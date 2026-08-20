@@ -27,15 +27,6 @@ void UMyCanvas::NativeConstruct()
     if (MoveJoystick) { MoveJoystick->SetVisibility(JoystickVis); }
     if (AimJoystick)  { AimJoystick->SetVisibility(JoystickVis); }
 
-    // 포인터 바인딩 확인용: NULL이면 BP_Canvas의 위젯 이름이 MoveJoystick/AimJoystick과
-    // 일치하지 않는다는 뜻 → 이 경우 조이스틱이 안 숨겨진다(BindWidgetOptional).
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Yellow,
-            FString::Printf(TEXT("[Canvas] MoveJoystick=%s, AimJoystick=%s"),
-                MoveJoystick ? TEXT("OK") : TEXT("NULL"),
-                AimJoystick ? TEXT("OK") : TEXT("NULL")));
-    }
 }
 
 void UMyCanvas::UpdateCoinText(int32 Money)
