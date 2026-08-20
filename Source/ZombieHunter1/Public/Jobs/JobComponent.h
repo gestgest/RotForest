@@ -11,6 +11,7 @@ class UAnimMontage;
 class USoundBase;
 class AProjectile;
 class USkeletalMesh;
+class UJobComponent;
 
 //enum의 E
 UENUM(BlueprintType)
@@ -53,6 +54,35 @@ struct FJobStats
 	/** 자동 공격 간격(초). 0 이하면 캐릭터의 AttackInterval 폴백을 쓴다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
 	float AttackInterval;
+};
+
+
+/**
+ * 직업 하나에 딸린 "직업 선택 화면이 알아야 할 것"의 묶음.
+ * 스탯(FJobStats)은 각 직업 컴포넌트 CDO가 들고 있으므로 여기 두지 않는다 — 두 벌이 되면 반드시 어긋난다.
+ *
+ * DisplayName이 게임 UI에 보이는 이름의 "원본"이다.
+ * EJobType의 UMETA(DisplayName)은 에디터 디테일 패널용으로 그대로 남겨둔다 — 용도가 다른 두 텍스트다.
+ * FString이 아니라 FText인 이유: 나중에 String Table을 물려 다국어로 넘어갈 때 이 시그니처를 안 바꿔도 된다.
+ */
+USTRUCT(BlueprintType)
+struct FJobDefinition
+{
+	GENERATED_BODY()
+
+	/** 어떤 직업인지. 배열 순서와 무관하게 이 값으로 직업을 식별한다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job")
+	EJobType JobType = EJobType::Warrior;
+
+	/** 실제 구현 클래스(BP_ArcherJob 등). 선택 UI가 이 값을 GameInstance의 SelectedJobClass로 넘긴다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job")
+	TSubclassOf<UJobComponent> JobClass;
+
+	/** 플레이어에게 보이는 이름("궁수"). 콤보박스 옵션 텍스트가 여기서 나온다. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job")
+	FText DisplayName;
+
+	// 아이콘·설명·해금여부가 필요해지면 Map을 새로 만들지 말고 여기에 필드를 추가한다.
 };
 
 
