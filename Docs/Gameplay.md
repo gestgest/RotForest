@@ -45,9 +45,7 @@
 
 *표의 수치는 C++ CDO 기본값이며, 직업 블루프린트에서 밸런싱 목적으로 오버라이드합니다.*
 
-> 🎬 `[4직업 공격 모션 이어붙인 짤.g<img width="400" height="225" alt="bandicam 2026-08-20 20-49-07-148" src="https://github.com/user-attachments/assets/f9b1ec42-7815-46f9-9184-3c0fb8bb85f6" />
-if]`
-
+> 🎬 `[4직업 공격 모션 이어붙인 짤.gif]`
 ---
 
 ## 4. 전투 시스템
