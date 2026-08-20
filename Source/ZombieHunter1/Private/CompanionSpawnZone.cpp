@@ -7,12 +7,6 @@
 void ACompanionSpawnZone::HandleZoneFilled(AMyPlayer* Player)
 {
 	Player->RecruitCompanion(GetJobComponent());
-
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.5f, FColor::Cyan,
-			TEXT("[SpawnZone] 게이지 완료 - 동료 소환!"));
-	}
 }
 
 //ACompanionSpawnZone::

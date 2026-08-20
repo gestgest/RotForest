@@ -33,10 +33,12 @@ public:
 	 * 주의: 이 함수는 콤보박스의 "보이는 선택"만 맞춘다.
 	 * GameInstance의 SelectedJobClass는 BP에서 ApplyJob(InitialIndex)로 따로 넣어야 한다.
 	 */
+
+	//콤보박스
 	UFUNCTION(BlueprintCallable, Category = "Job|UI", meta = (DisplayName = "Populate Job ComboBox"))
 	static void PopulateJobComboBox(UComboBoxString* ComboBox, const TArray<FJobDefinition>& Jobs, int32 InitialIndex = 0);
 
-	/** 직업 하나의 표시 이름. DisplayName이 비어 있으면 EJobType의 UMETA(DisplayName)으로 대신한다. */
+	// 직업 하나의 표시 이름. DisplayName이 비어 있으면 EJobType의 UMETA(DisplayName)으로 대신한다. 
 	UFUNCTION(BlueprintPure, Category = "Job|UI")
 	static FText GetJobDisplayName(const FJobDefinition& Job);
 };
