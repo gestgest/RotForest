@@ -19,15 +19,17 @@
 
 ---
 # 에셋 목록
-
-- Content/StarterContent
-- Content/ElfArden
-- Content/SKnight_modular
-
+- [ElfArden](https://www.fab.com/listings/53b68688-f8c0-4bc3-8612-7dce8df63b87)
+- [SKnight_modular](https://www.fab.com/listings/fc3a309a-a3eb-46de-bebe-dcb40dc31e48)
+- [Necropolis](https://www.fab.com/listings/b3d214c2-50fa-4a0e-a780-bee56c1baf8f)
+- [Assassin](https://www.fab.com/listings/c12ff2cb-2548-4b5a-bca6-7f52f7a85ce6)
+- [VFX_Magic](https://www.fab.com/listings/da3e48f2-d703-4233-b667-d3f57a4c787a)
 
 
 ---
-# 인 게임 플레이
+# 문서
+- [게임 플레이](Docs/Gameplay.md)
+
 
 ### 전투 시스템
 ![bandicam 2025-12-14 21-58-13-948](https://github.com/user-attachments/assets/6d7ee84f-4018-4288-8023-b7dcdfd99186)
@@ -38,7 +40,6 @@
 ### 코인 수집
 ![bandicam 2025-12-14 21-58-13-948 (1)](https://github.com/user-attachments/assets/0637a540-b307-41fb-8c95-13b5a1e2f602)
 <img width="1320" height="777" alt="image" src="https://github.com/user-attachments/assets/dde600bb-6d93-46c2-bddb-ce46079f8308" />
-
 - 맵에 배치된 코인을 수집하여 점수를 획득합니다.
 
 ### GameOver
