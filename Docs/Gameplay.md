@@ -28,9 +28,6 @@
 
 오브젝트 pooling 알고리즘을 활용해서 적과 코인을 주변에 생성합니다.
 
-### 공격
-![bandicam 2026-01-09 02-46-22-305](https://github.com/user-attachments/assets/404c3035-8a47-4845-8f66-2f201bcc42a2)
-
 ---
 
 ## 직업 시스템
@@ -43,18 +40,26 @@
 | 힐러 | 공격 대신 전방 아군 회복(적에겐 무효) | 8 | 1 | 600 | 10s |
 
 > 🎬 `[4직업 공격 모션 이어붙인 짤.gif]`
+<table>
+<tr>
+<td><img width="400" src="https://github.com/user-attachments/assets/62562274-254a-4805-838c-efb248ca21af" /><br>전사</td>
+<td><img width="400" src="https://github.com/user-attachments/assets/62562274-254a-4805-838c-efb248ca21af" /><br>궁수</td>
+<td><img width="400" src="https://github.com/user-attachments/assets/62562274-254a-4805-838c-efb248ca21af" /><br>마법사</td>
+<td><img width="400" src="https://github.com/user-attachments/assets/62562274-254a-4805-838c-efb248ca21af" /><br>힐</td>
+</tr>
+</table>
 
 ---
 
 ## 무한 맵 생성
 
-> 🎬 `[계속 걸어가도 지형이 끝없이 이어지는 짤.gif]`
+<img width="400" height="225" alt="bandicam 2026-08-20 20-49-07-148 (1)" src="https://github.com/user-attachments/assets/3f01b599-75c6-4eb7-8f05-f91ebcc5cd05" />
 
 레벨에 배치된 `AInfiniteMapGenerator` 하나가 플레이어를 따라다니며 지형을 만들고 지웁니다.
 
 - 같은 시드·같은 좌표는 언제나 같은 결과를 내므로, 떠났다 돌아와도 그 자리에 같은 지형이 다시 깔립니다. 마인크래프트식 청크 생성 시스템이라고 보면 됩니다.
 - 청크가 스폰한 액터는 `FMapChunk`에 묶여 있어 언로드 시 한 번에 정리됩니다.
-- NavMesh 동적 생성: 런타임에 생성된 바닥 위에 길찾기가 되도록, 플레이어에 `UNavigationInvokerComponent`(반경 7,000/9,000)를 붙이고 `NavMeshBoundsVolume`을 플레이어를 따라 옮기며 내비 시스템에 경계 변경을 통지합니다.
+- NavMesh 동적 생성: 런타임에 생성된 바닥 위에 길찾기가 되도록, 플레이어에 `UNavigationInvokerComponent`를 붙이고 `NavMeshBoundsVolume`을 플레이어를 따라 옮기며 내비 시스템에 경계 변경을 통지합니다.
 - 스폰존이나 보스 처치같은 기록해야하는 정보는 POIStateStore로 저장합니다.
 
 ---
@@ -71,7 +76,6 @@
 
 > 🎬 `[숲 걷다가 멀리 마을 바닥/구조물이 보이는 짤.gif]`
 
-- 마을 청크는 바닥 머티리얼이 일반 청크와 다릅니다.
 - 경비병(`ACompanion`의 경비 모드): 리더를 따라다니는 대신 자기 자리(`HomeLocation`)를 지키고, 교전이 끝나면 원위치로 복귀합니다.
 - 주민(`AVillager`): 비전투 NPC. 마을 주변을 배회하고, 적의 범위 공격에 맞으면 죽습니다.
 - 적 스폰 링이 마을을 피합니다. 게임모드가 맵 생성기에 질의해 마을 안에는 스폰하지 않습니다.
@@ -118,8 +122,8 @@ AMoneyPadZone (공통 베이스)
 
 - 플레이어와 동료 중 가까운 쪽을 추격합니다.
 - 거리 기반 LOD: 가까우면 0.25초, 20m 이상 멀면 0.8초마다 경로를 갱신합니다. 매 프레임 경로를 재요청하지 않습니다.
-- 스폰 링: 적은 시야 밖(22~35m)의 NavMesh 위에 생성됩니다. 화면 안에서 갑자기 나타나지 않습니다.
-- 리쉬(회수): 45m 이상 뒤처지거나 낙하한 적은 다시 시야 밖 링으로 옮깁니다. 청크가 언로드되면 뒤처진 적이 발밑 지형을 잃기 때문입니다.
+- 스폰 링: 적은 최대한 시야 밖(22~35m)의 NavMesh 위에 생성됩니다. 
+- 리쉬(회수): 45m 이상 뒤처지거나 낙하한 적은 다시 시야 밖 링으로 옮깁니다.
 
 ### 동료 AI (`ACompanion`)
 
@@ -138,8 +142,7 @@ Fighting  : 가장 가까운 적에게 접근 → 교전 사거리에서 정지 
 ---
 
 ## 최적화
-
-모바일을 타깃으로 해서, 매 프레임 도는 연산과 매번 새로 스폰하는 액터를 줄였습니다.
+매 프레임 도는 연산과 매번 새로 스폰하는 액터를 줄였습니다.
 
 | 기법 | 내용 |
 |---|---|
