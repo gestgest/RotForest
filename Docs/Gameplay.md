@@ -1,19 +1,17 @@
 # RotForest — 게임플레이 문서
 
 
-> 🎬 `[대표 짤 — 좀비 무리 뚫고 돌아다니는 짤.gif]`
+<img width="400" height="225" alt="bandicam 2026-08-20 20-49-07-148" src="https://github.com/user-attachments/assets/d0055de6-78cc-4984-8e4d-6f7dd528ca51" />
 
 ---
 
 ### 전투 시스템
 ![bandicam 2025-12-14 21-58-13-948](https://github.com/user-attachments/assets/6d7ee84f-4018-4288-8023-b7dcdfd99186)
-- 공격에 피격될 때 마다 HP가 1씩 줄어듭니다. 체력 게이지를 통해 실시간으로 생존 상태를 확인할 수 있습니다.
 - 좀비들은 플레이어와 마주치면 따라갑니다.
 
 
 ### 코인 수집
 ![bandicam 2025-12-14 21-58-13-948 (1)](https://github.com/user-attachments/assets/0637a540-b307-41fb-8c95-13b5a1e2f602)
-<img width="1320" height="777" alt="image" src="https://github.com/user-attachments/assets/dde600bb-6d93-46c2-bddb-ce46079f8308" />
 - 맵에 배치된 코인을 수집하여 점수를 획득합니다.
 
 ### GameOver
@@ -47,14 +45,8 @@
 
 *표의 수치는 C++ CDO 기본값이며, 직업 블루프린트에서 밸런싱 목적으로 오버라이드합니다.*
 
-> 🎬 `[4직업 공격 모션 이어붙인 짤.gif]`
-
-### 설계 포인트
-
-- **캐릭터는 직업의 종류를 모릅니다.** 무기를 드는 손조차 직업이 `EWeaponHand`로 들고 있어(활은 왼손), 캐릭터 코드는 "손 개수(2)"만큼만 분기합니다. 직업이 늘어도 캐릭터 코드는 그대로입니다.
-- **스탯의 단일 출처**: `FJobStats`(HP/데미지/속도/공격간격)는 직업 컴포넌트만 소유하고, 캐릭터는 `ApplyJobStats()`로 받아 적용합니다. 스탯이 두 벌이 되어 어긋나는 문제를 원천 차단했습니다.
-- **강화분 분리**: 실제 피해량은 `GetDamage() = Stats.Damage + BonusDamage`이고, 강화로 얻은 `BonusDamage`는 `Transient`라 한 판이 끝나면 사라집니다.
-- 선택한 직업은 `UZombieGameInstance`에 실려 레벨 전환을 넘어 게임플레이 맵까지 전달됩니다.
+> 🎬 `[4직업 공격 모션 이어붙인 짤.g<img width="400" height="225" alt="bandicam 2026-08-20 20-49-07-148" src="https://github.com/user-attachments/assets/f9b1ec42-7815-46f9-9184-3c0fb8bb85f6" />
+if]`
 
 ---
 
@@ -214,6 +206,3 @@ AMoneyPadZone         : 돈 발판 베이스 ├─ ACompanionSpawnZone └─ A
 UZombieGameInstance   : 레벨을 넘어 살아남는 데이터(선택한 직업)
 World Subsystems      : UProjectilePoolSubsystem · UCombatRegistrySubsystem
 ```
-
-**역할 분리 원칙**: 로직·성능에 관련된 것은 전부 C++, 에셋 지정과 연출(이펙트/사운드/UI 배치)은 블루프린트가 담당합니다.
-`BlueprintImplementableEvent`(`OnLevelUp`, `OnWeaponUpgraded`, `OnProgressChanged` 등)를 훅으로 열어두어 연출을 코드 수정 없이 붙일 수 있게 했습니다.
