@@ -27,7 +27,9 @@
 
 
 ---
-# 인 게임 플레이
+# 문서
+- [게임 플레이](Docs/Gameplay.md)
+
 
 ### 전투 시스템
 ![bandicam 2025-12-14 21-58-13-948](https://github.com/user-attachments/assets/6d7ee84f-4018-4288-8023-b7dcdfd99186)
@@ -38,7 +40,6 @@
 ### 코인 수집
 ![bandicam 2025-12-14 21-58-13-948 (1)](https://github.com/user-attachments/assets/0637a540-b307-41fb-8c95-13b5a1e2f602)
 <img width="1320" height="777" alt="image" src="https://github.com/user-attachments/assets/dde600bb-6d93-46c2-bddb-ce46079f8308" />
-
 - 맵에 배치된 코인을 수집하여 점수를 획득합니다.
 
 ### GameOver
