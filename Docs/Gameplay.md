@@ -43,7 +43,7 @@
 <td><img width="400" src="https://github.com/user-attachments/assets/ed01960d-9ce0-4ca4-9700-00d44e2d865e" /><br>전사</td>
 <td><img width="400" src="https://github.com/user-attachments/assets/c3bc110d-14d7-4647-928f-d3e0bb9076ac" /><br>궁수</td>
 <td><img width="400" src="https://github.com/user-attachments/assets/62562274-254a-4805-838c-efb248ca21af" /><br>마법사</td>
-<td><img width="400" src="https://github.com/user-attachments/assets/62562274-254a-4805-838c-efb248ca21af" /><br>힐</td>
+<td><img width="400" src="https://github.com/user-attachments/assets/19722ab5-d22d-4d89-916c-114a040a2b29" /><br>힐러</td>
 </tr>
 </table>
 
