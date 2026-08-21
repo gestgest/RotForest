@@ -37,11 +37,11 @@
 | 마법사 | 느린 발사체 + 착탄 지점 범위 폭발 | 8 | 4 | 600 | 1.2s |
 | 힐러 | 공격 대신 전방 아군 회복(적에겐 무효) | 8 | 1 | 600 | 10s |
 
-> 🎬 `[4직업 공격 모션 이어붙인 짤.gif]`
 <table>
 <tr>
 <td><img width="400" src="https://github.com/user-attachments/assets/ed01960d-9ce0-4ca4-9700-00d44e2d865e" /><br>전사</td>
 <td><img width="400" src="https://github.com/user-attachments/assets/c3bc110d-14d7-4647-928f-d3e0bb9076ac" /><br>궁수</td>
+<tr>
 <td><img width="400" src="https://github.com/user-attachments/assets/62562274-254a-4805-838c-efb248ca21af" /><br>마법사</td>
 <td><img width="400" src="https://github.com/user-attachments/assets/19722ab5-d22d-4d89-916c-114a040a2b29" /><br>힐러</td>
 </tr>
@@ -63,7 +63,7 @@
 ---
 ### POI
 
-<img width="855" height="445" alt="image" src="https://github.com/user-attachments/assets/6c43baba-e7c6-45ab-8e34-7a7e0ba28ff3" />
+<img width="400" alt="image" src="https://github.com/user-attachments/assets/6c43baba-e7c6-45ab-8e34-7a7e0ba28ff3" />
 
 [POI 설명 사이트](https://velog.io/@gestgest/Unreal-%EC%B2%AD%ED%81%AC%EC%8B%9C%EC%8A%A4%ED%85%9C2)
 
@@ -72,20 +72,18 @@
 
 #### 마을
 
-> 🎬 `[숲 걷다가 멀리 마을 바닥/구조물이 보이는 짤.gif]`
+<img width="400" height="225" alt="bandicam 2026-08-20_villege" src="https://github.com/user-attachments/assets/e40c3ec0-ae6e-4f82-9966-e17d2a481560" />
 
-- 경비병(`ACompanion`의 경비 모드): 리더를 따라다니는 대신 자기 자리(`HomeLocation`)를 지키고, 교전이 끝나면 원위치로 복귀합니다.
-- 주민(`AVillager`): 비전투 NPC. 마을 주변을 배회하고, 적의 범위 공격에 맞으면 죽습니다.
+- 경비병(`Companion`의 경비 모드): 리더를 따라다니는 대신 자기 자리를 지키고, 교전이 끝나면 원위치로 복귀합니다.
+- 주민(`Villager`): 비전투 NPC. 마을 주변을 배회하고, 피해를 받을 수 있습니다.
 - 적 스폰 링이 마을을 피합니다. 게임모드가 맵 생성기에 질의해 마을 안에는 스폰하지 않습니다.
-- 마을 외곽 구조물은 고정 슬롯 6곳에 배치됩니다. 랜덤 좌표가 아니라 슬롯 기반이라 구조물끼리 겹치지 않습니다.
+- 마을 외곽 구조물은 고정 슬롯 6곳에 배치됩니다. 구조물끼리 겹치지 않습니다.
 
 #### 역병마을
-
-- 어두운 바닥, 적 밀집, 보스(`ABoss`)가 있습니다.
+- 적 밀집, 보스(`Boss`)가 있습니다.
 - 보스는 자신이 속한 마을의 청크 좌표를 알고 있어서, 죽을 때 그 좌표를 클리어로 기록합니다.
 
 #### 상태 영속
-
 청크가 사라져도 진행도는 남습니다.
 청크가 언로드되면 액터가 전부 파괴됩니다. 지형은 시드로 다시 생성되지만 플레이어가 바꾼 상태(발판에 넣은 돈, 보스 처치 여부)는 남지 않습니다.
 이 값들은 `FPOIStateStore`(POI 중심 좌표 → 상태 맵)에 따로 보관합니다.
@@ -116,14 +114,14 @@ AMoneyPadZone (공통 베이스)
 
 ## AI
 
-### 적 AI (`AEnemy`)
+### 적 AI (`Enemy`)
 
 - 플레이어와 동료 중 가까운 쪽을 추격합니다.
 - 거리 기반 LOD: 가까우면 0.25초, 20m 이상 멀면 0.8초마다 경로를 갱신합니다. 매 프레임 경로를 재요청하지 않습니다.
 - 스폰 링: 적은 최대한 시야 밖(22~35m)의 NavMesh 위에 생성됩니다. 
 - 리쉬(회수): 45m 이상 뒤처지거나 낙하한 적은 다시 시야 밖 링으로 옮깁니다.
 
-### 동료 AI (`ACompanion`)
+### 동료 AI (`Companion`)
 
 > 🎬 `[동료들이 따라오다 적 보고 흩어져서 싸우는 짤.gif]`
 
