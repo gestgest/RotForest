@@ -15,12 +15,10 @@
 - 맵에 배치된 코인을 수집하여 점수를 획득합니다.
 
 ### 사망 연출
-> 🎬 `[죽는 순간 적들이 그대로 멈추는 짤.gif]`
+<img width="400" height="225" alt="bandicam 2026-08-21 _dead" src="https://github.com/user-attachments/assets/ffb8ab75-1727-42fe-bd47-4df18ae515f3" />
 
 플레이어가 죽으면 화면 속 적들의 시간이 멈춥니다.
 게임모드가 적 전체에 `CustomTimeDilation = 0`을 걸고 스폰·리쉬 타이머까지 일시정지시킨 뒤 사망 패널을 띄웁니다.
-
-<img width="773" height="365" alt="image" src="https://github.com/user-attachments/assets/37c655aa-f767-4b2a-8e35-d2fc87c951bc" />
 
 
 ### 적, 코인 생성
@@ -42,8 +40,8 @@
 > 🎬 `[4직업 공격 모션 이어붙인 짤.gif]`
 <table>
 <tr>
-<td><img width="400" src="https://github.com/user-attachments/assets/62562274-254a-4805-838c-efb248ca21af" /><br>전사</td>
-<td><img width="400" src="https://github.com/user-attachments/assets/62562274-254a-4805-838c-efb248ca21af" /><br>궁수</td>
+<td><img width="400" src="https://github.com/user-attachments/assets/ed01960d-9ce0-4ca4-9700-00d44e2d865e" /><br>전사</td>
+<td><img width="400" src="https://github.com/user-attachments/assets/c3bc110d-14d7-4647-928f-d3e0bb9076ac" /><br>궁수</td>
 <td><img width="400" src="https://github.com/user-attachments/assets/62562274-254a-4805-838c-efb248ca21af" /><br>마법사</td>
 <td><img width="400" src="https://github.com/user-attachments/assets/62562274-254a-4805-838c-efb248ca21af" /><br>힐</td>
 </tr>
