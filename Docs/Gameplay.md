@@ -92,19 +92,16 @@
 
 ## 성장
 <img width="400" height="225" alt="bandicam 2026-08-20_spawnzone" src="https://github.com/user-attachments/assets/b415613b-5c2b-4733-8a54-a889e380b32a" />
-
-코인으로 모은 돈은 발판 위에 서 있는 동안 소비됩니다. 대화창이나 상점 UI는 없습니다.
+코인으로 모은 돈은 발판 위에 서 있는 동안 소비됩니다. 
 
 ```
 AMoneyPadZone (공통 베이스)
- ├─ 트리거 박스 안에 서 있으면 0.15초마다 돈이 빠지며 게이지 상승
  ├─ 게이지가 가득 차면 HandleZoneFilled() 호출
  ├─ ACompanionSpawnZone  → 랜덤 직업 동료 소환
  └─ AWeaponUpgradeZone   → 무기 강화 (강화할수록 다음 비용 상승)
 ```
 
-- 돈이 부족하면 게이지가 멈춥니다.
-- 진행도는 `FPOIStateStore`에 저장되므로, 절반쯤 채우고 떠났다가 나중에 돌아와 이어서 채울 수 있습니다.
+- 진행도는 `FPOIStateStore`에 저장되므로, 청크가 언로드되어도 이어서 채울 수 있습니다.
 - 결제·게이지·쿨다운·디버그 바는 베이스가 처리하므로, 새 발판은 `HandleZoneFilled()`만 구현하면 추가됩니다.
 
 ---
@@ -116,7 +113,7 @@ AMoneyPadZone (공통 베이스)
 - 플레이어와 동료 중 가까운 쪽을 추격합니다.
 - 거리 기반 LOD: 가까우면 0.25초, 20m 이상 멀면 0.8초마다 경로를 갱신합니다. 매 프레임 경로를 재요청하지 않습니다.
 - 스폰 링: 적은 최대한 시야 밖(22~35m)의 NavMesh 위에 생성됩니다. 
-- 리쉬(회수): 45m 이상 뒤처지거나 낙하한 적은 다시 시야 밖 링으로 옮깁니다.
+- 리쉬(회수): 45m 이상 떨어진 적은 스폰될 때 위치만 수정해서 스폰됩니다.
 
 ### 동료 AI (`Companion`)
 <img width="400" height="225" alt="bandicam 2026-08-20_ai" src="https://github.com/user-attachments/assets/86d00dd1-9405-4740-a112-9b9213d94d88" />
@@ -137,7 +134,6 @@ AMoneyPadZone (공통 베이스)
 | 전투 캐릭터 레지스트리 | `UCombatRegistrySubsystem`에 전투 캐릭터를 등록해두고 가장 가까운 적을 조회. `GetAllActorsOfClass` 전체 순회를 대체. `TWeakObjectPtr`로 담아 죽은 액터를 잡아두지 않는다. |
 | AI 틱 간격화 | 추격 갱신·의사결정을 프레임이 아닌 시간 간격으로 전환 + 거리 LOD. |
 | 청크 언로드 | 반경 밖 청크의 액터를 묶음 단위로 파괴. |
-| 바닥 인스턴싱 | 청크마다 개별 액터로 깔던 바닥을 Instanced Static Mesh로 통합해 드로우콜과 청크 경계 아티팩트를 함께 해결. |
 
 ---
 
@@ -156,7 +152,11 @@ UJobComponent (전투 방식 캡슐화 — 플레이어/동료 공용)
 
 AInfiniteMapGenerator : 청크 생성/언로드 · POI 배치 · FPOIStateStore
 AZombieSlayerGameMode : 적/코인 풀 · 스폰 링 · 리쉬 · 사망 시 시간 정지
-AMoneyPadZone         : 돈 발판 베이스 ├─ ACompanionSpawnZone └─ AWeaponUpgradeZone
-UZombieGameInstance   : 레벨을 넘어 살아남는 데이터(선택한 직업)
-World Subsystems      : UProjectilePoolSubsystem · UCombatRegistrySubsystem
+
+AMoneyPadZone         : 돈 발판 베이스
+├─ ACompanionSpawnZone
+└─ AWeaponUpgradeZone
+
+UZombieGameInstance   : 레벨을 넘어 다른 레벨에게 전송되는 데이터(선택한 직업)
+World Subsystems      : UProjectilePoolSubsystem · UCombatRegistrySubsystem : Pool시스템
 ```
