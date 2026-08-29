@@ -60,7 +60,6 @@ void ACombatCharacter::BeginPlay()
 			Anim->OnMontageEnded.AddDynamic(this, &ACombatCharacter::OnAttackMontageEnded);
 		}
 	}
-
 }
 
 void ACombatCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)

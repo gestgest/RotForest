@@ -87,9 +87,6 @@ private:
 	UPROPERTY()
 	FTimerHandle SpawnTimerHandle; //타이머 설정 변수
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "True"), Category = "Spawners")
-	TArray<ATargetPoint*> Spawners;
-
 
 	UPROPERTY(EditDefaultsOnly, Category = "Enemy")
 	TSubclassOf<AEnemy> EnemyClass;

@@ -28,8 +28,6 @@ AEnemy::AEnemy()
 
 	// 머리 위 HP 바 — 생성/갱신 로직은 베이스(ACombatCharacter) 소유. 위젯 클래스는 BP_Enemy에서 지정.
 	CreateHPBarComponent();
-
-
 }
 
 // Called when the game starts or when spawned
@@ -54,6 +52,9 @@ void AEnemy::BeginPlay()
 		//추격을 완료했다면 - 콜백
 		aiController->GetPathFollowingComponent()->OnRequestFinished.AddUObject(this, &AEnemy::MoveCompleted);
 	}
+
+	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+	GetMesh()->bEnableUpdateRateOptimizations = true;
 }
 
 // Called every frame
