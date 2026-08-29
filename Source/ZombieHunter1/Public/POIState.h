@@ -40,11 +40,12 @@ public:
     // 창구는 그대로 넷 — 바깥은 맵이 둘인 걸 모른다.
     // 좌표는 항상 POI의 "중심 청크" 좌표다 (FPOIInfo::CenterChunk).
 
-    /** 발판 상태를 덮어쓴다. 기본값이면 저장을 건너뛸지는 호출자(생성기)가 판단한다 —
-     *  기본값 기준은 발판 BP의 CDO라 여기선 알 수 없기 때문. */
+    //발판 덮어쓰기. 저장 함수
     void SavePad(const FIntPoint& Center, int32 Paid, int32 Max, bool bConsumed);
 
-    /** 저장된 발판 상태가 있으면 Out에 채우고 true. 없으면 Out은 건드리지 않는다. */
+    
+    //저장된 발판 상태가 있으면 Out에 채우고 true. 없으면 Out은 건드리지 않는다.
+    //불러오기 함수
     bool TryGetPad(const FIntPoint& Center, FVillageState& Out) const;
 
     void MarkBossKilled(const FIntPoint& Center);
