@@ -4,6 +4,9 @@ _구 Zombie Hunter, 리마스터 후 RotForest_
 > 절차적으로 무한히 생성되는 숲을 탐험하며, 직업을 골라 적들을 잡고 돈을 모아
 > 동료를 늘리고 무기를 강화하는 한 판 단위의 게임입니다.
 
+<img width="400" height="225" alt="image" src="https://github.com/user-attachments/assets/3cf841d7-f134-4238-89e0-a38e6d723b7c" />
+
+
 | 항목 | 내용 |
 |---|---|
 | 장르 | 탑다운 로그라이트 |
