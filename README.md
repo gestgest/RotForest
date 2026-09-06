@@ -11,7 +11,7 @@ _구 Zombie Hunter, 리마스터 후 RotForest_
 |---|---|
 | 장르 | 탑다운 로그라이트 |
 | 엔진 | Unreal Engine 5.4 |
-| 플랫폼 | PC(키보드·마우스/패드), Android(가상 조이스틱) |
+| 플랫폼 | PC(마우스), Android(가상 조이스틱) |
 | 개발 기간 | 2025.12.15 ~ 2026.02.14 / 2026.06.15 ~ 진행 중 |
 | 인원 | 1인 개발 |
 | 영상 | [플레이 영상 (YouTube)](https://youtu.be/d2GGSKTJa9c) |
