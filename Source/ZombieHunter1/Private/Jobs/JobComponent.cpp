@@ -33,19 +33,23 @@ void UJobComponent::InitializeForOwner(ACombatCharacter* Owner)
 
 	//OwnerCharacter->AttackInterval = Stats.AttackInterval; => 어차피 계속 Get으로 받을 예정
 
-	EquipWeapon(); 
+	// 직업 기본 무기를 실제로 장착시킨다. 이 뒤로 "지금 무기"는 EquippedWeapon 하나뿐이다.
+	// EquipWeapon()을 쓰지 않는 이유: DefaultWeapon의 JobType이 BP에서 안 맞춰져 있으면
+	// 자기 기본 무기가 직업 제한에 걸려 거부당한다.
+	EquippedWeapon = DefaultWeapon;
+	RefreshWeaponMesh();
 }
 
-// 직업 무기를 소유자의 무기 슬롯에 끼운다.
+// 장착 무기의 메시를 소유자의 무기 슬롯에 끼운다.
 // 어느 손에 끼울지도 직업이 정한다 — 궁수는 왼손, 나머지는 오른손.
-void UJobComponent::EquipWeapon()
+void UJobComponent::RefreshWeaponMesh()
 {
 	if (!OwnerCharacter)
 	{
 		return;
 	}
 
-	OwnerCharacter->EquipWeaponInHand(Weapon.Mesh, WeaponHand);
+	OwnerCharacter->EquipWeaponInHand(EquippedWeapon.Mesh, WeaponHand);
 }
 
 void UJobComponent::Attack()
@@ -59,6 +63,20 @@ void UJobComponent::Attack()
 			CC->PlayAnimMontage(Montage);
 		}
 	}
+}
+
+// 무기 획득처(드랍/상점/발판)는 전부 이 함수 하나로 들어온다.
+bool UJobComponent::EquipWeapon(const FWeaponItemData& Item)
+{
+	// 다른 직업 전용 무기는 거부한다 — 검사가 활을 들면 몽타주도 공격 판정도 전부 어긋난다.
+	if (Item.JobType != JobType)
+	{
+		return false;
+	}
+
+	EquippedWeapon = Item;   // 값 복사 — 원본(픽업 액터/배열 원소)이 사라져도 안전하다.
+	RefreshWeaponMesh();     // 데이터가 바뀌었으니 손에 든 것도 갱신한다.
+	return true;
 }
 
 void UJobComponent::OnAttackNotify(FName NotifyName)

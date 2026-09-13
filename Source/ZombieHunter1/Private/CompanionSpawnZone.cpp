@@ -20,7 +20,8 @@ void ACompanionSpawnZone::ChangeIconMesh()
 	TSubclassOf<UJobComponent> JobClass = GetJobComponent();
 	if (JobClass && IconMeshComp)
 	{
-		IconMeshComp->SetSkeletalMeshAsset(JobClass.GetDefaultObject()->GetWeaponMesh());
+		// CDO에 묻는 것이므로 "지금 장착한 무기"가 아니라 "이 직업의 기본 무기"를 물어야 한다.
+		IconMeshComp->SetSkeletalMeshAsset(JobClass.GetDefaultObject()->GetDefaultWeaponMesh());
 	}
 }
 

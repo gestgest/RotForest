@@ -42,13 +42,14 @@ struct FWeaponItemData
 	FText WeaponName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Weapon")
-	int32 WeaponPower;
+	int32 WeaponPower = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Weapon")
-	USkeletalMesh* Mesh;
+	USkeletalMesh* Mesh = nullptr;
 
+	// 이 무기를 쓸 수 있는 직업. 다른 직업은 장착할 수 없다(검사가 활을 못 듦).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Weapon")
-	EJobType JobType;
+	EJobType JobType = EJobType::Warrior;
 };
 
 
@@ -58,18 +59,18 @@ struct FJobStats
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	int32 MaxHP; //몰랐네 무조건 int32를 써야하다니
+	int32 MaxHP = 100; //몰랐네 무조건 int32를 써야하다니
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	int32 Damage;
+	int32 Damage = 0;
 
 	//이동 속도(cm/s)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	int32 Speed;
+	int32 Speed = 600;
 
 	// 자동 공격 간격(초). 0 이하면 캐릭터의 AttackInterval 폴백을 쓴다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
-	float AttackInterval;
+	float AttackInterval = 0.0f;
 };
 
 
@@ -123,6 +124,12 @@ public:
 	// 매 프레임 호출(플레이어 Tick). 조준과 무관한 패시브 효과(자가 회복 등)용. 기본 구현 없음. 
 	virtual void TickJob(float DeltaTime);
 
+	// 주운/구매한 무기를 장착한다. 데이터만 바꾸고 손 슬롯 반영은 RefreshWeaponMesh()에 위임한다.
+	// 다른 직업 전용 무기는 거부한다.
+	// 반환: 장착에 성공하면 true, 직업이 안 맞아 거부하면 false.
+	UFUNCTION(BlueprintCallable, Category = "Job|Weapon")
+	bool EquipWeapon(const FWeaponItemData& Item);
+
 
 protected:
 	/** 소유 캐릭터 — 플레이어 또는 동료 AI (InitializeForOwner에서 설정) */
@@ -148,8 +155,9 @@ protected:
 	EWeaponHand WeaponHand = EWeaponHand::Right;
 
 
-	// 따로 지정된 WeaponMesh 무기를 WeaponHand 쪽 슬롯에 장착한다.
-	void EquipWeapon();
+	// 지금 장착 무기(EquippedWeapon)의 메시를 WeaponHand 쪽 슬롯에 꽂는다.
+	// 데이터는 건드리지 않는다 — 상태 변경은 EquipWeapon()이 하고 여기는 반영만 한다.
+	void RefreshWeaponMesh();
 
 	/** 공격 사운드를 소유자 위치에서 재생 */
 	void PlayAttackSound();
@@ -172,8 +180,15 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Combat")
 	USoundBase* AttackSound = nullptr;
 
+
+	// 직업 기본 무기 — 직업 BP(BP_ArcherJob 등)에서 지정한다. 시작 시 EquippedWeapon으로 복사되고 그 뒤로 안 변한다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Job|Weapon")
-	FWeaponItemData Weapon;
+	FWeaponItemData DefaultWeapon;
+
+	// 지금 장착 중인 무기. InitializeForOwner에서 DefaultWeapon으로 채워지므로 항상 유효하다.
+	// Transient — 한 판 동안만 유효한 값이라 애셋/세이브에 굳으면 안 된다(BonusDamage와 같은 성격).
+	UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Job|Weapon")
+	FWeaponItemData EquippedWeapon;
 
 
 public:
@@ -199,11 +214,15 @@ public:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Job|Combat")
 	int32 BonusDamage = 0;
 
-	// 실제 적용 피해량 = 직업 설계값 + 강화/버프 증가분. 공격 코드는 전부 이걸 쓴다. */
+	// 실제 적용 피해량 = 직업 설계값 + 강화/버프 증가분. 공격 코드는 전부 이걸 쓴다. 
 	UFUNCTION(BlueprintPure, Category = "Job|Stats")
-	int32 GetDamage() const { return Stats.Damage + BonusDamage; }
+	int32 GetDamage() const { return Stats.Damage + BonusDamage + EquippedWeapon.WeaponPower; }
 
-	USkeletalMesh* GetWeaponMesh() { return Weapon.Mesh; }
+	USkeletalMesh* GetWeaponMesh() const { return EquippedWeapon.Mesh; }
+
+	// 이 직업의 기본 무기 메시. CDO에 물어볼 때 쓴다(동료 스폰존 아이콘 등) —
+	// CDO는 InitializeForOwner를 안 타므로 EquippedWeapon이 비어 있다.
+	USkeletalMesh* GetDefaultWeaponMesh() const { return DefaultWeapon.Mesh; }
 	EWeaponHand GetWeaponHand() const { return WeaponHand; }
 	float GetEngageRange() { return EngageRange; }
 
