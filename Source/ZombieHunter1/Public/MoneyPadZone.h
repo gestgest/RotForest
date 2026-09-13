@@ -41,7 +41,7 @@ public:
 	// Component
 	////////////////////////////////////////////////////////////////////////////////////
 
-	/** 밟는 영역(트리거). 이 박스 안에 플레이어가 들어오면 게이지가 찬다. */
+	// 밟는 영역(트리거). 이 박스 안에 플레이어가 들어오면 게이지가 찬다. 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SpawnZone")
 	UBoxComponent* TriggerBox;
 

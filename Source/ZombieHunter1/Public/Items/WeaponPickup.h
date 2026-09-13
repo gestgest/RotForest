@@ -7,6 +7,8 @@
 #include "Items/WeaponItemData.h"
 #include "WeaponPickup.generated.h"
 
+class UBoxComponent;
+
 // 바닥에 떨어져 있는 무기 한 자루. 플레이어가 밟으면 장착되고 자신은 사라진다.
 UCLASS()
 class ZOMBIEHUNTER1_API AWeaponPickup : public AActor
@@ -28,4 +30,12 @@ public:
 private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Data")
 	FWeaponItemData WeaponItemData;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Collider")
+	UBoxComponent* TriggerBox;
+
+	UFUNCTION()
+	void OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*/, AActor* OtherActor,
+		UPrimitiveComponent* /*OtherComp*/, int32 /*OtherBodyIndex*/, bool /*bFromSweep*/, const FHitResult& /*Sweep*/);
+
 };
