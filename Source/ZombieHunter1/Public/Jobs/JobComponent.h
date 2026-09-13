@@ -24,8 +24,7 @@ enum class EJobType : uint8
 };
 
 
-/** 무기를 드는 손. 직업이 이 값을 들고 있고, 캐릭터는 이 값만 보고 슬롯을 고른다.
- *  → 캐릭터 코드가 직업 종류(EJobType)를 알 필요가 없다. 직업이 늘어도 분기는 손 개수(2)로 고정. */
+//무기를 드는 손
 UENUM(BlueprintType)
 enum class EWeaponHand : uint8
 {
@@ -34,6 +33,23 @@ enum class EWeaponHand : uint8
 };
 
 
+USTRUCT(BlueprintType)
+struct FWeaponItemData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Weapon")
+	FText WeaponName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Weapon")
+	int32 WeaponPower;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Weapon")
+	USkeletalMesh* Mesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Weapon")
+	EJobType JobType;
+};
 
 
 USTRUCT(BlueprintType)
@@ -47,11 +63,11 @@ struct FJobStats
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
 	int32 Damage;
 
-	/** 이동 속도(cm/s) — 캐릭터의 CharacterMovement->MaxWalkSpeed로 적용된다. */
+	//이동 속도(cm/s)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
 	int32 Speed;
 
-	/** 자동 공격 간격(초). 0 이하면 캐릭터의 AttackInterval 폴백을 쓴다. */
+	// 자동 공격 간격(초). 0 이하면 캐릭터의 AttackInterval 폴백을 쓴다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Stats")
 	float AttackInterval;
 };
@@ -156,12 +172,8 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Combat")
 	USoundBase* AttackSound = nullptr;
 
-	/** 이 직업이 들 무기 메시(검사=검, 궁수=활 등). 비우면 무기 숨김(예: 지팡이 없는 마법사).
-	 *  캐릭터에 이미 있는 무기 컴포넌트의 메시를 이걸로 교체한다. 직업 BP 서브클래스에서 지정. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Job|Weapon")
-	USkeletalMesh* WeaponMesh = nullptr;
-
-
+	FWeaponItemData Weapon;
 
 
 public:
@@ -191,7 +203,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Job|Stats")
 	int32 GetDamage() const { return Stats.Damage + BonusDamage; }
 
-	USkeletalMesh* GetWeaponMesh() { return WeaponMesh; }
+	USkeletalMesh* GetWeaponMesh() { return Weapon.Mesh; }
 	EWeaponHand GetWeaponHand() const { return WeaponHand; }
 	float GetEngageRange() { return EngageRange; }
 

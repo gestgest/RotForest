@@ -47,12 +47,12 @@ void UArcherJob::PlayBowDraw()
 {
     if (!BowDrawAnim || !OwnerCharacter) return;
 
-    USkeletalMeshComponent* Weapon = OwnerCharacter->GetWeaponMeshComponent();
-    if (!Weapon || !Weapon->GetSkeletalMeshAsset()) return;
+    USkeletalMeshComponent* WeaponComp = OwnerCharacter->GetWeaponMeshComponent();
+    if (!WeaponComp || !WeaponComp->GetSkeletalMeshAsset()) return;
 
-    Weapon->PlayAnimation(BowDrawAnim, false);
+    WeaponComp->PlayAnimation(BowDrawAnim, false);
 
-    UAnimSingleNodeInstance* Single = Weapon->GetSingleNodeInstance();
+    UAnimSingleNodeInstance* Single = WeaponComp->GetSingleNodeInstance();
     if (!Single) return;
 
     // 활 시위가 몽타주 끝(=활 놓는 순간)에 딱 맞춰 다 당겨지도록 배속을 계산한다.
@@ -80,10 +80,10 @@ void UArcherJob::ResetBow()
 {
     if (!OwnerCharacter) return;
 
-    USkeletalMeshComponent* Weapon = OwnerCharacter->GetWeaponMeshComponent();
-    if (!Weapon) return;
+    USkeletalMeshComponent* WeaponComp = OwnerCharacter->GetWeaponMeshComponent();
+    if (!WeaponComp) return;
 
-    if (UAnimSingleNodeInstance* Single = Weapon->GetSingleNodeInstance())
+    if (UAnimSingleNodeInstance* Single = WeaponComp->GetSingleNodeInstance())
     {
         Single->SetPosition(0.0f);   // 0프레임 = 시위 풀린 상태
         Single->SetPlaying(false);

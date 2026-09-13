@@ -45,7 +45,7 @@ void UJobComponent::EquipWeapon()
 		return;
 	}
 
-	OwnerCharacter->EquipWeaponInHand(WeaponMesh, WeaponHand);
+	OwnerCharacter->EquipWeaponInHand(Weapon.Mesh, WeaponHand);
 }
 
 void UJobComponent::Attack()
