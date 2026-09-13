@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Jobs/JobTypes.h"
+#include "Items/WeaponItemData.h"
 #include "JobComponent.generated.h"
 
 class ACombatCharacter;
@@ -12,46 +14,6 @@ class USoundBase;
 class AProjectile;
 class USkeletalMesh;
 class UJobComponent;
-
-//enum의 E
-UENUM(BlueprintType)
-enum class EJobType : uint8
-{
-	Warrior UMETA(DisplayName = "전사"),
-	Archer UMETA(DisplayName = "궁수"),
-	Mage UMETA(DisplayName = "마법사"),
-	Healer UMETA(DisplayName = "힐러"),
-};
-
-
-//무기를 드는 손
-UENUM(BlueprintType)
-enum class EWeaponHand : uint8
-{
-	Right UMETA(DisplayName = "오른손"),
-	Left  UMETA(DisplayName = "왼손"),
-};
-
-
-USTRUCT(BlueprintType)
-struct FWeaponItemData
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Weapon")
-	FText WeaponName;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Weapon")
-	int32 WeaponPower = 0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Weapon")
-	USkeletalMesh* Mesh = nullptr;
-
-	// 이 무기를 쓸 수 있는 직업. 다른 직업은 장착할 수 없다(검사가 활을 못 듦).
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Weapon")
-	EJobType JobType = EJobType::Warrior;
-};
-
 
 USTRUCT(BlueprintType)
 struct FJobStats
@@ -87,15 +49,15 @@ struct FJobDefinition
 {
 	GENERATED_BODY()
 
-	/** 어떤 직업인지. 배열 순서와 무관하게 이 값으로 직업을 식별한다. */
+	// 어떤 직업인지. 배열 순서와 무관하게 이 값으로 직업을 식별한다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job")
 	EJobType JobType = EJobType::Warrior;
 
-	/** 실제 구현 클래스(BP_ArcherJob 등). 선택 UI가 이 값을 GameInstance의 SelectedJobClass로 넘긴다. */
+	// 실제 구현 클래스(BP_ArcherJob 등). 선택 UI가 이 값을 GameInstance의 SelectedJobClass로 넘긴다. 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job")
 	TSubclassOf<UJobComponent> JobClass;
 
-	/** 플레이어에게 보이는 이름("궁수"). 콤보박스 옵션 텍스트가 여기서 나온다. */
+	// 플레이어에게 보이는 이름("궁수"). 콤보박스 옵션 텍스트가 여기서 나온다. 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job")
 	FText DisplayName;
 
