@@ -45,7 +45,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SpawnZone")
 	UBoxComponent* TriggerBox;
 
-	/** 발판 바닥 메시(선택). BP에서 평평한 큐브/플레인 메시를 지정해 시각화. */
+	// 발판 바닥 메시(선택). BP에서 평평한 큐브/플레인 메시를 지정해 시각화. 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SpawnZone")
 	UStaticMeshComponent* PadMesh;
 
@@ -100,7 +100,6 @@ public:
 	///////////////////////////////////////////////////////////////////////////////////
 	// 블루프린트 이벤트 (UI 연동용)
 	///////////////////////////////////////////////////////////////////////////////////
-
 	//게이지가 바뀔 때마다 호출  (NewProgress: 0~1).
 	UFUNCTION(BlueprintImplementableEvent, Category = "SpawnZone")
 	void OnProgressChanged(float NewProgress);

@@ -231,6 +231,33 @@ void ACombatCharacter::EquipWeapon(USkeletalMesh* NewMesh)
 }
 
 
+// 무기 획득처(픽업/상점/보상)는 전부 이 함수 하나로 들어온다.
+bool ACombatCharacter::EquipWeaponItem(const FWeaponItemData& Item)
+{
+	if (!CurrentJob)
+	{
+		return false;
+	}
+
+	//잡 타입이 다르면
+	if (Item.JobType != CurrentJob->JobType)
+	{
+		return false;
+	}
+	EquippedWeapon = Item;   // 값 복사 — 원본(픽업 액터/배열 원소)이 사라져도 안전하다.
+	RefreshWeaponMesh();     // 데이터가 바뀌었으니 손에 든 것도 갱신한다.
+	return true;
+}
+
+// 어느 손에 끼울지는 직업이 정한다 — 궁수는 왼손, 나머지는 오른손.
+// 직업이 없는 캐릭터(적 등)는 오른손으로 간다.
+void ACombatCharacter::RefreshWeaponMesh()
+{
+	const EWeaponHand Hand = CurrentJob ? CurrentJob->GetWeaponHand() : EWeaponHand::Right;
+	EquipWeaponInHand(EquippedWeapon.Mesh, Hand);
+}
+
+
 void ACombatCharacter::AddHP(int32 add_hp)
 {
 	SetHP(HP + add_hp);

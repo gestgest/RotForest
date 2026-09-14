@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Jobs/JobComponent.h"
+#include "Items/WeaponItemData.h"
 #include "CombatCharacter.generated.h"
 
 class UAnimMontage;
@@ -150,10 +151,9 @@ protected:
 
 
 
-	/** 현재 부착된 직업 컴포넌트(런타임 생성). 직업 없는 캐릭터는 null. */
+	// 현재 부착된 직업 컴포넌트(런타임 생성). 직업 없는 캐릭터는 null.
 	UPROPERTY(BlueprintReadOnly, Category = "Job")
 	UJobComponent* CurrentJob = nullptr;
-
 
 
 
@@ -166,6 +166,11 @@ protected:
 	/** 왼손 무기 슬롯 — 생성자에서 만들어 LeftHandSocket에 붙는다. 각도 조정은 WeaponRight와 동일. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	UChildActorComponent* WeaponLeft = nullptr;
+
+	// 지금 장착한 무기 데이터. 장비는 캐릭터가 소유한다 — 직업이 바뀌어도 들고 있던 무기는 남는다.
+	// Transient — 한 판 동안만 유효한 값이라 애셋/세이브에 굳으면 안 된다(BonusDamage와 같은 성격).
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Weapon")
+	FWeaponItemData EquippedWeapon;
 
 	/** 각 슬롯의 Weapon_BP 안에 있는 스켈레탈 메시 컴포넌트. BeginPlay(InitWeaponSlot)에서 캐시. */
 	UPROPERTY()
@@ -236,9 +241,10 @@ public:
 	int32 GetDamage() { return Damage; }
 	bool GetIsDead() { return IsDead; }
 
+	UJobComponent* GetJobComponent() const { return CurrentJob; }
 	USkeletalMeshComponent* GetWeaponMeshComponent() const { return WeaponMeshComponent; }
 
-	/** 죽음 상태, HP바 갱신 */
+	// 죽음 상태, HP바 갱신 
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	virtual void SetHP(int32 new_hp);
 
@@ -254,6 +260,16 @@ public:
 	// 오른손에 끼우는 단축형.
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void EquipWeapon(USkeletalMesh* NewMesh);
+
+	// 무기 데이터를 갈아끼우고 손 슬롯 반영까지 한다.
+	// 무기 획득처(픽업/상점/보상)는 전부 이 함수 하나로 들어온다.
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	bool EquipWeaponItem(const FWeaponItemData& Item);
+
+	// 지금 장착 무기의 메시를 직업이 지정한 손에 다시 끼운다. 데이터는 건드리지 않는다.
+	void RefreshWeaponMesh();
+
+	const FWeaponItemData& GetEquippedWeapon() const { return EquippedWeapon; }
 };
 
 /**

@@ -86,11 +86,6 @@ public:
 	// 매 프레임 호출(플레이어 Tick). 조준과 무관한 패시브 효과(자가 회복 등)용. 기본 구현 없음. 
 	virtual void TickJob(float DeltaTime);
 
-	// 주운/구매한 무기를 장착한다. 데이터만 바꾸고 손 슬롯 반영은 RefreshWeaponMesh()에 위임한다.
-	// 다른 직업 전용 무기는 거부한다.
-	// 반환: 장착에 성공하면 true, 직업이 안 맞아 거부하면 false.
-	UFUNCTION(BlueprintCallable, Category = "Job|Weapon")
-	bool EquipWeapon(const FWeaponItemData& Item);
 
 
 protected:
@@ -117,23 +112,11 @@ protected:
 	EWeaponHand WeaponHand = EWeaponHand::Right;
 
 
-	// 지금 장착 무기(EquippedWeapon)의 메시를 WeaponHand 쪽 슬롯에 꽂는다.
-	// 데이터는 건드리지 않는다 — 상태 변경은 EquipWeapon()이 하고 여기는 반영만 한다.
-	void RefreshWeaponMesh();
 
 	/** 공격 사운드를 소유자 위치에서 재생 */
 	void PlayAttackSound();
 
-
-
-	/**
-	 * 전방으로 발사체를 스폰하고 직업의 Damage/속도를 적용해 반환한다 (궁수/마법사 공용).
-	 * @param ProjectileClass  스폰할 발사체 클래스
-	 * @param Speed            발사 속도(cm/s)
-	 * @param MuzzleOffset     캐릭터 앞쪽으로 스폰하는 거리(cm)
-	 * @param MuzzleHeight     스폰 높이 보정(cm)
-	 * @return 스폰된 발사체(실패 시 nullptr). 호출 측에서 폭발반경 등 추가 설정 가능.
-	 */
+	//원거리 투사체 생성
 	AProjectile* SpawnProjectileForward(TSubclassOf<AProjectile> ProjectileClass, float Speed, float MuzzleOffset, float MuzzleHeight);
 
 private:
@@ -143,14 +126,10 @@ private:
 	USoundBase* AttackSound = nullptr;
 
 
-	// 직업 기본 무기 — 직업 BP(BP_ArcherJob 등)에서 지정한다. 시작 시 EquippedWeapon으로 복사되고 그 뒤로 안 변한다.
+	// 직업 기본 무기 — 직업 BP(BP_ArcherJob 등)에서 지정한다. 시작 시 캐릭터에 장착되고 그 뒤로 안 변한다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Job|Weapon")
 	FWeaponItemData DefaultWeapon;
 
-	// 지금 장착 중인 무기. InitializeForOwner에서 DefaultWeapon으로 채워지므로 항상 유효하다.
-	// Transient — 한 판 동안만 유효한 값이라 애셋/세이브에 굳으면 안 된다(BonusDamage와 같은 성격).
-	UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Job|Weapon")
-	FWeaponItemData EquippedWeapon;
 
 
 public:
@@ -176,14 +155,14 @@ public:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Job|Combat")
 	int32 BonusDamage = 0;
 
-	// 실제 적용 피해량 = 직업 설계값 + 강화/버프 증가분. 공격 코드는 전부 이걸 쓴다. 
+	// 실제 적용 피해량 = 직업 설계값 + 강화/버프 증가분 + 장착 무기 공격력.
+	// 무기는 캐릭터가 들고 있어서 여기서 인라인으로 못 읽는다(순환 include). 정의는 .cpp에 있다.
 	UFUNCTION(BlueprintPure, Category = "Job|Stats")
-	int32 GetDamage() const { return Stats.Damage + BonusDamage + EquippedWeapon.WeaponPower; }
+	int32 GetDamage() const;
 
-	USkeletalMesh* GetWeaponMesh() const { return EquippedWeapon.Mesh; }
 
 	// 이 직업의 기본 무기 메시. CDO에 물어볼 때 쓴다(동료 스폰존 아이콘 등) —
-	// CDO는 InitializeForOwner를 안 타므로 EquippedWeapon이 비어 있다.
+	// CDO는 InitializeForOwner를 안 타므로 캐릭터 쪽 장착 무기가 비어 있다.
 	USkeletalMesh* GetDefaultWeaponMesh() const { return DefaultWeapon.Mesh; }
 	EWeaponHand GetWeaponHand() const { return WeaponHand; }
 	float GetEngageRange() { return EngageRange; }
