@@ -4,14 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "Jobs/JobTypes.h"
+#include "Engine/DataTable.h"
 #include "WeaponItemData.generated.h"
 
 class USkeletalMesh;
 
+
 // 무기 한 자루의 데이터. 값 타입이라 복사해서 들고 다닌다.
 // 직업 컴포넌트(장착 무기), 픽업 액터(바닥에 떨어진 것), 상점/드랍이 전부 이 타입을 공유한다.
 USTRUCT(BlueprintType)
-struct FWeaponItemData
+struct FWeaponItemData : public FTableRowBase
 {
 	GENERATED_BODY()
 
