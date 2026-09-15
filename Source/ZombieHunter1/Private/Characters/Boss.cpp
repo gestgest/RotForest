@@ -1,4 +1,4 @@
-#include "Characters/Boss.h"
+﻿#include "Characters/Boss.h"
 #include "InfiniteMapGenerator.h" // 클리어 기록을 남길 곳 (POIStates)
 
 void ABoss::SetHome(AInfiniteMapGenerator* InGenerator, const FIntPoint& InCenterChunk)
@@ -18,12 +18,14 @@ void ABoss::OnDeath()
     // 다시 방문했을 때 생성기가 아무것도 모른 채 풀피 보스를 새로 세운다.
     if (!bHomeSet)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[Boss] Home 미설정 — 클리어가 기록되지 않는다(생성기가 스폰한 보스가 아님?)"));
         return;
     }
 
+    //죽였다는 값 설정
     if (AInfiniteMapGenerator* Generator = HomeGenerator.Get())
     {
         Generator->MarkBossKilled(HomeChunk);
     }
+
+    //
 }
