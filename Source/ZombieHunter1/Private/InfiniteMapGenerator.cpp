@@ -622,6 +622,27 @@ void AInfiniteMapGenerator::MarkBossKilled(const FIntPoint& CenterChunk)
 		CenterChunk.X, CenterChunk.Y);
 }
 
+/** GenerateChunk가 만든 액터가 아니면 SpawnedActors에 안 들어간다.
+ *  그런 액터는 여기서 직접 등록해줘야 청크와 함께 정리된다 — 안 하면 아무도 안 치우는 미아가 된다. */
+bool AInfiniteMapGenerator::RegisterChunkActor(const FIntPoint& ChunkCoord, AActor* Actor)
+{
+	if (!IsValid(Actor))
+	{
+		return false;
+	}
+
+	FMapChunk* Chunk = LoadedChunks.Find(ChunkCoord);
+	if (!Chunk)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Chunk] (%d, %d) 청크가 로드돼 있지 않아 %s 등록 실패"),
+			ChunkCoord.X, ChunkCoord.Y, *Actor->GetName());
+		return false;
+	}
+
+	Chunk->SpawnedActors.Add(Actor);
+	return true;
+}
+
 
 //오브젝트 배치라고 생각하면 됨
 AStaticMeshActor* AInfiniteMapGenerator::SpawnObstacleMesh(UStaticMesh* Mesh, const FVector& Location,

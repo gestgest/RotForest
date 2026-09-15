@@ -558,6 +558,16 @@ void AMyPlayer::UpdateExpUI()
     }
 }
 
+// HP바 폭 갱신. 공식이 여기 한 곳에만 살게 해서 호출부마다 달라지는 일을 막는다.
+// (MaxHP가 0이면 정수 나눗셈으로 크래시하므로 최소 1로 막는다)
+void AMyPlayer::UpdateHPUI()
+{
+    if (CanvasWidget)
+    {
+        CanvasWidget->SetProgressUISize(FVector2D(HP * 500 / FMath::Max(1, MaxHP), 50));
+    }
+}
+
 void AMyPlayer::SetHP(int32 new_hp)
 {
     // HP 대입 + IsDead 전환 + OnDeath/OnRevive 호출은 베이스가 담당.
@@ -566,7 +576,7 @@ void AMyPlayer::SetHP(int32 new_hp)
     // HUD 체력바 갱신
     if (CanvasWidget)
     {
-        CanvasWidget->SetProgressUISize(FVector2D(HP * 500 /MaxHP, 50)); //500
+        UpdateHPUI();
 
         // 사망 패널을 현재 죽음 상태와 동기화.
         // OnDeath/OnRevive는 "전환 시점"에만 1회 호출이라, BP BeginPlay(위젯 연결)가
@@ -705,7 +715,7 @@ void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
         // 위젯이 막 연결된 시점에 현재 HP 기준으로 사망 UI/HP바를 동기화한다.
         // BeginPlay 때는 CanvasWidget이 아직 null이라 패널을 못 껐을 수 있으므로 여기서 확정.
         CanvasWidget->ShowDeathPanel(HP <= 0);
-        CanvasWidget->SetProgressUISize(FVector2D(HP * 100, 50));
+        UpdateHPUI();
         UpdateExpUI(); // 위젯 연결 시점에 경험치 표시도 현재 값으로 맞춘다
     }
 }

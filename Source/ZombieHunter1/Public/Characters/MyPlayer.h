@@ -340,6 +340,10 @@ private: //평범한 변수 및 함수
 	void UpdateExpUI();
 
 
+	// SetHP와 SetCanvasWidget(초기 표시)에서 호출. => HP바 폭 갱신.
+	void UpdateHPUI();
+
+
 
 	//아마 부활할때 넣을듯 => ReVived랑 비교해
 	void ReStart();

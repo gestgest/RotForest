@@ -77,16 +77,16 @@ void AZombieSlayerGameMode::initEnemy(int index)
         spawnParams
     );
 
-    newEnemy->SetID(index);
-
     if (newEnemy)
     {
+        newEnemy->SetID(index);
 #if WITH_EDITOR
         newEnemy->SetFolderPath(TEXT("Spawned/Enemies")); // 아웃라이너 정리용 (에디터 전용)
 #endif
         enemyPool.Add(newEnemy);  // 풀에 추가
         newEnemy->EnterPoolDormancy();  // 숨김 + 콜리전/이동/틱 정지 (숨김만으론 중력에 낙하)
     }
+
 }
 
 void AZombieSlayerGameMode::initCoin(int index)

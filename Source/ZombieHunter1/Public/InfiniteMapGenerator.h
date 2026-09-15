@@ -324,4 +324,9 @@ public:
 	/** 좀비마을 보스가 죽었음을 기록한다 (ABoss::OnDeath가 호출).
 	 *  청크가 언로드됐다 재생성돼도 이 마을에는 보스가 다시 서지 않는다. */
 	void MarkBossKilled(const FIntPoint& CenterChunk);
+
+	/** 런타임에 생긴 액터(보스 전리품 등)를 청크 소유물로 등록한다.
+	 *  등록해두면 청크가 언로드될 때 UnloadChunk가 같이 Destroy해준다.
+	 *  해당 청크가 이미 언로드됐으면 false — 호출자가 액터를 직접 정리해야 한다. */
+	bool RegisterChunkActor(const FIntPoint& ChunkCoord, AActor* Actor);
 };
