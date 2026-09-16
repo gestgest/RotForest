@@ -752,7 +752,7 @@ void AInfiniteMapGenerator::SetupFloor(const FVector & Center, FMapChunk & Chunk
 //보스 나오는 구역 생성
 void AInfiniteMapGenerator::SetupZombieVillege(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream)
 {
-	if (bIsPOIChunk && POI.bIsCenter && POI.Type == EPOIType::ZombieVillage&& BossClass)
+	if (bIsPOIChunk && POI.bIsCenter && POI.Type == EPOIType::ZombieVillage && BossClass)
 	{
 		//아마 전리품이나 구조는 이런곳에?
 

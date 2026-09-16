@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "Characters/Enemy.h"
+
+
 #include "Boss.generated.h"
 
 class AInfiniteMapGenerator;
@@ -21,15 +23,14 @@ public:
 
 protected:
 	// 이 보스가 떨굴 수 있는 무기들. WeaponDataTable의 행을 가리킨다.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Drop")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drop")
 	TArray<FDataTableRowHandle> DropTable;
 
 	// 바닥에 떨굴 픽업 액터 (BP_WeaponPickup)
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss|Drop")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drop")
 	TSubclassOf<AWeaponPickup> DropPickupClass;
+
 private:
-
-
 	// 상태를 기록할 생성기. 약참조 — 레벨 종료 중이면 이미 사라졌을 수 있다. 
 	TWeakObjectPtr<AInfiniteMapGenerator> HomeGenerator;
 
@@ -37,4 +38,6 @@ private:
 
 	// (0,0)도 유효한 청크 좌표라 좌표값만으로는 "설정됨"을 구분할 수 없다 — 별도 플래그가 필요.
 	bool bHomeSet = false;
+
+	void SpawnDropPickup();
 };
