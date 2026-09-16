@@ -4,6 +4,7 @@
 #include "Items/WeaponPickup.h"
 #include "Components/BoxComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "TimerManager.h"
 #include "Characters/MyPlayer.h"
 
 // Sets default values
@@ -17,7 +18,7 @@ AWeaponPickup::AWeaponPickup()
 
 	TriggerBox->SetBoxExtent(FVector(50.0f, 50.0f, 50.0f));
 	TriggerBox->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
-	TriggerBox->SetGenerateOverlapEvents(true);
+	TriggerBox->SetGenerateOverlapEvents(false);
 
 
 	// 땅에 놓인 무기 외형. 실제 메시는 WeaponItemData.Mesh에서 꽂는다.
@@ -39,6 +40,16 @@ void AWeaponPickup::BeginPlay()
 	if (WeaponItemData.Mesh)
 	{
 		WeaponMesh->SetSkeletalMeshAsset(WeaponItemData.Mesh);
+	}
+
+	//딜레이
+	if (PickupDelay > 0.f)
+	{
+		GetWorldTimerManager().SetTimer(PickupDelayHandle, this, &AWeaponPickup::EnablePickup, PickupDelay);
+	}
+	else //딜레이 값이 없으면 그냥 바로 실행
+	{
+		EnablePickup();
 	}
 }
 
@@ -74,4 +85,16 @@ void AWeaponPickup::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*
 	//중복 오버랩 — 한 번 주운 뒤 이벤트가 또 들어오는 경우를 어떻게 막을지
 	TriggerBox->SetGenerateOverlapEvents(false);
 	Destroy();
+}
+
+void AWeaponPickup::EnablePickup()
+{
+	if (!TriggerBox)
+	{
+		return;
+	}
+
+	
+	TriggerBox->SetGenerateOverlapEvents(true);
+	TriggerBox->UpdateOverlaps();
 }

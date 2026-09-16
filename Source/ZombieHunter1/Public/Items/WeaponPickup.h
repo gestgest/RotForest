@@ -23,6 +23,22 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+public:
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+
+
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data")
+	FWeaponItemData WeaponItemData;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Collider")
+	USkeletalMeshComponent* WeaponMesh;
+
+
+protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Collider")
 	UBoxComponent* TriggerBox;
 
@@ -30,15 +46,10 @@ protected:
 	void OnTriggerBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& Sweep);
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Data")
-	FWeaponItemData WeaponItemData;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Collider")
-	USkeletalMeshComponent* WeaponMesh;
-
 private:
+	void EnablePickup();
+	FTimerHandle PickupDelayHandle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category="Pickup")
+	float PickupDelay = 0.5f;
 };
