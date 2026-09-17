@@ -81,6 +81,8 @@ void UMyCanvas::ShowDeathPanel(bool bShow)
 
 void UMyCanvas::AddItemNotification(const FText& Text)
 {
+    UE_LOG(LogTemp, Log, TEXT("엄준식 : BBB"));
+
     if (!Vertical_ItemTextBox)
     {
         return;
@@ -88,6 +90,7 @@ void UMyCanvas::AddItemNotification(const FText& Text)
 
     UTextBlock* NewText = NewObject<UTextBlock>(this);
     NewText->SetText(Text);
+    NewText->SetRenderTransformAngle(180.0f);   // 부모 박스가 뒤집혀 있어서 되돌리기
     Vertical_ItemTextBox->AddChildToVerticalBox(NewText);
 
     //5초후에 제거 느낌

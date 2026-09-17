@@ -81,6 +81,8 @@ void AWeaponPickup::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*
 	{
 		return;
 	}
+	FText Msg = FText::Format( FText::FromString( TEXT("{0}을 획득했습니다.") ), (WeaponItemData.WeaponName) );
+	MyPlayer->ShowOnItemText(Msg);
 
 	//중복 오버랩 — 한 번 주운 뒤 이벤트가 또 들어오는 경우를 어떻게 막을지
 	TriggerBox->SetGenerateOverlapEvents(false);
