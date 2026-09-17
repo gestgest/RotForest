@@ -10,6 +10,7 @@
 #include "Components/Button.h"
 #include "Components/ProgressBar.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
+#include "Components/VerticalBox.h"
 #include "MyCanvas.generated.h"
 
 class UVirtualJoystick;
@@ -40,6 +41,11 @@ public:
     UPROPERTY(meta = (BindWidgetOptional))
     UVirtualJoystick* AimJoystick;
 
+
+    UPROPERTY(meta = (BindWidgetOptional))
+    UVerticalBox* Vertical_ItemTextBox;
+    
+
     // 경험치 표시 (선택) — BP_Canvas에 이 이름으로 배치하면 자동 연결, 없어도 컴파일에 지장 없음.
     // ExpText: "Lv.3  12 / 20" 형식 텍스트, ExpBar: 다음 레벨까지 진행도(0~1)
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
@@ -49,7 +55,7 @@ public:
     UProgressBar* ExpBar;
 
     //////////////////////////////////////////////////////////////////////////
-    // 사망 패널(디아블로식) — 별도 위젯 WBP_DeathPanel(부모: UDeathPanelWidget)을
+    // 사망 패널 — 별도 위젯 WBP_DeathPanel(부모: UDeathPanelWidget)을
     // BP_Canvas에 "DeathPanel"이라는 이름으로 배치하면 자동 연결된다(없어도 컴파일/실행 지장 없음).
     // 여기(MyCanvas)는 켜고 끄기만 하고, 버튼 로직은 UDeathPanelWidget이 자체 처리한다.
 
@@ -71,4 +77,7 @@ public:
     /** 경험치 HUD 갱신 — AMyPlayer::UpdateExpUI가 호출. 위젯이 배치돼 있을 때만 그린다. */
     void UpdateExp(int32 Level, int32 Exp, int32 ExpToNext);
 
+
+    void AddItemNotification(const FText & Text);
+    void RemoveItemNotification();
 };

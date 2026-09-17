@@ -77,3 +77,29 @@ void UMyCanvas::ShowDeathPanel(bool bShow)
     }
 }
 
+
+
+void UMyCanvas::AddItemNotification(const FText& Text)
+{
+    if (!Vertical_ItemTextBox)
+    {
+        return;
+    }
+
+    UTextBlock* NewText = NewObject<UTextBlock>(this);
+    NewText->SetText(Text);
+    Vertical_ItemTextBox->AddChildToVerticalBox(NewText);
+
+    //5초후에 제거 느낌
+    FTimerHandle TempHandle;
+    FTimerDelegate Delegate = FTimerDelegate::CreateUObject(this, &UMyCanvas::RemoveItemNotification);
+    GetWorld()->GetTimerManager().SetTimer(TempHandle, Delegate, 2.0f, false);
+}
+
+void UMyCanvas::RemoveItemNotification()
+{
+    if (Vertical_ItemTextBox && Vertical_ItemTextBox->GetChildrenCount() > 0)
+    {
+        Vertical_ItemTextBox->RemoveChildAt(0);
+    }
+}

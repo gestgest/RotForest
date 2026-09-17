@@ -460,6 +460,16 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     }
 }
 
+void AMyPlayer::ShowOnItemText(FText & Text)
+{
+    CanvasWidget
+}
+
+
+
+
+
+
 void AMyPlayer::SetMoveInput(FVector2D Value) { TouchMove = Value; }
 void AMyPlayer::SetAimInput(FVector2D Value) { TouchAim = Value; }
 

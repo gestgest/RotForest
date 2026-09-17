@@ -79,14 +79,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
 	void MoveTopDown(FVector2D Value);
 
-	/** 모바일 터치 가상 조이스틱(왼쪽: 이동)이 매 프레임 호출 */
+	// 모바일 터치 가상 조이스틱(왼쪽: 이동)이 매 프레임 호출
 	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
 	void SetMoveInput(FVector2D Value);
 
-	/** 모바일 터치 가상 조이스틱(오른쪽: 조준+공격)이 매 프레임 호출 */
+	// 모바일 터치 가상 조이스틱(오른쪽: 조준+공격)이 매 프레임 호출
 	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
 	void SetAimInput(FVector2D Value);
 
+
+	void ShowOnItemText(FText& Text);
 
 
 	// 하체 yaw 오프셋(도). AnimInstance(UCombatAnimInstance)가 매 프레임 읽는다.
@@ -100,8 +102,8 @@ public:
 	// Returns TopDownCamera subobject
 	FORCEINLINE UCameraComponent* GetTopDownCamera() const { return TopDownCamera; }
 
-
-
+	
+	
 
 protected:
 	// [아직 구현 안함] BP에서 이펙트/사운드/무기 외형 교체 등을 구현. => 
@@ -268,19 +270,19 @@ private: //평범한 변수 및 함수
 
 	////////////////////////////////////////////////////////////////////////
 	// Companion
-	/** 스폰할 동료 클래스(BP_Companion 지정). 비우면 섭외 안 됨. */
+	// 스폰할 동료 클래스(BP_Companion 지정). 비우면 섭외 안 됨.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<ACompanion> CompanionClass;
 
-	/** 최대 동료 수. 이 인원에 도달하면 더 섭외하지 않는다. */
+	// 최대 동료 수. 이 인원에 도달하면 더 섭외하지 않는다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion", meta = (AllowPrivateAccess = "true"))
 	int32 MaxCompanions = 3;
 
-	/** 동료를 플레이어 기준 어디에 스폰할지 오프셋(cm). 살짝 옆/위로 띄워 바닥 끼임 방지. */
+	// 동료를 플레이어 기준 어디에 스폰할지 오프셋(cm). 살짝 옆/위로 띄워 바닥 끼임 방지.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion", meta = (AllowPrivateAccess = "true"))
 	FVector CompanionSpawnOffset = FVector(-120.0f, 120.0f, 0.0f);
 
-	/** 현재 섭외해 둔 동료들(런타임). 죽으면 정리된다. */
+	// 현재 섭외해 둔 동료들(런타임). 죽으면 정리된다.
 	UPROPERTY(BlueprintReadOnly, Category = "Companion", meta = (AllowPrivateAccess = "true"))
 	TArray<ACompanion*> Companions;
 
