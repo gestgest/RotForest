@@ -462,7 +462,6 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 void AMyPlayer::ShowOnItemText(FText & Text)
 {
-    UE_LOG(LogTemp, Log, TEXT("엄준식 : AAA"));
     if (!CanvasWidget)
     {
         return;

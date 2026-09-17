@@ -81,8 +81,6 @@ void UMyCanvas::ShowDeathPanel(bool bShow)
 
 void UMyCanvas::AddItemNotification(const FText& Text)
 {
-    UE_LOG(LogTemp, Log, TEXT("엄준식 : BBB"));
-
     if (!Vertical_ItemTextBox)
     {
         return;
