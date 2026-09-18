@@ -1,6 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#include "InfiniteMapGenerator.h"
+﻿#include "InfiniteMapGenerator.h"
 #include "Engine/StaticMeshActor.h"
 #include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -80,8 +78,6 @@ void AInfiniteMapGenerator::BeginPlay()
 	}
 	UpdateNavBoundsToPlayer();
 }
-
-
 
 void AInfiniteMapGenerator::Tick(float DeltaTime)
 {
@@ -234,8 +230,8 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 	
 	SetupFloor(Center, Chunk, POI, bIsPOIChunk);
 	SpawnFog(Center, Chunk);
-	SetupVillege(bIsPOIChunk, POI, Center, Chunk, Stream);
-	SetupZombieVillege(bIsPOIChunk, POI, Center, Chunk, Stream);
+	SetupVillage(bIsPOIChunk, POI, Center, Chunk, Stream);
+	SetupZombieVillage(bIsPOIChunk, POI, Center, Chunk, Stream);
 
 	//POI : 마을이나 좀비마을 와이어 박스 만듬
 	if (bIsPOIChunk && bDebugDrawPOI && POI.bIsCenter)
@@ -407,12 +403,10 @@ FPOIInfo AInfiniteMapGenerator::GetPOIForRegion(const FIntPoint& RegionCoord) co
 	return Info;
 }
 
-
-
 ///////////////////////////////////////////////////////////////////////////////////////////////
-//Villege
+//Village
 // 마을 v1: 마을 안의 오브젝트 생성 (무기고, npc 같은거)
-void AInfiniteMapGenerator::SetupVillege(bool bIsPOIChunk, FPOIInfo & POI, const FVector Center, FMapChunk & Chunk, FRandomStream & Stream)
+void AInfiniteMapGenerator::SetupVillage(bool bIsPOIChunk, FPOIInfo & POI, const FVector Center, FMapChunk & Chunk, FRandomStream & Stream)
 {
 	if (bIsPOIChunk && POI.bIsCenter && POI.Type == EPOIType::Village && VillagePadClass)
 	{
@@ -750,7 +744,7 @@ void AInfiniteMapGenerator::SetupFloor(const FVector & Center, FMapChunk & Chunk
 }
 
 //보스 나오는 구역 생성
-void AInfiniteMapGenerator::SetupZombieVillege(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream)
+void AInfiniteMapGenerator::SetupZombieVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream)
 {
 	if (bIsPOIChunk && POI.bIsCenter && POI.Type == EPOIType::ZombieVillage && BossClass)
 	{

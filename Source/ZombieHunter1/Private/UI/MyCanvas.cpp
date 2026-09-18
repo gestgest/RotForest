@@ -79,15 +79,31 @@ void UMyCanvas::ShowDeathPanel(bool bShow)
 
 
 
-void UMyCanvas::AddItemNotification(const FText& Text)
+namespace
+{
+	// 종류별 글자색. 여기만 고치면 전체가 바뀐다.
+	FLinearColor GetItemNotifyColor(EItemNotifyType Type)
+	{
+		switch (Type)
+		{
+		case EItemNotifyType::Blocked:   return FLinearColor(1.0f, 0.0f, 0.0f);	// 빨간 - 뭐 안된다는 내용
+		case EItemNotifyType::Companion: return FLinearColor(0.45f, 0.8f, 1.0f);	// 하늘 - 주체가 동료
+		default:                         return FLinearColor::White;				// 획득
+		}
+	}
+}
+
+void UMyCanvas::AddItemNotification(const FText& Text, EItemNotifyType Type)
 {
     if (!Vertical_ItemTextBox)
     {
         return;
     }
+    
 
     UTextBlock* NewText = NewObject<UTextBlock>(this);
     NewText->SetText(Text);
+    NewText->SetColorAndOpacity(FSlateColor(GetItemNotifyColor(Type)));
     NewText->SetRenderTransformAngle(180.0f);   // 부모 박스가 뒤집혀 있어서 되돌리기
     Vertical_ItemTextBox->AddChildToVerticalBox(NewText);
 

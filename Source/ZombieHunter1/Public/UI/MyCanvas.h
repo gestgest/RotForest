@@ -16,6 +16,15 @@
 class UVirtualJoystick;
 class UDeathPanelWidget;
 
+// 알림 메시지 종류. 색은 UMyCanvas가 정한다 — 호출부는 "무슨 일인지"만 넘긴다.
+UENUM(BlueprintType)
+enum class EItemNotifyType : uint8
+{
+	Gain,		// 획득
+	Blocked,	// 장착 불가 (직업 불일치 등)
+	Companion,	// 동료가 대신 장착
+};
+
 UCLASS()
 class ZOMBIEHUNTER1_API UMyCanvas : public UUserWidget
 {
@@ -78,6 +87,6 @@ public:
     void UpdateExp(int32 Level, int32 Exp, int32 ExpToNext);
 
 
-    void AddItemNotification(const FText & Text);
+    void AddItemNotification(const FText& Text, EItemNotifyType Type = EItemNotifyType::Gain);
     void RemoveItemNotification();
 };

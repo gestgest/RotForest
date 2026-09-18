@@ -85,7 +85,7 @@ public:
 	void SetAimInput(FVector2D Value);
 
 
-	void ShowOnItemText(FText& Text);
+	void ShowOnItemText(FText& Text, EItemNotifyType Type = EItemNotifyType::Gain);
 
 
 	// 하체 yaw 오프셋(도). AnimInstance(UCombatAnimInstance)가 매 프레임 읽는다.
@@ -265,7 +265,6 @@ private: //평범한 변수 및 함수
 
 
 
-	////////////////////////////////////////////////////////////////////////
 	// Companion
 	// 스폰할 동료 클래스(BP_Companion 지정). 비우면 섭외 안 됨.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion", meta = (AllowPrivateAccess = "true"))
@@ -285,15 +284,15 @@ private: //평범한 변수 및 함수
 
 	bool CheckCompanion(UWorld* World);
 	FTransform SetSpawnTransformCompanion(UWorld* World);
-	////////////////////////////////////////////////////////////////////////
 
 
-	////////////////////////////////////////////////////////////////////////
+
+
+
 	// Debug Function
 	// true면 C 키로 디버그용 돈 획득(AddMoney)을 테스트할 수 있다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Debug", meta = (AllowPrivateAccess = "true"))
 	bool bDebugAddMoneyKey = true;
-	////////////////////////////////////////////////////////////////////////
 
 
 

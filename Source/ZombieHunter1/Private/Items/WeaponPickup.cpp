@@ -75,13 +75,15 @@ void AWeaponPickup::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*
 	{
 		return;
 	}
-
+	FText Msg;
 	//장착
 	if (!MyPlayer->EquipWeaponItem(WeaponItemData))
 	{
+		Msg = FText::Format(FText::FromString(TEXT("타입이 달라서 {0}을 장착할 수 없습니다.")), (WeaponItemData.WeaponName));
+		MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Blocked);
 		return;
 	}
-	FText Msg = FText::Format( FText::FromString( TEXT("{0}을 획득했습니다.") ), (WeaponItemData.WeaponName) );
+	Msg = FText::Format( FText::FromString( TEXT("{0}을 획득했습니다.") ), (WeaponItemData.WeaponName) );
 	MyPlayer->ShowOnItemText(Msg);
 
 	//중복 오버랩 — 한 번 주운 뒤 이벤트가 또 들어오는 경우를 어떻게 막을지

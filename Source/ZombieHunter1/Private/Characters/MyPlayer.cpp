@@ -460,13 +460,13 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     }
 }
 
-void AMyPlayer::ShowOnItemText(FText & Text)
+void AMyPlayer::ShowOnItemText(FText & Text, EItemNotifyType Type)
 {
     if (!CanvasWidget)
     {
         return;
     }
-    CanvasWidget->AddItemNotification(Text);
+    CanvasWidget->AddItemNotification(Text, Type);
 }
 
 
