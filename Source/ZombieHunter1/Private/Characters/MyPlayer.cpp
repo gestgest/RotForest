@@ -24,8 +24,7 @@
 #include "Components/SkeletalMeshComponent.h" //무기 컴포넌트 메시 교체
 #include "Components/ChildActorComponent.h" //무기 ChildActor(Weapon_BP)
 #include "Engine/SkeletalMesh.h"
-#include "Characters/Companion.h" //동료 섭외
-#include "Components/CapsuleComponent.h" //동료 스폰 시 캡슐 반높이
+#include "Characters/PartyComponent.h" //동료 파티(섭외·장비 배분)
 #include "ZombieGameInstance.h" //직업 선택 씬에서 고른 직업 읽기
 #include "ZombieSlayerGameMode.h" //사망 시 적 시간 정지(SetEnemiesFrozen)
 
@@ -49,37 +48,20 @@ AMyPlayer::AMyPlayer()
     //디폴트 설정
     TeamType = ETeam::Ally;
 
-	// 컨트롤러 회전이 캐릭터를 돌리지 않게 함 (조준 방향으로 직접 회전시킴)
-	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
-	bUseControllerRotationRoll = false;
-
-	//// 이동 방향 자동 회전 끄기 — 오른쪽 스틱(조준) 방향으로 수동 회전
-	GetCharacterMovement()->bOrientRotationToMovement = false;
-
-	// 비스듬한 탑다운 카메라 암
-	TopDownBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("TopDownBoom"));
-	TopDownBoom->SetupAttachment(RootComponent);
-	TopDownBoom->SetUsingAbsoluteRotation(true); // 캐릭터가 회전해도 카메라는 고정
-	TopDownBoom->TargetArmLength = CameraDistance;
-	TopDownBoom->SetRelativeRotation(FRotator(CameraPitch, 0.0f, 0.0f));
-	TopDownBoom->bDoCollisionTest = false; // 탑다운: 벽에 의해 줌인되지 않게
-
-	// 탑다운 카메라
-	TopDownCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
-	TopDownCamera->SetupAttachment(TopDownBoom, USpringArmComponent::SocketName);
-	TopDownCamera->bUsePawnControlRotation = false;
+    InitController();
+    InitCamera();
 
 	// NavMesh 동적 생성 : 플레이어 주변에만 NavMesh를 깔고, 멀어지면 제거.
 	// 무한 청크 맵의 시야 범위(약 ViewRadius*ChunkSize)를 덮도록 반경 설정.
 	NavInvoker = CreateDefaultSubobject<UNavigationInvokerComponent>(TEXT("NavInvoker"));
 	NavInvoker->SetGenerationRadii(7000.0f, 9000.0f);
 
+	// 동료 파티 — 섭외/명단/장비 배분은 전부 이쪽이 맡는다.
+	Party = CreateDefaultSubobject<UPartyComponent>(TEXT("Party"));
+
 	// 기본 직업: 전사. 에디터(BP)에서 DefaultJobClass를 바꾸면 다른 직업으로 시작한다.
 	DefaultJobClass = UWarriorJob::StaticClass();
 }
-
-
 
 // Called when the game starts or when spawned
 void AMyPlayer::BeginPlay()
@@ -108,7 +90,6 @@ void AMyPlayer::BeginPlay()
     }
 
 
-    //SetMoney(0);
     ReStart(); // 주의: 엔진 내장 APawn::Restart()가 아니라 우리 부활 함수(대문자 S). HP/돈 초기화 + 스타트 지점 이동.
 
     // 직업(Job) 컴포넌트 생성 — 시작 시 1개 고정.
@@ -117,8 +98,40 @@ void AMyPlayer::BeginPlay()
         DefaultJobClass = UWarriorJob::StaticClass();
     }
 
-    SetJob();
+    SetupJob();
 }
+
+
+//Init
+void AMyPlayer::InitCamera()
+{
+    // 비스듬한 탑다운 카메라 암
+    TopDownBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("TopDownBoom"));
+    TopDownBoom->SetupAttachment(RootComponent);
+    TopDownBoom->SetUsingAbsoluteRotation(true); // 캐릭터가 회전해도 카메라는 고정
+    TopDownBoom->TargetArmLength = CameraDistance;
+    TopDownBoom->SetRelativeRotation(FRotator(CameraPitch, 0.0f, 0.0f));
+    TopDownBoom->bDoCollisionTest = false; // 탑다운: 벽에 의해 줌인되지 않게
+
+    // 탑다운 카메라
+    TopDownCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
+    TopDownCamera->SetupAttachment(TopDownBoom, USpringArmComponent::SocketName);
+    TopDownCamera->bUsePawnControlRotation = false;
+}
+
+void AMyPlayer::InitController()
+{
+    // 컨트롤러 회전이 캐릭터를 돌리지 않게 함 (조준 방향으로 직접 회전시킴)
+    bUseControllerRotationPitch = false;
+    bUseControllerRotationYaw = false;
+    bUseControllerRotationRoll = false;
+
+
+    //// 이동 방향 자동 회전 끄기 — 오른쪽 스틱(조준) 방향으로 수동 회전
+    GetCharacterMovement()->bOrientRotationToMovement = false;
+}
+
+
 
 void AMyPlayer::OnTopDownMode()
 {
@@ -169,7 +182,7 @@ void AMyPlayer::OnTopDownMode()
 }
 
 
-void AMyPlayer::SetJob()
+void AMyPlayer::SetupJob()
 {
     // 직업 선택 씬에서 고른 직업이 GameInstance에 실려 왔으면 그걸 우선 사용한다.
     // 선택이 없거나(None) GameInstance 클래스를 아직 지정 안 했으면(캐스트 실패)
@@ -401,41 +414,6 @@ void AMyPlayer::UpdateLegYawOffset(float DeltaTime)
 
 
 
-////////////////////////////////       Companion         ///////////////////
-// 동료 섭외 — 플레이어 옆에 동료를 스폰해 따라다니며 싸우게 한다.
-void AMyPlayer::RecruitCompanion(TSubclassOf<UJobComponent> JobComponent)
-{
-    UWorld* World = GetWorld();
-    if (!CheckCompanion(World))
-    {
-        return;
-    }
-
-    const FTransform SpawnTM = SetSpawnTransformCompanion(World);
-
-    // 지연 스폰: BeginPlay가 돌기 전에 Leader/직업을 세팅해야
-    ACompanion* Companion = World->SpawnActorDeferred<ACompanion>(
-        CompanionClass, SpawnTM, this, nullptr,
-        ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn);
-
-    if (!Companion)
-    {
-        return;
-    }
-
-    Companion->Leader = this;
-
-    Companion->DefaultJobClass = JobComponent; //직업 셋팅
-
-    UGameplayStatics::FinishSpawningActor(Companion, SpawnTM);
-
-    Companions.Add(Companion);
-
-}
-
-
-///////////////////////////////////      Input    ////////////////////////////////
-// 
 void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -735,54 +713,4 @@ void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
 }
 
 
-//
-bool AMyPlayer::CheckCompanion(UWorld* World)
-{
-    if (!CompanionClass)
-    {
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange,
-                TEXT("[Companion] CompanionClass가 비어있음 - BP_MyPlayer Details에서 BP_Companion 지정"));
-        }
-        return false;
-    }
 
-    if (!World)
-    {
-        return false;
-    }
-
-    // 죽어서 사라진 동료는 목록에서 제거한 뒤 인원 체크.
-    Companions.RemoveAll([](const ACompanion* C) { return !IsValid(C); });
-    if (Companions.Num() >= MaxCompanions)
-    {
-        return false;
-    }
-    return true;
-}
-
-FTransform AMyPlayer::SetSpawnTransformCompanion(UWorld* World)
-{
-    // 플레이어 회전 기준으로 오프셋을 적용해 옆/뒤쪽에 스폰(여러 명이면 살짝씩 벌어지게).
-    const FRotator SpawnRot = GetActorRotation();
-    FVector Offset = CompanionSpawnOffset;
-    Offset.Y += Companions.Num() * 80.0f; // 두 번째부터는 옆으로 더 벌려 겹침 방지
-    FVector SpawnLoc = GetActorLocation() + SpawnRot.RotateVector(Offset);
-
-    // 바닥에 맞춰 스폰 — 위에서 아래로 트레이스해 지면을 찾고, 그 위에 캡슐 반높이만큼 띄운다.
-    // (플레이어 Z 그대로 쓰면 캡슐 높이 차이로 바닥에 끼이거나 허공에서 떨어져 안 보일 수 있음)
-    const FVector TraceStart = SpawnLoc + FVector(0, 0, 200.0f);
-    const FVector TraceEnd = SpawnLoc - FVector(0, 0, 1000.0f);
-    FHitResult Hit;
-    FCollisionQueryParams Q;
-    Q.AddIgnoredActor(this);
-    if (World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Q))
-    {
-        const float HalfHeight = GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 88.0f;
-        SpawnLoc = Hit.ImpactPoint + FVector(0, 0, HalfHeight + 2.0f);
-    }
-
-    FTransform SpawnTM(SpawnRot, SpawnLoc);
-    return SpawnTM;
-}

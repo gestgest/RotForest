@@ -6,6 +6,8 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "TimerManager.h"
 #include "Characters/MyPlayer.h"
+#include "Characters/PartyComponent.h"
+#include "Characters/CombatCharacter.h"
 
 // Sets default values
 AWeaponPickup::AWeaponPickup()
@@ -69,22 +71,24 @@ void AWeaponPickup::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*
 		return;
 	}
 
+	UPartyComponent* Party = MyPlayer->GetParty();
+	if (!Party)
+	{
+		return;
+	}
 
-	//줍는 데미지가 약하다면
-	if (WeaponItemData.WeaponPower <= MyPlayer->GetEquippedWeapon().WeaponPower)
+	// 누가 가져갈지(플레이어 우선, 없으면 동료)는 파티가 정한다. 획득 문구도 파티가 띄운다.
+	const ACombatCharacter* Receiver = Party->TryDistributeWeapon(WeaponItemData);
+	if (!Receiver)
 	{
+		if (!bNoTakerNotified)
+		{
+			bNoTakerNotified = true;
+			FText Msg = FText::Format(FText::FromString(TEXT("아무도 {0}을 쓸 수 없습니다.")), (WeaponItemData.WeaponName));
+			MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Blocked);
+		}
 		return;
 	}
-	FText Msg;
-	//장착
-	if (!MyPlayer->EquipWeaponItem(WeaponItemData))
-	{
-		Msg = FText::Format(FText::FromString(TEXT("타입이 달라서 {0}을 장착할 수 없습니다.")), (WeaponItemData.WeaponName));
-		MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Blocked);
-		return;
-	}
-	Msg = FText::Format( FText::FromString( TEXT("{0}을 획득했습니다.") ), (WeaponItemData.WeaponName) );
-	MyPlayer->ShowOnItemText(Msg);
 
 	//중복 오버랩 — 한 번 주운 뒤 이벤트가 또 들어오는 경우를 어떻게 막을지
 	TriggerBox->SetGenerateOverlapEvents(false);

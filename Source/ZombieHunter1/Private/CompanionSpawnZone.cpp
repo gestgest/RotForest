@@ -2,11 +2,18 @@
 
 #include "CompanionSpawnZone.h"
 #include "Characters/MyPlayer.h"
+#include "Characters/PartyComponent.h"
 #include "Engine/Engine.h"
 
 void ACompanionSpawnZone::HandleZoneFilled(AMyPlayer* Player)
 {
-	Player->RecruitCompanion(GetJobComponent());
+	UPartyComponent* Party = Player ? Player->GetParty() : nullptr;
+	if (!Party)
+	{
+		return;
+	}
+
+	Party->RecruitCompanion(GetJobComponent());
 }
 
 //ACompanionSpawnZone::

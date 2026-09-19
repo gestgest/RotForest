@@ -266,6 +266,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	bool EquipWeaponItem(const FWeaponItemData& Item);
 
+	// 이 무기를 지금 것과 바꿀 가치가 있는지. 직업이 맞고 공격력이 더 높아야 한다.
+	UFUNCTION(BlueprintPure, Category = "Weapon")
+	bool WantsWeaponItem(const FWeaponItemData& Item) const;
+
 	// 지금 장착 무기의 메시를 직업이 지정한 손에 다시 끼운다. 데이터는 건드리지 않는다.
 	void RefreshWeaponMesh();
 

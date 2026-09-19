@@ -249,6 +249,24 @@ bool ACombatCharacter::EquipWeaponItem(const FWeaponItemData& Item)
 	return true;
 }
 
+// 장착은 하지 않고 판단만 한다 — 후보 중에서 고르려면 둘이 분리돼 있어야 한다.
+bool ACombatCharacter::WantsWeaponItem(const FWeaponItemData& Item) const
+{
+	if (!CurrentJob)
+	{
+		return false;
+	}
+
+	//잡 타입이 다르면
+	if (Item.JobType != CurrentJob->JobType)
+	{
+		return false;
+	}
+
+	return Item.WeaponPower > EquippedWeapon.WeaponPower;
+}
+
+
 // 어느 손에 끼울지는 직업이 정한다 — 궁수는 왼손, 나머지는 오른손.
 // 직업이 없는 캐릭터(적 등)는 오른손으로 간다.
 void ACombatCharacter::RefreshWeaponMesh()

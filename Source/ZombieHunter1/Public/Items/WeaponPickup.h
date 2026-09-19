@@ -48,6 +48,10 @@ protected:
 
 private:
 	void EnablePickup();
+
+	// 아무도 못 쓰는 무기라는 안내는 한 번만 — 오버랩이 반복 들어와도 도배되지 않게.
+	bool bNoTakerNotified = false;
+
 	FTimerHandle PickupDelayHandle;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category="Pickup")

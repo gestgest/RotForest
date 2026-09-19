@@ -17,13 +17,22 @@ class UTexture2D;
 class UJobComponent;
 class USkeletalMesh;
 class USkeletalMeshComponent;
-class ACompanion;
+class UPartyComponent;
 
 UCLASS()
 class ZOMBIEHUNTER1_API AMyPlayer : public ACombatCharacter
 {
 	GENERATED_BODY()
 
+	/*
+		여담으로 get set같은 프로퍼티와 부품 함수라면 밑 public에 넣어라.
+		1. 핵심 메인 함수
+		2. 핵심 메인 변수
+		3. 부품 변수
+		4. 부품 함수 => 프로퍼티
+
+		private도 변수는 앞에
+	*/
 public:
 	AMyPlayer();
 
@@ -36,71 +45,21 @@ protected:
 	// 죽음 → 부활(ReStart의 SetHP) 
 	virtual void OnRevive() override;
 
-
 public:
 	virtual void Tick(float DeltaTime) override;
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-
-	//~ Begin Death
-	// 파라미터 이름은 bDead — 베이스(ACombatCharacter)의 IsDead 멤버와 겹치면 UHT가 shadowing 에러를 냄.
-	UFUNCTION(BlueprintImplementableEvent, Category = "Player")
-	void CheckDeath(bool bDead);
-	//~ End Death
-
-
-	/*
-		여담으로 get set같은 프로퍼티와 부품 함수라면 밑 public에 넣어라.
-		1. 핵심 메인 함수
-		2. 핵심 메인 변수
-		3. 부품 변수
-		4. 부품 함수 => 프로퍼티
-
-		private도 변수는 앞에
-	*/
-
-
+	
+	//입력 설정
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override; 
+	
+	
 	// 강화 발판 AWeaponUpgradeZone이 호출 => WeaponLevel 증가 + 현재 직업의 Damage 상승.
 	UFUNCTION(BlueprintCallable, Category = "Player|Weapon")
 	void UpgradeWeapon();
 
+	// 파라미터 이름은 bDead — 베이스(ACombatCharacter)의 IsDead 멤버와 겹치면 UHT가 shadowing 에러를 냄.
+	UFUNCTION(BlueprintImplementableEvent, Category = "Player")
+	void CheckDeath(bool bDead);
 
-	// 스폰존의 생성 함수 HandleZoneFilled에서 호출
-	UFUNCTION(BlueprintCallable, Category = "Companion")
-	void RecruitCompanion(TSubclassOf<UJobComponent> JobComponent);
-
-
-
-	//근데 안 쓰이는 거 같다?
-	// 키보드(WASD) Enhanced Input(IA_Move)에서 호출. 카메라가 고정된 월드축 기준으로 이동
-	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
-	void MoveTopDown(FVector2D Value);
-
-	// 모바일 터치 가상 조이스틱(왼쪽: 이동)이 매 프레임 호출
-	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
-	void SetMoveInput(FVector2D Value);
-
-	// 모바일 터치 가상 조이스틱(오른쪽: 조준+공격)이 매 프레임 호출
-	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
-	void SetAimInput(FVector2D Value);
-
-
-	void ShowOnItemText(FText& Text, EItemNotifyType Type = EItemNotifyType::Gain);
-
-
-	// 하체 yaw 오프셋(도). AnimInstance(UCombatAnimInstance)가 매 프레임 읽는다.
-	FORCEINLINE float GetLegYawOffset() const { return LegYawOffset; }
-
-	// 현재 동료 목록(읽기 전용) — 적 타게팅(AEnemy::TrackingPlayer) 등 외부 조회용. 
-	FORCEINLINE const TArray<ACompanion*>& GetCompanions() const { return Companions; }
-
-	// Returns TopDownBoom subobject 
-	FORCEINLINE USpringArmComponent* GetTopDownBoom() const { return TopDownBoom; }
-	// Returns TopDownCamera subobject
-	FORCEINLINE UCameraComponent* GetTopDownCamera() const { return TopDownCamera; }
-
-	
-	
 
 protected:
 	// [아직 구현 안함] BP에서 이펙트/사운드/무기 외형 교체 등을 구현. => 
@@ -108,10 +67,8 @@ protected:
 	void OnWeaponUpgraded(int32 NewWeaponLevel);
 
 
-
 private: //평범한 변수 및 함수
-	////////////////////////////////////////////////////////////////////////
-	// ~ Begin Stats
+
 	// HP / Damage 는 베이스(ACombatCharacter)로 이동.
 	// 블루프린트에서 읽고 쓸 수 있는 Money 변수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Stats", meta = (AllowPrivateAccess = "true"))
@@ -130,15 +87,9 @@ private: //평범한 변수 및 함수
 	// 레벨당 필요 경험치 증가량 (필요량 = ExpBase + (Level-1) × ExpGrowth)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Stats", meta = (AllowPrivateAccess = "true"))
 	int32 ExpGrowth = 5;
-	// ~ End Stats
-	////////////////////////////////////////////////////////////////////////
 
 
-
-
-
-	////////////////////////////////////////////////////////////////////////ㄱ
-	// Weapon
+	// [Weapon]
 	// 강화 레벨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapon", meta = (AllowPrivateAccess = "true"))
 	int32 WeaponLevel = 0;
@@ -146,24 +97,22 @@ private: //평범한 변수 및 함수
 	// 데미지 증가량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapon", meta = (AllowPrivateAccess = "true"))
 	int32 WeaponDamagePerLevel = 1;
-	////////////////////////////////////////////////////////////////////////
 
 
-	// 사운드
+	// [사운드]
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio", meta = (AllowPrivateAccess = "true"))
 	USoundBase* AttackSound; //MS
 
 
-
-	////////////////////////////////////////////////////////////////////////
-	//Input Variable
+	//[Input Variable]
 	// 입력 누적값 (게임패드 / 터치를 분리 저장 후 Tick에서 합성)
 	FVector2D GamepadMove = FVector2D::ZeroVector;
 	FVector2D GamepadAim = FVector2D::ZeroVector;
 	FVector2D TouchMove = FVector2D::ZeroVector;
 	FVector2D TouchAim = FVector2D::ZeroVector;
 
-	//조이스틱 인스턴스
+
+	//[조이스틱]
 	UPROPERTY()
 	UVirtualJoystick* MoveJoystick;
 
@@ -182,16 +131,11 @@ private: //평범한 변수 및 함수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Movement", meta = (AllowPrivateAccess = "true"))
 	float TurnInterpSpeed = 12.0f;
 	
-	// 켜면 화면에 이동 입력 크기 / 실제 속도 / MaxWalkSpeed를 출력한다. 이동 속도 튜닝용
+	// 디버깅 : 켜면 화면에 이동 입력 크기 / 실제 속도 / MaxWalkSpeed를 출력한다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Debug", meta = (AllowPrivateAccess = "true"))
 	bool bShowSpeedDebug = false;
-	////////////////////////////////////////////////////////////////////////
 
 
-
-
-	////////////////////////////////////////////////////////////////////////
-	//~ Begin Camera Variable
 	// 비스듬한 탑다운 카메라 암 (BP의 기존 CameraBoom과 이름 충돌 방지)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "TopDown|Camera", meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* TopDownBoom;
@@ -220,7 +164,6 @@ private: //평범한 변수 및 함수
 
 
 
-	////////////////////////////////////////////////////////////////////////┐
 	// ~ Begin Animation
 	// 
 	// 자동 공격 간격(AttackInterval)·직업(DefaultJobClass/CurrentJob)·공격 몽타주(AttackMontage)는
@@ -237,8 +180,6 @@ private: //평범한 변수 및 함수
 	// LegYawOffset 최대 각도(도). 전방 애니 1개라 이 이상은 허리가 부러져 보여서 막는다(보통 90). 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Animation", meta = (AllowPrivateAccess = "true"))
 	float LegYawMaxAngle = 90.0f;
-	// ~ End Animation
-	////////////////////////////////////////////////////////////////////////┘
 
 
 
@@ -256,34 +197,15 @@ private: //평범한 변수 및 함수
 	FVector LastCursorDir = FVector::ForwardVector;
 
 
-
-	////////////////////////////////////////////////////////////////////////┐
 	// UI Variable
 	UPROPERTY()
 	UMyCanvas* CanvasWidget = nullptr;
-	////////////////////////////////////////////////////////////////////////┘
 
 
-
-	// Companion
-	// 스폰할 동료 클래스(BP_Companion 지정). 비우면 섭외 안 됨.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion", meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<ACompanion> CompanionClass;
-
-	// 최대 동료 수. 이 인원에 도달하면 더 섭외하지 않는다.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion", meta = (AllowPrivateAccess = "true"))
-	int32 MaxCompanions = 3;
-
-	// 동료를 플레이어 기준 어디에 스폰할지 오프셋(cm). 살짝 옆/위로 띄워 바닥 끼임 방지.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion", meta = (AllowPrivateAccess = "true"))
-	FVector CompanionSpawnOffset = FVector(-120.0f, 120.0f, 0.0f);
-
-	// 현재 섭외해 둔 동료들(런타임). 죽으면 정리된다.
-	UPROPERTY(BlueprintReadOnly, Category = "Companion", meta = (AllowPrivateAccess = "true"))
-	TArray<ACompanion*> Companions;
-
-	bool CheckCompanion(UWorld* World);
-	FTransform SetSpawnTransformCompanion(UWorld* World);
+	// [파티]
+	// 동료 섭외/명단/장비 배분 담당. 동료 관련 설정값은 이 컴포넌트 Details에 있다.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Party", meta = (AllowPrivateAccess = "true"))
+	UPartyComponent* Party;
 
 
 
@@ -295,9 +217,11 @@ private: //평범한 변수 및 함수
 	bool bDebugAddMoneyKey = true;
 
 
-
-
-
+	
+	/////////////////////////////////////////////////////////////함수들
+	//[생성자]
+	void InitCamera();
+	void InitController();
 
 
 	//~ Begin Input
@@ -324,24 +248,17 @@ private: //평범한 변수 및 함수
 
 	UFUNCTION()
 	void OnAimJoystickMoved(FVector2D Value);
-	//~ End Input
-
 
 
 	// 초기 셋업 / 내부 헬퍼 (BeginPlay 등 내부에서만 호출)
 	void OnTopDownMode();
-	void SetJob();
-	void SetMoney(int Money);
-
+	void SetupJob();
 
 	// AddExp와 SetCanvasWidget(초기 표시)에서 호출. => 경험치 HUD(텍스트/바) 갱신.
 	void UpdateExpUI();
 
-
 	// SetHP와 SetCanvasWidget(초기 표시)에서 호출. => HP바 폭 갱신.
 	void UpdateHPUI();
-
-
 
 	//아마 부활할때 넣을듯 => ReVived랑 비교해
 	void ReStart();
@@ -364,7 +281,6 @@ public: //PROPERTY FUNCTION
 	// HUD 체력바 갱신.
 	virtual void SetHP(int32 new_hp) override; //  죽음/부활 "전환" 처리는 베이스가 OnDeath/OnRevive로 호출해준다.
 
-
 	//차감 성공하면 true
 	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
 	bool TrySpendMoney(int32 Amount);
@@ -379,13 +295,6 @@ public: //PROPERTY FUNCTION
 	UFUNCTION(BlueprintCallable)
 	bool GetIsDead();
 
-
-
-
-
-
-
-
 	// ~ Begin Growth Function
 	// 현재 레벨에서 다음 레벨까지 필요한 경험치 총량
 	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
@@ -396,8 +305,37 @@ public: //PROPERTY FUNCTION
 	void OnLevelUp(int32 NewLevel);
 	// ~ End Growth Function
 
+	void SetMoney(int Money);
 
 	//AddCoin
 	UFUNCTION(BlueprintCallable)
 	void AddMoney();
+	
+	//근데 안 쓰이는 거 같다?
+	// 키보드(WASD) Enhanced Input(IA_Move)에서 호출. 카메라가 고정된 월드축 기준으로 이동
+	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
+	void MoveTopDown(FVector2D Value);
+
+	// 모바일 터치 가상 조이스틱(왼쪽: 이동)이 매 프레임 호출
+	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
+	void SetMoveInput(FVector2D Value);
+
+	// 모바일 터치 가상 조이스틱(오른쪽: 조준+공격)이 매 프레임 호출
+	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
+	void SetAimInput(FVector2D Value);
+
+
+	void ShowOnItemText(FText& Text, EItemNotifyType Type = EItemNotifyType::Gain);
+
+
+	// 하체 yaw 오프셋(도). AnimInstance(UCombatAnimInstance)가 매 프레임 읽는다.
+	FORCEINLINE float GetLegYawOffset() const { return LegYawOffset; }
+
+	// 동료 파티(섭외·장비 배분). 스폰존/픽업이 이걸 통해 파티에 접근한다.
+	FORCEINLINE UPartyComponent* GetParty() const { return Party; }
+
+	// Returns TopDownBoom subobject 
+	FORCEINLINE USpringArmComponent* GetTopDownBoom() const { return TopDownBoom; }
+	// Returns TopDownCamera subobject
+	FORCEINLINE UCameraComponent* GetTopDownCamera() const { return TopDownCamera; }
 };
