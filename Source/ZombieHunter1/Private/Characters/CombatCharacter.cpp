@@ -417,9 +417,11 @@ bool ACombatCharacter::TickAttack(float DeltaTime, bool bWantsToAttack)
 	return true;
 }
 
-// 한 번도 공격한 적 없으면 지금 정면으로 폴백한다.
+
+// 공식 공격 방향 반환
 FVector ACombatCharacter::GetAttackAimDir() const
 {
+    //대체로 AttackAimDir를 반환한다.
 	return AttackAimDir.IsNearlyZero() ? GetActorForwardVector() : AttackAimDir;
 }
 
