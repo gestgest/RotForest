@@ -9,6 +9,7 @@
 #include "InputCoreTypes.h"            //EKeys
 #include "Kismet/GameplayStatics.h" //getCharacter, sound
 #include "Animation/AnimInstance.h" //SetRootMotionMode, ERootMotionMode
+#include "Animation/AnimMontage.h" //공격 몽타주 길이
 
 
 #include "GameFramework/GameModeBase.h"
@@ -268,8 +269,6 @@ void AMyPlayer::Tick(float DeltaTime)
 }
 
 
-
-
 ///////////////////////////      Tick :: Move, AIM      /////////////////////
 void AMyPlayer::MouseInput(FVector2D & MouseMove, FVector2D & MouseAim)
 {
@@ -278,7 +277,9 @@ void AMyPlayer::MouseInput(FVector2D & MouseMove, FVector2D & MouseAim)
         // 이번 프레임의 커서 방향을 구한다.
         FVector MoveDir = FVector::ZeroVector;
         FVector Cursor;
-        if (GetCursorGroundLocation(Cursor)) //커서 지면에 닿았는지 여부
+
+        //커서 지면에 닿았는지 여부 => Cursor에 클릭한 값 넣기
+        if (GetCursorGroundLocation(Cursor)) 
         {
             FVector ToCursor = Cursor - GetActorLocation();
             ToCursor.Z = 0.0f;
@@ -359,31 +360,44 @@ void AMyPlayer::UpdateAimAndAttack(float DeltaTime, const FVector2D& Aim, const 
 {
     const bool bAiming = Aim.SizeSquared() > InputDeadzone * InputDeadzone;
 
-    // 조준 중이면 조준 방향, 아니면 이동 방향을 바라봄
-    const FVector2D Face = bAiming ? Aim : Move;
+    AttackFacingHold = FMath::Max(0.0f, AttackFacingHold - DeltaTime);
 
-    if (Face.SizeSquared() > InputDeadzone * InputDeadzone)
+    if (bAiming)
     {
-        const FVector FaceDir(Face.Y, Face.X, 0.0f); // 이동과 동일한 축 매핑
-        const FRotator TargetRot(0.0f, FaceDir.Rotation().Yaw, 0.0f);
-        if (bAiming)
-        {
-            // 조준(좌클릭/오른쪽 스틱) 중에는 즉시 그 방향을 바라본다.
-            // 부드러운 보간을 쓰면 회전이 끝나기 전에 발사돼 화살이 중간 방향으로 나가므로,
-            // 발사 프레임에 정면 = 커서 방향이 되도록 스냅한다. (발사체는 액터 정면으로 나감)
-            SetActorRotation(TargetRot);
-        }
-        else
-        {
-            // 단순 이동 방향 바라보기는 부드럽게 보간
-            const FRotator NewRot = FMath::RInterpTo(GetActorRotation(), TargetRot, DeltaTime, TurnInterpSpeed);
-            SetActorRotation(NewRot);
-        }
+        // 조준(좌클릭/오른쪽 스틱) 중에는 즉시 그 방향을 바라본다.
+        // 부드러운 보간을 쓰면 회전이 끝나기 전에 발사돼 화살이 중간 방향으로 나가므로,
+        // 발사 프레임에 정면 = 커서 방향이 되도록 스냅한다. (발사체는 액터 정면으로 나감)
+        const FVector AimDir(Aim.Y, Aim.X, 0.0f); // 이동과 동일한 축 매핑
+        SetActorRotation(FRotator(0.0f, AimDir.Rotation().Yaw, 0.0f));
+    }
+    else if (AttackFacingHold <= 0.0f && Move.SizeSquared() > InputDeadzone * InputDeadzone)
+    {
+        // 공격 모션이 끝난 뒤에야 이동 방향으로 되돌린다 — 휘두르는 도중에 몸이 돌아가면
+        // 타격 프레임에 이동 방향을 때린다. 단순 이동 방향 바라보기는 부드럽게 보간.
+        const FVector MoveDir(Move.Y, Move.X, 0.0f);
+        const FRotator TargetRot(0.0f, MoveDir.Rotation().Yaw, 0.0f);
+        SetActorRotation(FMath::RInterpTo(GetActorRotation(), TargetRot, DeltaTime, TurnInterpSpeed));
     }
 
     // 조준 중에는 일정 간격으로 자동 공격. 타이머·간격·직업 호출은 베이스가 처리하고,
     // 플레이어는 "지금 공격하고 싶은가"(= 조준 중인가)만 넘긴다.
-    TickAttack(DeltaTime, bAiming);
+    if (TickAttack(DeltaTime, bAiming))
+    {
+        AttackFacingHold = GetAttackMontageLength();
+    }
+}
+
+// 공격 중에는 클릭한 방향을 유지해야 해서, 그 유지 시간을 몽타주 길이로 잡는다.
+float AMyPlayer::GetAttackMontageLength()
+{
+    UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+    UAnimMontage* Montage = AnimInstance ? AnimInstance->GetCurrentActiveMontage() : nullptr;
+    if (!Montage || Montage->GetPlayLength() <= 0.0f)
+    {
+        return AttackFacingHoldFallback;
+    }
+
+    return Montage->GetPlayLength();
 }
 
 // 다리(하체)를 실제 이동 방향으로 돌리기 위한 yaw 오프셋을 계산한다.

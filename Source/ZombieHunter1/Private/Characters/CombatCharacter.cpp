@@ -409,8 +409,18 @@ bool ACombatCharacter::TickAttack(float DeltaTime, bool bWantsToAttack)
 	}
 
 	TimeSinceLastAttack = 0.0f;
+
+	// 공격 방향은 "지금" 고정한다 — 타격은 몽타주 Notify라 0.2~0.4초 뒤에 일어난다.
+	AttackAimDir = GetActorForwardVector();
+
 	CurrentJob->Attack(); // 직업이 공격 방식을 결정(몽타주 재생 → Notify → OnAttackNotify)
 	return true;
+}
+
+// 한 번도 공격한 적 없으면 지금 정면으로 폴백한다.
+FVector ACombatCharacter::GetAttackAimDir() const
+{
+	return AttackAimDir.IsNearlyZero() ? GetActorForwardVector() : AttackAimDir;
 }
 
 

@@ -32,7 +32,8 @@ void UWarriorJob::OnAttackNotify(FName NotifyName)
 	// 전방으로 구체를 스윕해 범위 내 모든 적을 타격한다.
 	TArray<FHitResult> hitResults;
 	const FVector start = OwnerCharacter->GetActorLocation();
-	const FVector end = start + (OwnerCharacter->GetActorForwardVector() * AttackRange);
+	const FVector AimDir = OwnerCharacter->GetAttackAimDir();
+	const FVector end = start + (AimDir * AttackRange);
 
 	FCollisionShape Sphere = FCollisionShape::MakeSphere(AttackRadius);
 	FCollisionQueryParams queryParams;
@@ -56,7 +57,7 @@ void UWarriorJob::OnAttackNotify(FName NotifyName)
 		{
 			UE_LOG(LogTemp, Log, TEXT("Hit Enemy!"));
 			hitEnemy->AddHP(-GetDamage());
-			const FVector force = OwnerCharacter->GetActorForwardVector() * KnockbackForce + FVector(0, 0, 100);
+			const FVector force = AimDir * KnockbackForce + FVector(0, 0, 100);
 			hitEnemy->LaunchCharacter(force, false, false);
 			bDidHit = true;
 		}

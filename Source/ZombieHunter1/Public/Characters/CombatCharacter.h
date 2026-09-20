@@ -35,59 +35,38 @@ class ZOMBIEHUNTER1_API ACombatCharacter : public ACharacter
 public:
 	ACombatCharacter();
 
-	void ApplyJobStats(FJobStats Stats);
-	
-	// 공격 몽타주를 반환. => 대체로 공격할때 호출
-	UFUNCTION(BlueprintCallable, Category = "Combat")
-	UAnimMontage* GetAttackMontageForJob(EJobType JobType) const;
-
-
-	/////////////////////////////////////////////////////////////////////////////////////////
-	// 직업(Job)
-	//  — 플레이어/동료가 공유한다. 직업이 없는 캐릭터(적)는 그냥 비워두면 된다.
-	/////////////////////////////////////////////////////////////////////////////////////////
-
-	/** BeginPlay에서 호출. */
-	UFUNCTION(BlueprintCallable, Category = "Job")
-	virtual void CreateJobComponent();
-
-	/** 실제 적용할 자동 공격 간격(초). 직업 값이 유효하면 그것, 아니면 아래 AttackInterval 폴백. */
-	UFUNCTION(BlueprintPure, Category = "Combat|Stats")
-	float GetAttackInterval() const;
-
-	/** 공격 판단 쿨타임 함수 */
-	bool TickAttack(float DeltaTime, bool bWantsToAttack);
-
-	
-	
-	// 시작 시 부착할 직업 클래스. 비우면 직업 없이 동작한다(적 등). 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job")
-	TSubclassOf<UJobComponent> DefaultJobClass;
-
-
-	// 무장 상태 
-	// UCombatAnimInstance가 매 프레임 이 값을 bArmed 변수로 미러링해 AnimBP에 공급한다.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	bool bArmed = true;
-	
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
-	ETeam TeamType;
-
 protected:
 	virtual void BeginPlay() override;
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+public: //핵심 함수
+	// [Begin]
+	UFUNCTION(BlueprintCallable, Category = "Job")
+	virtual void CreateJobComponent();
+
+	// [Init]
+	// 직업에 맞는 능력 부여. => JobComponent에서 호출
+	void ApplyJobStats(FJobStats Stats);
+
+	// [공격]
+	// 공격 몽타주를 반환. => 대체로 공격할때 호출
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	UAnimMontage* GetAttackMontageForJob(EJobType JobType) const;
 
 
+protected: //핵심 함수의 부품
 
-
-
+	// [생성자]
 	// 반드시 서브클래스 생성자에서만 호출할 것 => Companion 같은 생성자
-	// 컴포넌트 이름은 "HPBar" 
+	// ㄴ MyPlayer는 따로 UI가 있다.
 	void CreateHPBarComponent();
 
+	// [Begin]
+	void InitWeaponSlot();
+
+	
+	
 	// SetHP가 호출.
 	void UpdateHPBar();
 
@@ -95,8 +74,6 @@ protected:
 	void SetDead(bool bNewDead);
 
 
-	//초반에 호출
-	void InitWeaponSlot();
 
 	/** 살아있음 → 죽음 전환 시 1회. 서브클래스가 AI 정지/콜리전 해제/연출 등을 구현. */
 	virtual void OnDeath() {}
@@ -114,11 +91,6 @@ protected:
 
 	UFUNCTION()
 	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
-
-
-
-
-
 
 	/** 무기 슬롯이 스폰할 액터 클래스(Weapon_BP). 양손 슬롯이 같은 클래스를 쓴다 —
 	 *  무기 액터는 빈 껍데기이고, 안의 메시는 직업이 런타임에 갈아끼우기 때문. 캐릭터 BP에서 지정. */
@@ -187,14 +159,7 @@ protected:
 
 
 
-
-	//마지막 공격 이후 누적 시간(TickAttack이 관리).
-	float TimeSinceLastAttack = 0.0f;
-
-
-
-
-	/** 머리 위 HP 바(스크린 스페이스). 서브클래스 "생성자"가 CreateHPBarComponent()를 불러야 생긴다. */
+	// 머리 위 HP 바(스크린 스페이스). 서브클래스 "생성자"가 CreateHPBarComponent()를 불러야 생긴다.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	UWidgetComponent* HPBarComponent = nullptr;
 
@@ -233,8 +198,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float AttackRange = 100.0f;
 
-public: 
-	//property
+
+	// [공격 시간]
+	//마지막 공격 이후 누적 시간(TickAttack이 관리).
+	float TimeSinceLastAttack = 0.0f;
+
+	//공격 시작 순간의 정면 방향(TickAttack이 고정).
+	FVector AttackAimDir = FVector::ZeroVector;
+
+
+public: //Property
 	//여기서 호출하면 인라인화된다.
 	int32 GetMaxHP() { return MaxHP; }
 	int32 GetHP() { return HP; }
@@ -274,13 +247,36 @@ public:
 	void RefreshWeaponMesh();
 
 	const FWeaponItemData& GetEquippedWeapon() const { return EquippedWeapon; }
-};
 
-/**
- * 전투 캐릭터 공통 베이스 — 플레이어(AMyPlayer)/동료(ACompanion)/적(AEnemy)이 공유한다.
- * 셋의 공통분모인 체력(HP)·데미지·죽음/부활 전환·공격 몽타주 Notify 배선을 한곳에 모은다.
- *
- * 실제 공격 처리(직업 호출 or 자체 타격)와 죽음 연출은 서브클래스가 가상 함수로 구현한다:
- *  - HandleAttackNotify() : 공격 몽타주의 Notify가 들어왔을 때 실제 타격을 어떻게 줄지
- *  - OnDeath()/OnRevive() : 죽거나(전환) 풀에서 되살아날 때 무엇을 끄고/켤지
- */
+
+
+
+	// 직업(Job)
+	// 실제 적용할 자동 공격 간격(초). 직업 값이 유효하면 그것, 아니면 아래 AttackInterval 폴백. 
+	UFUNCTION(BlueprintPure, Category = "Combat|Stats")
+	float GetAttackInterval() const;
+
+	// 공격 판단 쿨타임 함수 
+	bool TickAttack(float DeltaTime, bool bWantsToAttack);
+
+	// 공격을 시작한 순간에 고정해 둔 공격 방향(월드, 수평).
+	// 타격 프레임(Notify)엔 몸이 이미 다른 데를 보고 있을 수 있어 이 값으로 때린다.
+	FVector GetAttackAimDir() const;
+
+
+
+	// 시작 시 부착할 직업 클래스. 비우면 직업 없이 동작한다(적 등). 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job")
+	TSubclassOf<UJobComponent> DefaultJobClass;
+
+
+	// 무장 상태 
+	// UCombatAnimInstance가 매 프레임 이 값을 bArmed 변수로 미러링해 AnimBP에 공급한다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	bool bArmed = true;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
+	ETeam TeamType;
+
+};

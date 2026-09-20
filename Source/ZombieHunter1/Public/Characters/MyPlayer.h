@@ -130,6 +130,13 @@ private: //평범한 변수 및 함수
 	// 캐릭터가 조준/이동 방향으로 회전하는 속도
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Movement", meta = (AllowPrivateAccess = "true"))
 	float TurnInterpSpeed = 12.0f;
+
+	// 공격 몽타주 길이를 못 구했을 때 쓸 조준 유지 시간(초)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Movement", meta = (AllowPrivateAccess = "true"))
+	float AttackFacingHoldFallback = 0.5f;
+
+	// 공격 중 남은 조준 유지 시간(초). 0보다 크면 이동 방향으로 몸을 되돌리지 않는다.
+	float AttackFacingHold = 0.0f;
 	
 	// 디버깅 : 켜면 화면에 이동 입력 크기 / 실제 속도 / MaxWalkSpeed를 출력한다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Debug", meta = (AllowPrivateAccess = "true"))
@@ -232,6 +239,9 @@ private: //평범한 변수 및 함수
 
 	// 매 프레임 속도 방향과 액터 회전으로 LegYawOffset을 갱신한다(Tick에서 호출).
 	void UpdateLegYawOffset(float DeltaTime);
+
+	// 방금 시작한 공격 몽타주가 끝날 때까지 남은 시간
+	float GetAttackMontageLength();
 
 	// 마우스(로스트아크식): 우클릭 누르는 동안 커서로 이동, 좌클릭 누르는 동안 커서 방향 공격
 	void OnLeftMousePressed();

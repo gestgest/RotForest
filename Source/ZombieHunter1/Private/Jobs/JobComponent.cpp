@@ -107,7 +107,7 @@ AProjectile* UJobComponent::SpawnProjectileForward(TSubclassOf<AProjectile> Proj
 		return nullptr;
 	}
 
-	const FVector Forward = OwnerCharacter->GetActorForwardVector();
+	const FVector Forward = OwnerCharacter->GetAttackAimDir();
 	const FVector SpawnLocation =
 		OwnerCharacter->GetActorLocation() + Forward * MuzzleOffset + FVector(0, 0, MuzzleHeight);
 	const FRotator SpawnRotation = Forward.Rotation();
