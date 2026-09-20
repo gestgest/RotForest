@@ -45,7 +45,7 @@ public:
 	virtual void Attack() override;
 
 protected:
-	/** 전방으로 화살 1발 발사 */
+	//전방으로 화살 1발 발사
 	void FireArrow();
 	void PlayBowDraw();
 

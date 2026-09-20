@@ -203,7 +203,7 @@ protected:
 	//마지막 공격 이후 누적 시간(TickAttack이 관리).
 	float TimeSinceLastAttack = 0.0f;
 
-	//공격 시작 순간의 정면 방향(TickAttack이 고정).
+	//공격 방향. TickAttack이 호출
 	FVector AttackAimDir = FVector::ZeroVector;
 
 

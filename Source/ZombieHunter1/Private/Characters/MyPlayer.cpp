@@ -283,26 +283,35 @@ void AMyPlayer::MouseInput(FVector2D & MouseMove, FVector2D & MouseAim)
         {
             FVector ToCursor = Cursor - GetActorLocation();
             ToCursor.Z = 0.0f;
-            // 커서가 StopRadius보다 멀 때만 이동(가까우면 방향이 뒤집혀 진동하므로 정지).
+
+            // CursorStopRadius는 너무 가까우면 player가 진자운동하는 버그 해결용
+            // 이동
             if (ToCursor.SizeSquared() > CursorStopRadius * CursorStopRadius && ToCursor.Normalize())
             {
                 LastCursorDir = ToCursor; // 유효 방향 캐시
                 MoveDir = ToCursor;
             }
+
+
+            // 마우스 공격 에임
+            if (!MoveDir.IsNearlyZero() && bLeftMouseHeld)
+            {
+                const FVector2D Dir(MoveDir.Y, MoveDir.X);
+                MouseAim = Dir;
+            }
         }
-        else
+        else //커서가 밖인 경우
         {
-            // 커서→월드 변환이 실패한 프레임
             // 직전 방향을 유지해 미세 끊김(속도 손실)을 막는다.
             MoveDir = LastCursorDir;
         }
 
+        // 변환기
         if (!MoveDir.IsNearlyZero())
         {
-            // 월드 방향 (dx,dy) → 기존 스틱 포맷 FVector2D(Y=dx, X=dy)
             const FVector2D Dir(MoveDir.Y, MoveDir.X);
+            // 월드 방향 (dx,dy) → 기존 스틱 포맷 FVector2D(Y=dx, X=dy)
             if (bRightMouseHeld) { MouseMove = Dir; }
-            if (bLeftMouseHeld) { MouseAim = Dir; }
         }
     }
 }
