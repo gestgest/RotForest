@@ -158,11 +158,10 @@ private: //평범한 변수 및 함수
 	// 카메라 거리(암 길이) 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Camera", meta = (AllowPrivateAccess = "true"))
 	float CameraDistance = 900.0f;
-	////////////////////////////////////////////////////////////////////////
+	
 
 
-
-
+	// [Nav]
 	// NavMesh를 플레이어 주변에만 동적으로 생성시키는 인보커 (무한 맵용)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "TopDown|Navigation", meta = (AllowPrivateAccess = "true"))
 	UNavigationInvokerComponent* NavInvoker;
@@ -224,7 +223,18 @@ private: //평범한 변수 및 함수
 	bool bDebugAddMoneyKey = true;
 
 
-	
+	// before 커서 방향(월드, 수평) => 이거 없으면 클릭하다가 윈도우 나갈경우 속도가 감속함
+	FVector LastCursorDir = FVector::ForwardVector;
+
+	// 직전 유효 커서 좌표(월드). bHasLastCursorPoint가 true일 때만 유효.
+	FVector LastCursorPoint = FVector::ZeroVector;
+	bool bHasLastCursorPoint = false;
+
+
+
+
+
+
 	/////////////////////////////////////////////////////////////함수들
 	//[생성자]
 	void InitCamera();

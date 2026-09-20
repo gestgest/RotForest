@@ -282,11 +282,14 @@ void AMyPlayer::MouseInput(FVector2D & MouseMove, FVector2D & MouseAim)
     //커서 지면에 닿았는지 여부 => Cursor에 클릭한 값 넣기
     if (GetCursorGroundLocation(Cursor)) 
     {
+        LastCursorPoint = Cursor;
+        bHasLastCursorPoint = true;
+
         FVector ToCursor = Cursor - GetActorLocation();
         ToCursor.Z = 0.0f;
 
+        // [이동]
         // CursorStopRadius는 너무 가까우면 player가 진자운동하는 버그 해결용
-        // 이동
         if (ToCursor.SizeSquared() > CursorStopRadius * CursorStopRadius && ToCursor.Normalize())
         {
             LastCursorDir = ToCursor; // 유효 방향 캐시
@@ -307,12 +310,24 @@ void AMyPlayer::MouseInput(FVector2D & MouseMove, FVector2D & MouseAim)
         MoveDir = LastCursorDir;
     }
 
-    // 변환기
-    if (!MoveDir.IsNearlyZero())
+    // [이동]
+    if (!MoveDir.IsNearlyZero() && bRightMouseHeld)
     {
-        const FVector2D Dir(MoveDir.Y, MoveDir.X);
         // 월드 방향 (dx,dy) → 기존 스틱 포맷 FVector2D(Y=dx, X=dy)
-        if (bRightMouseHeld) { MouseMove = Dir; }
+        MouseMove = FVector2D(MoveDir.Y, MoveDir.X);
+    }
+
+    // [조준] : MouseAim 설정 및 CursorPoint 비활성화
+    if (bLeftMouseHeld && bHasLastCursorPoint) //양심상 커서 위치는 있어야지.
+    {
+        FVector ToAim = LastCursorPoint - GetActorLocation();
+        ToAim.Z = 0;
+
+        //정규화
+        ToAim.Normalize();
+
+        MouseAim = FVector2D(ToAim.Y, ToAim.X);
+        // todo SetDersiredAimPoint(LastCursorPoint);
     }
 }
 
