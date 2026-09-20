@@ -65,20 +65,22 @@ protected: //핵심 함수의 부품
 	// [Begin]
 	void InitWeaponSlot();
 
+
+	// [Tick]
+	// 공격 판단 쿨타임 함수. 자식 클래스의 Tick에서 호출.
+	bool TickAttack(float DeltaTime, bool bWantsToAttack);
 	
 	
 	// SetHP가 호출.
 	void UpdateHPBar();
 
-	/** HP 변화에 따라 IsDead를 바꾸고 OnDeath/OnRevive 훅을 전환 시점에 1회씩 호출. */
+	// HP 변화에 따라 IsDead를 바꾸고 OnDeath/OnRevive 훅을 전환 시점에 1회씩 호출. 
 	void SetDead(bool bNewDead);
 
-
-
-	/** 살아있음 → 죽음 전환 시 1회. 서브클래스가 AI 정지/콜리전 해제/연출 등을 구현. */
+	// Virtual : 살아있음 → 죽음 전환 시 1회. 자식클래스가 AI 정지/콜리전 해제/연출 등을 구현.
 	virtual void OnDeath() {}
 
-	/** 죽음 → 부활(풀 재사용 등) 전환 시 1회. 죽을 때 껐던 것들을 되돌린다. */
+	// 죽음 → 부활(풀 재사용 등) 전환 시 1회. 죽을 때 껐던 것들을 되돌린다. 
 	virtual void OnRevive() {}
 
 
@@ -256,8 +258,6 @@ public: //Property
 	UFUNCTION(BlueprintPure, Category = "Combat|Stats")
 	float GetAttackInterval() const;
 
-	// 공격 판단 쿨타임 함수 
-	bool TickAttack(float DeltaTime, bool bWantsToAttack);
 
 	// 공격을 시작한 순간에 고정해 둔 공격 방향(월드, 수평).
 	// 타격 프레임(Notify)엔 몸이 이미 다른 데를 보고 있을 수 있어 이 값으로 때린다.

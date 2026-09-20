@@ -269,50 +269,50 @@ void AMyPlayer::Tick(float DeltaTime)
 }
 
 
-///////////////////////////      Tick :: Move, AIM      /////////////////////
+//마우스의 이동, 공격을 담당
 void AMyPlayer::MouseInput(FVector2D & MouseMove, FVector2D & MouseAim)
 {
-    if (bRightMouseHeld || bLeftMouseHeld)
+    if (!bRightMouseHeld && bLeftMouseHeld)
+        return;
+
+    // 이번 프레임의 커서 방향을 구한다.
+    FVector MoveDir = FVector::ZeroVector;
+    FVector Cursor;
+
+    //커서 지면에 닿았는지 여부 => Cursor에 클릭한 값 넣기
+    if (GetCursorGroundLocation(Cursor)) 
     {
-        // 이번 프레임의 커서 방향을 구한다.
-        FVector MoveDir = FVector::ZeroVector;
-        FVector Cursor;
+        FVector ToCursor = Cursor - GetActorLocation();
+        ToCursor.Z = 0.0f;
 
-        //커서 지면에 닿았는지 여부 => Cursor에 클릭한 값 넣기
-        if (GetCursorGroundLocation(Cursor)) 
+        // CursorStopRadius는 너무 가까우면 player가 진자운동하는 버그 해결용
+        // 이동
+        if (ToCursor.SizeSquared() > CursorStopRadius * CursorStopRadius && ToCursor.Normalize())
         {
-            FVector ToCursor = Cursor - GetActorLocation();
-            ToCursor.Z = 0.0f;
-
-            // CursorStopRadius는 너무 가까우면 player가 진자운동하는 버그 해결용
-            // 이동
-            if (ToCursor.SizeSquared() > CursorStopRadius * CursorStopRadius && ToCursor.Normalize())
-            {
-                LastCursorDir = ToCursor; // 유효 방향 캐시
-                MoveDir = ToCursor;
-            }
-
-
-            // 마우스 공격 에임
-            if (!MoveDir.IsNearlyZero() && bLeftMouseHeld)
-            {
-                const FVector2D Dir(MoveDir.Y, MoveDir.X);
-                MouseAim = Dir;
-            }
-        }
-        else //커서가 밖인 경우
-        {
-            // 직전 방향을 유지해 미세 끊김(속도 손실)을 막는다.
-            MoveDir = LastCursorDir;
+            LastCursorDir = ToCursor; // 유효 방향 캐시
+            MoveDir = ToCursor;
         }
 
-        // 변환기
-        if (!MoveDir.IsNearlyZero())
+
+        // 마우스 공격 에임 설정
+        if (!MoveDir.IsNearlyZero() && bLeftMouseHeld)
         {
             const FVector2D Dir(MoveDir.Y, MoveDir.X);
-            // 월드 방향 (dx,dy) → 기존 스틱 포맷 FVector2D(Y=dx, X=dy)
-            if (bRightMouseHeld) { MouseMove = Dir; }
+            MouseAim = Dir;
         }
+    }
+    else //커서가 밖인 경우
+    {
+        // 직전 방향을 유지해 미세 끊김(속도 손실)을 막는다.
+        MoveDir = LastCursorDir;
+    }
+
+    // 변환기
+    if (!MoveDir.IsNearlyZero())
+    {
+        const FVector2D Dir(MoveDir.Y, MoveDir.X);
+        // 월드 방향 (dx,dy) → 기존 스틱 포맷 FVector2D(Y=dx, X=dy)
+        if (bRightMouseHeld) { MouseMove = Dir; }
     }
 }
 

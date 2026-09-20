@@ -231,14 +231,16 @@ private: //평범한 변수 및 함수
 	void InitController();
 
 
-	//~ Begin Input
+	// [Begin]
 	// 마우스(로스트아크식) 입력을 스틱 포맷으로 변환해 채워서 내보낸다(출력 파라미터).
 	void MouseInput(FVector2D& MouseMove, FVector2D& MouseAim);
 	void UpdateMovement(float DeltaTime, const FVector2D& Move);
-	void UpdateAimAndAttack(float DeltaTime, const FVector2D& Aim, const FVector2D& Move);
 
-	// 매 프레임 속도 방향과 액터 회전으로 LegYawOffset을 갱신한다(Tick에서 호출).
+	// [Tick]
+	void UpdateAimAndAttack(float DeltaTime, const FVector2D& Aim, const FVector2D& Move);
+	// 매 프레임 속도 방향과 액터 회전으로 LegYawOffset을 갱신한다
 	void UpdateLegYawOffset(float DeltaTime);
+
 
 	// 방금 시작한 공격 몽타주가 끝날 때까지 남은 시간
 	float GetAttackMontageLength();
