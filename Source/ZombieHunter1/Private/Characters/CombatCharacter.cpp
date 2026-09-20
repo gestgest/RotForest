@@ -421,7 +421,9 @@ bool ACombatCharacter::TickAttack(float DeltaTime, bool bWantsToAttack)
 // 공식 공격 방향 반환
 FVector ACombatCharacter::GetAttackAimDir() const
 {
-    //대체로 AttackAimDir를 반환한다.
+    // todo 데스크탑 코드 추가
+    // 마우스는 여기에 추가될 예정
+    // 대체로 모바일은 AttackAimDir를 반환한다.
 	return AttackAimDir.IsNearlyZero() ? GetActorForwardVector() : AttackAimDir;
 }
 
