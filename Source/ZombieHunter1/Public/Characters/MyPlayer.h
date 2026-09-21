@@ -202,6 +202,9 @@ private: //평범한 변수 및 함수
 	// 직전 유효 커서 방향(월드, 수평). 커서 변환이 실패한 프레임에 이걸 재사용해 끊김 방지.
 	FVector LastCursorDir = FVector::ForwardVector;
 
+	// 직전 유효 커서 좌표(월드). bHasLastCursorPoint가 true일 때만 유효.
+	FVector LastCursorPoint = FVector::ZeroVector;
+	bool bHasLastCursorPoint = false;
 
 	// UI Variable
 	UPROPERTY()
@@ -216,22 +219,10 @@ private: //평범한 변수 및 함수
 
 
 
-
 	// Debug Function
 	// true면 C 키로 디버그용 돈 획득(AddMoney)을 테스트할 수 있다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Debug", meta = (AllowPrivateAccess = "true"))
 	bool bDebugAddMoneyKey = true;
-
-
-	// before 커서 방향(월드, 수평) => 이거 없으면 클릭하다가 윈도우 나갈경우 속도가 감속함
-	FVector LastCursorDir = FVector::ForwardVector;
-
-	// 직전 유효 커서 좌표(월드). bHasLastCursorPoint가 true일 때만 유효.
-	FVector LastCursorPoint = FVector::ZeroVector;
-	bool bHasLastCursorPoint = false;
-
-
-
 
 
 

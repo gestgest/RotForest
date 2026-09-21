@@ -176,12 +176,30 @@ FVector ACombatCharacter::GetAttackAimDir() const
 }
 ```
 
-## 5. 공격 중 조준 좌표 바라보기 — MyPlayer.cpp:373 `UpdateAimAndAttack`
+## 5. 공격 중 조준 좌표 바라보기 — MyPlayer.cpp:383 `UpdateAimAndAttack` 전체 교체
 
-기존엔 회전을 막기만 해서 몸은 멈추고 화살만 각도가 바뀌었다.
-`else if`는 중간에 — 아래면 이동 분기가 먼저 걸리고, 위면 커서 추적이 끊긴다.
+분기가 2개에서 3개로 늘어난다. 바뀌는 건 두 줄뿐이다.
 
 ```cpp
+// Before
+else if (AttackFacingHold <= 0.0f && Move.SizeSquared() > InputDeadzone * InputDeadzone)
+```
+
+`AttackFacingHold > 0`인데 `bAiming`이 false인 구간(= 손을 뗐는데 몽타주가 남은 구간)이
+지금은 어느 분기에도 안 걸려서 몸이 그 자리에 굳는다. 그 구간을 중간 분기가 받는다.
+새 분기가 `AttackFacingHold <= 0`을 이미 걸러주므로 3번 분기의 앞 조건은 지운다.
+
+**순서가 중요하다.** 맨 위로 올리면 발사 중(=거의 항상) 커서 추적이 끊겨 조작이 굼떠지고,
+맨 아래로 내리면 이동 분기가 먼저 걸려서 몸이 이동 방향으로 돌아가 버린다.
+
+```cpp
+void AMyPlayer::UpdateAimAndAttack(float DeltaTime, const FVector2D& Aim, const FVector2D& Move)
+{
+    const bool bAiming = Aim.SizeSquared() > InputDeadzone * InputDeadzone;
+
+    AttackFacingHold = FMath::Max(0.0f, AttackFacingHold - DeltaTime);
+
+    //조준
     if (bAiming)
     {
         const FVector AimDir(Aim.Y, Aim.X, 0.0f); // 이동과 동일한 축 매핑
@@ -189,15 +207,24 @@ FVector ACombatCharacter::GetAttackAimDir() const
     }
     else if (AttackFacingHold > 0.0f)
     {
-        // 공격 모션 중에는 고정해둔 조준 좌표를 계속 바라본다.
+        // 손을 떼도 몽타주가 끝날 때까지는 고정해둔 조준 좌표를 바라본다.
         SetActorRotation(FRotator(0.0f, GetAttackAimDir().Rotation().Yaw, 0.0f));
     }
     else if (Move.SizeSquared() > InputDeadzone * InputDeadzone)
     {
+        // 단순 이동 방향 바라보기는 부드럽게 보간.
         const FVector MoveDir(Move.Y, Move.X, 0.0f);
         const FRotator TargetRot(0.0f, MoveDir.Rotation().Yaw, 0.0f);
         SetActorRotation(FMath::RInterpTo(GetActorRotation(), TargetRot, DeltaTime, TurnInterpSpeed));
     }
+
+    // 조준 중에는 일정 간격으로 자동 공격. 타이머·간격·직업 호출은 베이스가 처리하고,
+    // 플레이어는 "지금 공격하고 싶은가"(= 조준 중인가)만 넘긴다.
+    if (TickAttack(DeltaTime, bAiming))
+    {
+        AttackFacingHold = GetAttackMontageLength();
+    }
+}
 ```
 
 ---

@@ -272,7 +272,7 @@ void AMyPlayer::Tick(float DeltaTime)
 //마우스의 이동, 공격을 담당
 void AMyPlayer::MouseInput(FVector2D & MouseMove, FVector2D & MouseAim)
 {
-    if (!bRightMouseHeld && bLeftMouseHeld)
+    if (!bRightMouseHeld && !bLeftMouseHeld)
         return;
 
     // 이번 프레임의 커서 방향을 구한다.
@@ -327,7 +327,7 @@ void AMyPlayer::MouseInput(FVector2D & MouseMove, FVector2D & MouseAim)
         ToAim.Normalize();
 
         MouseAim = FVector2D(ToAim.Y, ToAim.X);
-        // todo SetDersiredAimPoint(LastCursorPoint);
+        SetDesiredAimPoint(LastCursorPoint);
     }
 }
 
@@ -386,18 +386,22 @@ void AMyPlayer::UpdateAimAndAttack(float DeltaTime, const FVector2D& Aim, const 
 
     AttackFacingHold = FMath::Max(0.0f, AttackFacingHold - DeltaTime);
 
+    //조준
     if (bAiming)
     {
-        // 조준(좌클릭/오른쪽 스틱) 중에는 즉시 그 방향을 바라본다.
-        // 부드러운 보간을 쓰면 회전이 끝나기 전에 발사돼 화살이 중간 방향으로 나가므로,
-        // 발사 프레임에 정면 = 커서 방향이 되도록 스냅한다. (발사체는 액터 정면으로 나감)
         const FVector AimDir(Aim.Y, Aim.X, 0.0f); // 이동과 동일한 축 매핑
         SetActorRotation(FRotator(0.0f, AimDir.Rotation().Yaw, 0.0f));
     }
-    else if (AttackFacingHold <= 0.0f && Move.SizeSquared() > InputDeadzone * InputDeadzone)
+    // 공격중
+    else if (AttackFacingHold > 0.0f)
     {
-        // 공격 모션이 끝난 뒤에야 이동 방향으로 되돌린다 — 휘두르는 도중에 몸이 돌아가면
-        // 타격 프레임에 이동 방향을 때린다. 단순 이동 방향 바라보기는 부드럽게 보간.
+        // 공격위치 바라보기
+        SetActorRotation(FRotator(0.0f, GetAttackAimDir().Rotation().Yaw, 0.0f));
+    }
+    // 공격이 끝나면
+    else if (Move.SizeSquared() > InputDeadzone * InputDeadzone)
+    {
+        // 이동 방향으로 되돌리기
         const FVector MoveDir(Move.Y, Move.X, 0.0f);
         const FRotator TargetRot(0.0f, MoveDir.Rotation().Yaw, 0.0f);
         SetActorRotation(FMath::RInterpTo(GetActorRotation(), TargetRot, DeltaTime, TurnInterpSpeed));

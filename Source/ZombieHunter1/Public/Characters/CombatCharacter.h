@@ -83,6 +83,8 @@ protected: //핵심 함수의 부품
 	// 죽음 → 부활(풀 재사용 등) 전환 시 1회. 죽을 때 껐던 것들을 되돌린다. 
 	virtual void OnRevive() {}
 
+	UFUNCTION()
+	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 
 	/** 공격 몽타주 Notify가 들어왔을 때 호출.
@@ -90,9 +92,51 @@ protected: //핵심 함수의 부품
 	 *  직업이 없는 캐릭터(AEnemy)만 이걸 재정의해 자기 방식으로 타격한다. */
 	virtual void HandleAttackNotify(FName NotifyName);
 
+	//aim point 활성화.
+	void SetDesiredAimPoint(const FVector& Point);
 
+private: //부품 함수
+	// 메시 애님 인스턴스의 OnPlayMontageNotifyBegin에 바인딩 → HandleAttackNotify로 전달. 
 	UFUNCTION()
-	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void OnMontageNotifyBegin(FName NotifyName, const FBranchingPointNotifyPayload& Payload);
+
+
+protected: //변수
+
+	// SetHP로만 소통하자
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	int32 HP = 5;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	int32 Damage = 1;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	int32 MaxHP = 5;
+
+	/** 죽었는지 여부. HP<=0이면 true. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	bool IsDead = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	float AttackRange = 100.0f;
+
+
+	// [공격 시간]
+	// 마지막 공격 이후 누적 시간(TickAttack이 관리).
+	float TimeSinceLastAttack = 0.0f;
+
+	//공격 방향. TickAttack이 호출
+	FVector AttackAimDir = FVector::ZeroVector;
+
+	// 공격 포인트. 이 변수를 기준으로 움직여도 포인트를 고정해서 공격함.
+	FVector AttackAimPoint = FVector::ZeroVector;
+	bool bHasAttackAimPoint = false;
+
+	// 현재 좌클릭 커서 위치. TickAttack에서 AttackAimPoint를 설정
+	FVector DesiredAimPoint = FVector::ZeroVector;
+	bool bHasDesiredAimPoint = false;
+
+
 
 	/** 무기 슬롯이 스폰할 액터 클래스(Weapon_BP). 양손 슬롯이 같은 클래스를 쓴다 —
 	 *  무기 액터는 빈 껍데기이고, 안의 메시는 직업이 런타임에 갈아끼우기 때문. 캐릭터 BP에서 지정. */
@@ -170,43 +214,10 @@ protected: //핵심 함수의 부품
 	/////////////////////////////////////////////////////////////////////////////////////////
 	//디버깅 
 	/////////////////////////////////////////////////////////////////////////////////////////
-	
+
 	// 전투 캐릭터의 상태/공격 디버그를 화면에 그린다
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Debug")
 	bool bDebugCombat = false;
-
-
-
-private:
-	/** 메시 애님 인스턴스의 OnPlayMontageNotifyBegin에 바인딩 → HandleAttackNotify로 전달. */
-	UFUNCTION()
-	void OnMontageNotifyBegin(FName NotifyName, const FBranchingPointNotifyPayload& Payload);
-
-protected:
-	// SetHP로만 소통하자
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
-	int32 HP = 5;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	int32 Damage = 1;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
-	int32 MaxHP = 5;
-
-	/** 죽었는지 여부. HP<=0이면 true. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
-	bool IsDead = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	float AttackRange = 100.0f;
-
-
-	// [공격 시간]
-	//마지막 공격 이후 누적 시간(TickAttack이 관리).
-	float TimeSinceLastAttack = 0.0f;
-
-	//공격 방향. TickAttack이 호출
-	FVector AttackAimDir = FVector::ZeroVector;
 
 
 public: //Property

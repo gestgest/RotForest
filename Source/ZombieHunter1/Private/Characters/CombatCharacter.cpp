@@ -350,6 +350,14 @@ void ACombatCharacter::OnMontageNotifyBegin(FName NotifyName, const FBranchingPo
 	HandleAttackNotify(NotifyName);
 }
 
+//DesiredAimPoint 설정
+void ACombatCharacter::SetDesiredAimPoint(const FVector& Point)
+{
+	DesiredAimPoint = Point;
+	bHasDesiredAimPoint = true;
+}
+
+
 // 실제 타격 판정/사운드는 현재 직업이 담당한다 (전사: 근접 스윕, 궁수: 발사체 등).
 // 직업이 없는 캐릭터(AEnemy)는 이 함수를 재정의해 자기 방식으로 때린다.
 void ACombatCharacter::HandleAttackNotify(FName NotifyName)
@@ -395,7 +403,7 @@ float ACombatCharacter::GetAttackInterval() const
 	return AttackInterval > 0.0f ? AttackInterval : 0.4f;
 }
 
-//
+//공격
 bool ACombatCharacter::TickAttack(float DeltaTime, bool bWantsToAttack)
 {
 	TimeSinceLastAttack += DeltaTime;
@@ -411,8 +419,13 @@ bool ACombatCharacter::TickAttack(float DeltaTime, bool bWantsToAttack)
 
 	TimeSinceLastAttack = 0.0f;
 
-	// 공격 방향은 "지금" 고정한다 — 타격은 몽타주 Notify라 0.2~0.4초 뒤에 일어난다.
+	// 공격 방향은 지금 고정한다 — 타격은 몽타주 Notify라 0.2~0.4초 뒤에 일어난다.
 	AttackAimDir = GetActorForwardVector();
+
+	//최종적으로 point는 이때
+	AttackAimPoint = DesiredAimPoint;
+	bHasAttackAimPoint = bHasDesiredAimPoint;
+
 	CurrentJob->Attack(); // 직업이 공격 방식을 결정(몽타주 재생 → Notify → OnAttackNotify)
 	return true;
 }
@@ -421,7 +434,21 @@ bool ACombatCharacter::TickAttack(float DeltaTime, bool bWantsToAttack)
 // 공식 공격 방향 반환
 FVector ACombatCharacter::GetAttackAimDir() const
 {
-    // todo 데스크탑 코드 추가
+    // 데스크탑 코드
+	if (bHasAttackAimPoint)
+	{
+		//Attack 방향
+		FVector AttackVector = AttackAimPoint - GetActorLocation();
+		AttackVector.Z = 0;
+
+		//normal
+		AttackVector = AttackVector.GetSafeNormal();
+		if (!AttackVector.IsNearlyZero())
+		{
+			return AttackVector;
+		}
+	}
+
     // 마우스는 여기에 추가될 예정
     // 대체로 모바일은 AttackAimDir를 반환한다.
 	return AttackAimDir.IsNearlyZero() ? GetActorForwardVector() : AttackAimDir;
