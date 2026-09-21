@@ -7,6 +7,7 @@
 #include "Components/WidgetComponent.h" //머리 위 HP 바
 #include "UI/EnemyHPBarWidget.h"
 #include "Characters/CombatRegistrySubsystem.h"
+#include "Items/ItemDataAsset.h"
 
 #include "Engine/Engine.h" //화면 디버그 메시지(AddOnScreenDebugMessage)
 
@@ -232,38 +233,43 @@ void ACombatCharacter::EquipWeapon(USkeletalMesh* NewMesh)
 
 
 // 무기 획득처(픽업/상점/보상)는 전부 이 함수 하나로 들어온다.
-bool ACombatCharacter::EquipWeaponItem(const FWeaponItemData& Item)
+bool ACombatCharacter::EquipWeaponItem(UWeaponDataAsset* Item)
 {
-	if (!CurrentJob)
+	if (!Item || !CurrentJob)
 	{
 		return false;
 	}
 
 	//잡 타입이 다르면
-	if (Item.JobType != CurrentJob->JobType)
+	if (Item->JobType != CurrentJob->JobType)
 	{
 		return false;
 	}
-	EquippedWeapon = Item;   // 값 복사 — 원본(픽업 액터/배열 원소)이 사라져도 안전하다.
+	EquippedWeapon = Item;   // 에셋 참조 — 픽업 액터가 사라져도 정의는 남는다.
 	RefreshWeaponMesh();     // 데이터가 바뀌었으니 손에 든 것도 갱신한다.
 	return true;
 }
 
 // 장착은 하지 않고 판단만 한다 — 후보 중에서 고르려면 둘이 분리돼 있어야 한다.
-bool ACombatCharacter::WantsWeaponItem(const FWeaponItemData& Item) const
+bool ACombatCharacter::WantsWeaponItem(UWeaponDataAsset* Item) const
 {
-	if (!CurrentJob)
+	if (!Item || !CurrentJob)
 	{
 		return false;
 	}
 
 	//잡 타입이 다르면
-	if (Item.JobType != CurrentJob->JobType)
+	if (Item->JobType != CurrentJob->JobType)
 	{
 		return false;
 	}
 
-	return Item.WeaponPower > EquippedWeapon.WeaponPower;
+	return Item->WeaponPower > GetEquippedWeaponPower();
+}
+
+int32 ACombatCharacter::GetEquippedWeaponPower() const
+{
+	return EquippedWeapon ? EquippedWeapon->WeaponPower : 0;
 }
 
 
@@ -272,7 +278,7 @@ bool ACombatCharacter::WantsWeaponItem(const FWeaponItemData& Item) const
 void ACombatCharacter::RefreshWeaponMesh()
 {
 	const EWeaponHand Hand = CurrentJob ? CurrentJob->GetWeaponHand() : EWeaponHand::Right;
-	EquipWeaponInHand(EquippedWeapon.Mesh, Hand);
+	EquipWeaponInHand(EquippedWeapon ? EquippedWeapon->Mesh : nullptr, Hand);
 }
 
 

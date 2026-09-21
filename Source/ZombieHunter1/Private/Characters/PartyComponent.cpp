@@ -6,6 +6,7 @@
 #include "Characters/CombatCharacter.h"
 #include "Characters/MyPlayer.h" //획득 문구 표시(ShowOnItemText)
 #include "Jobs/JobComponent.h"
+#include "Items/ItemDataAsset.h"
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h" //동료 스폰 시 캡슐 반높이
 #include "Kismet/GameplayStatics.h"
@@ -102,8 +103,13 @@ FTransform UPartyComponent::MakeSpawnTransform(UWorld* World) const
 
 // [장비]
 // 소유자(플레이어)가 먼저 판단하고, 안 쓰면 동료 중 한 명에게 넘긴다.
-ACombatCharacter* UPartyComponent::TryDistributeWeapon(const FWeaponItemData& Item)
+ACombatCharacter* UPartyComponent::TryDistributeWeapon(UWeaponDataAsset* Item)
 {
+	if (!Item)
+	{
+		return nullptr;
+	}
+
 	ACombatCharacter* OwnerCharacter = Cast<ACombatCharacter>(GetOwner());
 	if (OwnerCharacter && OwnerCharacter->WantsWeaponItem(Item) && OwnerCharacter->EquipWeaponItem(Item))
 	{
@@ -120,7 +126,7 @@ ACombatCharacter* UPartyComponent::TryDistributeWeapon(const FWeaponItemData& It
 			continue;
 		}
 
-		if (!Best || Companion->GetEquippedWeapon().WeaponPower < Best->GetEquippedWeapon().WeaponPower)
+		if (!Best || Companion->GetEquippedWeaponPower() < Best->GetEquippedWeaponPower())
 		{
 			Best = Companion;
 		}
@@ -135,10 +141,10 @@ ACombatCharacter* UPartyComponent::TryDistributeWeapon(const FWeaponItemData& It
 	return nullptr;
 }
 
-void UPartyComponent::NotifyWeaponTaken(const FWeaponItemData& Item, ACombatCharacter* Receiver) const
+void UPartyComponent::NotifyWeaponTaken(UWeaponDataAsset* Item, ACombatCharacter* Receiver) const
 {
 	AMyPlayer* Player = Cast<AMyPlayer>(GetOwner());
-	if (!Player || !Receiver)
+	if (!Player || !Receiver || !Item)
 	{
 		return;
 	}
@@ -146,7 +152,7 @@ void UPartyComponent::NotifyWeaponTaken(const FWeaponItemData& Item, ACombatChar
 	FText Msg;
 	if (Receiver == Player)
 	{
-		Msg = FText::Format(FText::FromString(TEXT("{0}을 획득했습니다.")), Item.WeaponName);
+		Msg = FText::Format(FText::FromString(TEXT("{0}을 획득했습니다.")), Item->Name);
 	}
 	else
 	{
@@ -156,7 +162,7 @@ void UPartyComponent::NotifyWeaponTaken(const FWeaponItemData& Item, ACombatChar
 			? StaticEnum<EJobType>()->GetDisplayNameTextByValue(static_cast<int64>(Job->JobType))
 			: FText::FromString(TEXT("동료"));
 
-		Msg = FText::Format(FText::FromString(TEXT("{0} 동료가 {1}을 획득했습니다.")), JobName, Item.WeaponName);
+		Msg = FText::Format(FText::FromString(TEXT("{0} 동료가 {1}을 획득했습니다.")), JobName, Item->Name);
 	}
 
 	Player->ShowOnItemText(Msg);

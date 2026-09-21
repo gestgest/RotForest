@@ -26,6 +26,7 @@
 #include "Components/ChildActorComponent.h" //무기 ChildActor(Weapon_BP)
 #include "Engine/SkeletalMesh.h"
 #include "Characters/PartyComponent.h" //동료 파티(섭외·장비 배분)
+#include "Component/InventoryComponent.h" //아이템 가방
 #include "ZombieGameInstance.h" //직업 선택 씬에서 고른 직업 읽기
 #include "ZombieSlayerGameMode.h" //사망 시 적 시간 정지(SetEnemiesFrozen)
 
@@ -61,6 +62,8 @@ AMyPlayer::AMyPlayer()
 
 	// 동료 파티 — 섭외/명단/장비 배분은 전부 이쪽이 맡는다.
 	Party = CreateDefaultSubobject<UPartyComponent>(TEXT("Party"));
+
+	Bag = CreateDefaultSubobject<UInventoryComponent>(TEXT("Bag"));
 
 	// 기본 직업: 전사. 에디터(BP)에서 DefaultJobClass를 바꾸면 다른 직업으로 시작한다.
 	DefaultJobClass = UWarriorJob::StaticClass();
@@ -513,6 +516,16 @@ void AMyPlayer::OnRightMouseReleased() { bRightMouseHeld = false; }
 void AMyPlayer::AddMoney()
 {
     SetMoney(Money + 1);
+}
+
+void AMyPlayer::GainMoney(int32 Amount)
+{
+    if (Amount <= 0)
+    {
+        return;
+    }
+
+    SetMoney(Money + Amount);
 }
 
 void AMyPlayer::SetMoney(int value)

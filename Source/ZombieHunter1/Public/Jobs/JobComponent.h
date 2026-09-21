@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Jobs/JobTypes.h"
-#include "Items/WeaponItemData.h"
 #include "JobComponent.generated.h"
 
 class ACombatCharacter;
@@ -14,6 +13,7 @@ class USoundBase;
 class AProjectile;
 class USkeletalMesh;
 class UJobComponent;
+class UWeaponDataAsset;
 
 USTRUCT(BlueprintType)
 struct FJobStats
@@ -128,7 +128,7 @@ private:
 
 	// 직업 기본 무기 — 직업 BP(BP_ArcherJob 등)에서 지정한다. 시작 시 캐릭터에 장착되고 그 뒤로 안 변한다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Job|Weapon")
-	FWeaponItemData DefaultWeapon;
+	UWeaponDataAsset* DefaultWeapon = nullptr;
 
 
 
@@ -163,7 +163,7 @@ public:
 
 	// 이 직업의 기본 무기 메시. CDO에 물어볼 때 쓴다(동료 스폰존 아이콘 등) —
 	// CDO는 InitializeForOwner를 안 타므로 캐릭터 쪽 장착 무기가 비어 있다.
-	USkeletalMesh* GetDefaultWeaponMesh() const { return DefaultWeapon.Mesh; }
+	USkeletalMesh* GetDefaultWeaponMesh() const;
 	EWeaponHand GetWeaponHand() const { return WeaponHand; }
 	float GetEngageRange() { return EngageRange; }
 

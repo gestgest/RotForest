@@ -1,6 +1,7 @@
 ﻿#include "Characters/Boss.h"
 #include "InfiniteMapGenerator.h" // 클리어 기록을 남길 곳 (POIStates)
 #include "Items/WeaponPickup.h" // 바닥에 떨굴 전리품
+#include "Items/ItemDataAsset.h"
 #include "Kismet/GameplayStatics.h" // FinishSpawningActor
 
 void ABoss::SetHome(AInfiniteMapGenerator* InGenerator, const FIntPoint& InCenterChunk)
@@ -41,16 +42,15 @@ void ABoss::SpawnDropPickup()
         return;
     }
     // 떨굴 무기 한 자루를 고른다
-    const FDataTableRowHandle& Handle = DropTable[FMath::RandRange(0, DropTable.Num() - 1)];
-    const FWeaponItemData* Row = Handle.GetRow<FWeaponItemData>(TEXT("BossDrop"));
-    if (!Row)
+    UWeaponDataAsset* Drop = DropTable[FMath::RandRange(0, DropTable.Num() - 1)];
+    if (!Drop)
     {
         return;
     }
 
     const FTransform SpawnTM(FRotator::ZeroRotator, GetActorLocation());
 
-    // 지연 스폰: WeaponPickup의 BeginPlay가 WeaponItemData.Mesh를 읽어 외형을 꽂는다.
+    // 지연 스폰: WeaponPickup의 BeginPlay가 WeaponItemData->Mesh를 읽어 외형을 꽂는다.
     // 그 전에 데이터를 넣어야 무기가 보인다.
     AWeaponPickup* Pickup = World->SpawnActorDeferred<AWeaponPickup>(
         DropPickupClass, SpawnTM, this, nullptr,
@@ -61,7 +61,7 @@ void ABoss::SpawnDropPickup()
         return;
     }
 
-    Pickup->WeaponItemData = *Row;
+    Pickup->WeaponItemData = Drop;
 
     UGameplayStatics::FinishSpawningActor(Pickup, SpawnTM);
 

@@ -8,6 +8,7 @@
 
 class AInfiniteMapGenerator;
 class AWeaponPickup;
+class UWeaponDataAsset;
 
 UCLASS()
 class ZOMBIEHUNTER1_API ABoss : public AEnemy
@@ -22,9 +23,9 @@ public:
 	void SetHome(AInfiniteMapGenerator* InGenerator, const FIntPoint& InCenterChunk);
 
 protected:
-	// 이 보스가 떨굴 수 있는 무기들. WeaponDataTable의 행을 가리킨다.
+	// 이 보스가 떨굴 수 있는 무기들. 무기 에셋(DA_*)을 직접 지정한다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drop")
-	TArray<FDataTableRowHandle> DropTable;
+	TArray<UWeaponDataAsset*> DropTable;
 
 	// 바닥에 떨굴 픽업 액터 (BP_WeaponPickup)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Drop")

@@ -5,6 +5,7 @@
 #include "Characters/CombatCharacter.h"
 #include "Projectiles/Projectile.h"
 #include "Projectiles/ProjectilePoolSubsystem.h"
+#include "Items/ItemDataAsset.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -50,11 +51,16 @@ void UJobComponent::Attack()
 	}
 }
 
-// 무기 데이터는 캐릭터가 소유하므로 소유자가 없으면(CDO 등) 무기분은 빠진다.
+// 무기는 캐릭터가 소유하므로 소유자가 없으면(CDO 등) 무기분은 빠진다.
 int32 UJobComponent::GetDamage() const
 {
-	const int32 WeaponPower = OwnerCharacter ? OwnerCharacter->GetEquippedWeapon().WeaponPower : 0;
+	const int32 WeaponPower = OwnerCharacter ? OwnerCharacter->GetEquippedWeaponPower() : 0;
 	return Stats.Damage + BonusDamage + WeaponPower;
+}
+
+USkeletalMesh* UJobComponent::GetDefaultWeaponMesh() const
+{
+	return DefaultWeapon ? DefaultWeapon->Mesh : nullptr;
 }
 
 void UJobComponent::OnAttackNotify(FName NotifyName)

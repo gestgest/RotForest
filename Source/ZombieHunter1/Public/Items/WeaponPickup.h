@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Items/WeaponItemData.h"
 #include "WeaponPickup.generated.h"
 
 class UBoxComponent;
+class UWeaponDataAsset;
 
 // 바닥에 떨어져 있는 무기 한 자루. 플레이어가 밟으면 장착되고 자신은 사라진다.
 UCLASS()
@@ -32,7 +32,7 @@ public:
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data")
-	FWeaponItemData WeaponItemData;
+	UWeaponDataAsset* WeaponItemData = nullptr;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Collider")
 	USkeletalMeshComponent* WeaponMesh;

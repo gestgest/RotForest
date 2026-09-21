@@ -8,6 +8,8 @@
 #include "Characters/MyPlayer.h"
 #include "Characters/PartyComponent.h"
 #include "Characters/CombatCharacter.h"
+#include "Component/InventoryComponent.h"
+#include "Items/ItemDataAsset.h"
 
 // Sets default values
 AWeaponPickup::AWeaponPickup()
@@ -39,9 +41,9 @@ void AWeaponPickup::BeginPlay()
 	{
 		TriggerBox->OnComponentBeginOverlap.AddDynamic(this, &AWeaponPickup::OnTriggerBeginOverlap);
 	}
-	if (WeaponItemData.Mesh)
+	if (WeaponItemData && WeaponItemData->Mesh)
 	{
-		WeaponMesh->SetSkeletalMeshAsset(WeaponItemData.Mesh);
+		WeaponMesh->SetSkeletalMeshAsset(WeaponItemData->Mesh);
 	}
 
 	//딜레이
@@ -77,17 +79,30 @@ void AWeaponPickup::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*
 		return;
 	}
 
+	if (!WeaponItemData)
+	{
+		return;
+	}
+
 	// 누가 가져갈지(플레이어 우선, 없으면 동료)는 파티가 정한다. 획득 문구도 파티가 띄운다.
 	const ACombatCharacter* Receiver = Party->TryDistributeWeapon(WeaponItemData);
 	if (!Receiver)
 	{
-		if (!bNoTakerNotified)
+		// 아무도 못 쓰면 가방으로. 무게가 넘치면 바닥에 그대로 남는다.
+		UInventoryComponent* Bag = MyPlayer->GetBag();
+		if (!Bag || !Bag->TryAddItem(WeaponItemData))
 		{
-			bNoTakerNotified = true;
-			FText Msg = FText::Format(FText::FromString(TEXT("아무도 {0}을 쓸 수 없습니다.")), (WeaponItemData.WeaponName));
-			MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Blocked);
+			if (!bNoTakerNotified)
+			{
+				bNoTakerNotified = true;
+				FText Msg = FText::Format(FText::FromString(TEXT("가방이 가득 차 {0}을 넣을 수 없습니다.")), (WeaponItemData->Name));
+				MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Blocked);
+			}
+			return;
 		}
-		return;
+
+		FText Msg = FText::Format(FText::FromString(TEXT("{0}을 가방에 넣었습니다.")), (WeaponItemData->Name));
+		MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Gain);
 	}
 
 	//중복 오버랩 — 한 번 주운 뒤 이벤트가 또 들어오는 경우를 어떻게 막을지

@@ -18,6 +18,7 @@ class UJobComponent;
 class USkeletalMesh;
 class USkeletalMeshComponent;
 class UPartyComponent;
+class UInventoryComponent;
 
 UCLASS()
 class ZOMBIEHUNTER1_API AMyPlayer : public ACombatCharacter
@@ -222,6 +223,12 @@ private: //평범한 변수 및 함수
 	UPartyComponent* Party;
 
 
+	// [가방]
+	// 아무도 못 쓰는 무기를 보관. 판매 발판(AItemSellZone)이 전량 비운다.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
+	UInventoryComponent* Bag;
+
+
 
 	// [Debug]
 	// 켜면 화면에 이동 입력 크기 / 실제 속도 / MaxWalkSpeed를 출력한다.
@@ -340,6 +347,10 @@ public: //Property Function
 	//AddCoin
 	UFUNCTION(BlueprintCallable)
 	void AddMoney();
+
+	// 판매처럼 한 번에 여러 개를 얻을 때
+	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
+	void GainMoney(int32 Amount);
 	
 	// 근데 안 쓰이는 거 같다?
 	// 키보드(WASD) Enhanced Input(IA_Move)에서 호출. 카메라가 고정된 월드축 기준으로 이동
@@ -363,6 +374,9 @@ public: //Property Function
 
 	// 동료 파티(섭외·장비 배분). 스폰존/픽업이 이걸 통해 파티에 접근한다.
 	FORCEINLINE UPartyComponent* GetParty() const { return Party; }
+
+	// 아이템 가방. 픽업/판매 발판이 이걸 통해 접근한다.
+	FORCEINLINE UInventoryComponent* GetBag() const { return Bag; }
 
 	// Returns TopDownBoom subobject 
 	FORCEINLINE USpringArmComponent* GetTopDownBoom() const { return TopDownBoom; }

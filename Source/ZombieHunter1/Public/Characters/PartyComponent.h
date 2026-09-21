@@ -4,12 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Items/WeaponItemData.h"
 #include "PartyComponent.generated.h"
 
 class ACompanion;
 class ACombatCharacter;
 class UJobComponent;
+class UWeaponDataAsset;
 
 // 플레이어가 데리고 다니는 동료 파티 — 섭외/명단/장비 배분을 담당한다.
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
@@ -25,7 +25,7 @@ public:
 	void RecruitCompanion(TSubclassOf<UJobComponent> JobComponent);
 
 	// 무기 한 자루를 파티에 배분한다. 받은 캐릭터를 반환하고, 아무도 못 쓰면 nullptr.
-	ACombatCharacter* TryDistributeWeapon(const FWeaponItemData& Item);
+	ACombatCharacter* TryDistributeWeapon(UWeaponDataAsset* Item);
 
 	// 현재 섭외해 둔 동료 목록(읽기 전용)
 	FORCEINLINE const TArray<ACompanion*>& GetCompanions() const { return Companions; }
@@ -57,5 +57,5 @@ private:
 
 	// [장비]
 	// 무기를 누가 가져갔는지 플레이어 UI에 알린다.
-	void NotifyWeaponTaken(const FWeaponItemData& Item, ACombatCharacter* Receiver) const;
+	void NotifyWeaponTaken(UWeaponDataAsset* Item, ACombatCharacter* Receiver) const;
 };

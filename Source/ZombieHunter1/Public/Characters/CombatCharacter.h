@@ -5,13 +5,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Jobs/JobComponent.h"
-#include "Items/WeaponItemData.h"
 #include "CombatCharacter.generated.h"
 
 class UAnimMontage;
 struct FBranchingPointNotifyPayload;
 class UWidgetComponent;
 class UChildActorComponent;
+class UWeaponDataAsset;
 
 /** 무기 슬롯 전용 로그 카테고리.
  *  출력 로그 창 → Categories 드롭다운에서 'LogWeapon'만 체크하면 무기 관련 로그만 볼 수 있다.
@@ -185,10 +185,10 @@ protected: //변수
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	UChildActorComponent* WeaponLeft = nullptr;
 
-	// 지금 장착한 무기 데이터. 장비는 캐릭터가 소유한다 — 직업이 바뀌어도 들고 있던 무기는 남는다.
+	// 지금 장착한 무기. 장비는 캐릭터가 소유한다 — 직업이 바뀌어도 들고 있던 무기는 남는다.
 	// Transient — 한 판 동안만 유효한 값이라 애셋/세이브에 굳으면 안 된다(BonusDamage와 같은 성격).
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Weapon")
-	FWeaponItemData EquippedWeapon;
+	UWeaponDataAsset* EquippedWeapon = nullptr;
 
 	/** 각 슬롯의 Weapon_BP 안에 있는 스켈레탈 메시 컴포넌트. BeginPlay(InitWeaponSlot)에서 캐시. */
 	UPROPERTY()
@@ -247,19 +247,22 @@ public: //Property
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void EquipWeapon(USkeletalMesh* NewMesh);
 
-	// 무기 데이터를 갈아끼우고 손 슬롯 반영까지 한다.
+	// 무기를 갈아끼우고 손 슬롯 반영까지 한다.
 	// 무기 획득처(픽업/상점/보상)는 전부 이 함수 하나로 들어온다.
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	bool EquipWeaponItem(const FWeaponItemData& Item);
+	bool EquipWeaponItem(UWeaponDataAsset* Item);
 
 	// 이 무기를 지금 것과 바꿀 가치가 있는지. 직업이 맞고 공격력이 더 높아야 한다.
 	UFUNCTION(BlueprintPure, Category = "Weapon")
-	bool WantsWeaponItem(const FWeaponItemData& Item) const;
+	bool WantsWeaponItem(UWeaponDataAsset* Item) const;
 
 	// 지금 장착 무기의 메시를 직업이 지정한 손에 다시 끼운다. 데이터는 건드리지 않는다.
 	void RefreshWeaponMesh();
 
-	const FWeaponItemData& GetEquippedWeapon() const { return EquippedWeapon; }
+	// 장착한 무기의 공격력. 무기가 없으면 0.
+	int32 GetEquippedWeaponPower() const;
+
+	UWeaponDataAsset* GetEquippedWeapon() const { return EquippedWeapon; }
 
 
 
