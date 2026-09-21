@@ -29,6 +29,7 @@
 #include "ZombieGameInstance.h" //직업 선택 씬에서 고른 직업 읽기
 #include "ZombieSlayerGameMode.h" //사망 시 적 시간 정지(SetEnemiesFrozen)
 
+
 // 모바일(안드로이드/iOS) 플랫폼이면 true. 터치 조이스틱 표시 여부 판단용.
 // 컴파일 타임 매크로라 PC 빌드에선 항상 false → 조이스틱 숨김.
 static bool IsMobilePlatform()
@@ -40,7 +41,8 @@ static bool IsMobilePlatform()
 #endif
 }
 
-//생성자
+
+// 생성자
 AMyPlayer::AMyPlayer()
 {
  	// Tick() 업데이트 키는 변수
@@ -64,7 +66,7 @@ AMyPlayer::AMyPlayer()
 	DefaultJobClass = UWarriorJob::StaticClass();
 }
 
-// Called when the game starts or when spawned
+
 void AMyPlayer::BeginPlay()
 {
 	Super::BeginPlay();
@@ -102,8 +104,62 @@ void AMyPlayer::BeginPlay()
     SetupJob();
 }
 
+void AMyPlayer::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
 
-//Init
+    // 죽으면 입력 처리를 멈춤 (죽은 뒤 공격 몽타주가 또 재생되는 것 방지)
+    if (IsDead)
+    {
+        return;
+    }
+
+    // 마우스를 기존 스틱 포맷으로 변환: just like 로스트아크
+    // 커서 방향 (dx,dy) → FVector2D(Y=dx, X=dy).
+    FVector2D MouseMove = FVector2D::ZeroVector;
+    FVector2D MouseAim = FVector2D::ZeroVector;
+
+    MouseInput(MouseMove, MouseAim);
+
+    // 게임패드 / 터치 / 마우스 중 가장 크게 입력된 쪽을 사용 (전부 지원) => 람다임
+    auto Largest = [](const FVector2D& A, const FVector2D& B, const FVector2D& C) -> FVector2D
+        {
+            const FVector2D& AB = (A.SizeSquared() >= B.SizeSquared()) ? A : B;
+            return (AB.SizeSquared() >= C.SizeSquared()) ? AB : C;
+        };
+    const FVector2D Move = Largest(TouchMove, GamepadMove, MouseMove);
+    const FVector2D Aim = Largest(TouchAim, GamepadAim, MouseAim);
+
+    DebugWalkSpeed(Move);
+
+    UpdateMovement(DeltaTime, Move);
+    UpdateAimAndAttack(DeltaTime, Aim, Move);
+
+    // 다리를 이동 방향으로 돌리기 위한 각도 갱신(상체/조준은 액터 회전 그대로). AnimBP가 LegYawOffset을 읽는다.
+    UpdateLegYawOffset(DeltaTime);
+
+    // 직업 패시브(힐러 자가 회복 등) — 살아있을 때만 (위에서 HP<=0이면 return)
+    if (CurrentJob)
+    {
+        CurrentJob->TickJob(DeltaTime);
+    }
+}
+
+
+
+// [생성자 함수들]
+void AMyPlayer::InitController()
+{
+    // 컨트롤러 회전이 캐릭터를 돌리지 않게 함 (조준 방향으로 직접 회전시킴)
+    bUseControllerRotationPitch = false;
+    bUseControllerRotationYaw = false;
+    bUseControllerRotationRoll = false;
+
+
+    //// 이동 방향 자동 회전 끄기 — 오른쪽 스틱(조준) 방향으로 수동 회전
+    GetCharacterMovement()->bOrientRotationToMovement = false;
+}
+
 void AMyPlayer::InitCamera()
 {
     // 비스듬한 탑다운 카메라 암
@@ -120,17 +176,6 @@ void AMyPlayer::InitCamera()
     TopDownCamera->bUsePawnControlRotation = false;
 }
 
-void AMyPlayer::InitController()
-{
-    // 컨트롤러 회전이 캐릭터를 돌리지 않게 함 (조준 방향으로 직접 회전시킴)
-    bUseControllerRotationPitch = false;
-    bUseControllerRotationYaw = false;
-    bUseControllerRotationRoll = false;
-
-
-    //// 이동 방향 자동 회전 끄기 — 오른쪽 스틱(조준) 방향으로 수동 회전
-    GetCharacterMovement()->bOrientRotationToMovement = false;
-}
 
 
 
@@ -217,56 +262,6 @@ void AMyPlayer::SetupJob()
 
 
 
-
-
-// update 왠만하면 여기선 bp함수를 쓰지마라
-void AMyPlayer::Tick(float DeltaTime)
-{
-    Super::Tick(DeltaTime);
-
-    // 죽으면 이동/조준/공격 입력 처리를 멈춤 (죽은 뒤 공격 몽타주가 또 재생되는 것 방지)
-    if (IsDead)
-    {
-        return;
-    }
-
-    // 마우스(로스트아크식)를 기존 스틱 포맷으로 변환:
-    // 커서 방향 (dx,dy) → FVector2D(Y=dx, X=dy). UpdateMovement/UpdateAimAndAttack의 축 매핑과 일치.
-    FVector2D MouseMove = FVector2D::ZeroVector;
-    FVector2D MouseAim = FVector2D::ZeroVector;
-
-    MouseInput(MouseMove, MouseAim);
-
-    // 게임패드 / 터치 / 마우스 중 가장 크게 입력된 쪽을 사용 (전부 지원) => 람다임
-    auto Largest = [](const FVector2D& A, const FVector2D& B, const FVector2D& C) -> FVector2D
-    {
-        const FVector2D& AB = (A.SizeSquared() >= B.SizeSquared()) ? A : B;
-        return (AB.SizeSquared() >= C.SizeSquared()) ? AB : C;
-    };
-    const FVector2D Move = Largest(TouchMove, GamepadMove, MouseMove);
-    const FVector2D Aim = Largest(TouchAim, GamepadAim, MouseAim);
-
-    // 속도 튜닝용 디버그(토글). 입력 크기 / 실제 속도 / 최고속도를 화면에 출력.
-    if (bShowSpeedDebug && GEngine)
-    {
-        const float MaxSpd = GetCharacterMovement() ? GetCharacterMovement()->MaxWalkSpeed : 0.0f;
-        GEngine->AddOnScreenDebugMessage(101, 0.0f, FColor::Green,
-            FString::Printf(TEXT("Move=%.2f  Vel=%.0f  MaxWalkSpeed=%.0f"),
-                Move.Size(), GetVelocity().Size(), MaxSpd));
-    }
-
-    UpdateMovement(DeltaTime, Move);
-    UpdateAimAndAttack(DeltaTime, Aim, Move);
-
-    // 다리를 이동 방향으로 돌리기 위한 각도 갱신(상체/조준은 액터 회전 그대로). AnimBP가 LegYawOffset을 읽는다.
-    UpdateLegYawOffset(DeltaTime);
-
-    // 직업 패시브(힐러 자가 회복 등) — 살아있을 때만 (위에서 HP<=0이면 return)
-    if (CurrentJob)
-    {
-        CurrentJob->TickJob(DeltaTime);
-    }
-}
 
 
 //마우스의 이동, 공격을 담당
@@ -755,4 +750,16 @@ void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
 }
 
 
-
+// [Debug]
+// 속도 체크
+void AMyPlayer::DebugWalkSpeed(const FVector2D& Move)
+{
+    // 속도 튜닝용 디버그(토글). 입력 크기 / 실제 속도 / 최고속도를 화면에 출력.
+    if (bShowSpeedDebug && GEngine)
+    {
+        const float MaxSpd = GetCharacterMovement() ? GetCharacterMovement()->MaxWalkSpeed : 0.0f;
+        GEngine->AddOnScreenDebugMessage(101, 0.0f, FColor::Green,
+            FString::Printf(TEXT("Move=%.2f  Vel=%.0f  MaxWalkSpeed=%.0f"),
+                Move.Size(), GetVelocity().Size(), MaxSpd));
+    }
+}

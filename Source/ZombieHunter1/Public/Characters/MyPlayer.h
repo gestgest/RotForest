@@ -33,6 +33,7 @@ class ZOMBIEHUNTER1_API AMyPlayer : public ACombatCharacter
 
 		private도 변수는 앞에
 	*/
+
 public:
 	AMyPlayer();
 
@@ -69,6 +70,7 @@ protected:
 
 private: //평범한 변수 및 함수
 
+	// [Stat]
 	// HP / Damage 는 베이스(ACombatCharacter)로 이동.
 	// 블루프린트에서 읽고 쓸 수 있는 Money 변수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Stats", meta = (AllowPrivateAccess = "true"))
@@ -89,6 +91,7 @@ private: //평범한 변수 및 함수
 	int32 ExpGrowth = 5;
 
 
+
 	// [Weapon]
 	// 강화 레벨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapon", meta = (AllowPrivateAccess = "true"))
@@ -99,12 +102,14 @@ private: //평범한 변수 및 함수
 	int32 WeaponDamagePerLevel = 1;
 
 
+
 	// [사운드]
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio", meta = (AllowPrivateAccess = "true"))
 	USoundBase* AttackSound; //MS
 
 
-	//[Input Variable]
+
+	// [Input Variable]
 	// 입력 누적값 (게임패드 / 터치를 분리 저장 후 Tick에서 합성)
 	FVector2D GamepadMove = FVector2D::ZeroVector;
 	FVector2D GamepadAim = FVector2D::ZeroVector;
@@ -112,7 +117,8 @@ private: //평범한 변수 및 함수
 	FVector2D TouchAim = FVector2D::ZeroVector;
 
 
-	//[조이스틱]
+
+	// [조이스틱]
 	UPROPERTY()
 	UVirtualJoystick* MoveJoystick;
 
@@ -138,11 +144,9 @@ private: //평범한 변수 및 함수
 	// 공격 중 남은 조준 유지 시간(초). 0보다 크면 이동 방향으로 몸을 되돌리지 않는다.
 	float AttackFacingHold = 0.0f;
 	
-	// 디버깅 : 켜면 화면에 이동 입력 크기 / 실제 속도 / MaxWalkSpeed를 출력한다.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Debug", meta = (AllowPrivateAccess = "true"))
-	bool bShowSpeedDebug = false;
 
 
+	// [카메라]
 	// 비스듬한 탑다운 카메라 암 (BP의 기존 CameraBoom과 이름 충돌 방지)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "TopDown|Camera", meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* TopDownBoom;
@@ -170,11 +174,11 @@ private: //평범한 변수 및 함수
 
 
 
-	// ~ Begin Animation
-	// 
+
+	// [Begin] Animation
 	// 자동 공격 간격(AttackInterval)·직업(DefaultJobClass/CurrentJob)·공격 몽타주(AttackMontage)는
 	// 모두 베이스(ACombatCharacter)로 이동했다. 동료(ACompanion)와 똑같은 배선이라 한곳에 모음.
-	// 
+	
 	// 다리를 이동 방향으로 돌리기 위한 yaw 오프셋(도). 액터 정면(=조준) 기준 이동 방향과의 각도. AnimBP가 읽는다.
 	UPROPERTY(BlueprintReadOnly, Category = "TopDown|Animation", meta = (AllowPrivateAccess = "true"))
 	float LegYawOffset = 0.0f;
@@ -186,8 +190,6 @@ private: //평범한 변수 및 함수
 	// LegYawOffset 최대 각도(도). 전방 애니 1개라 이 이상은 허리가 부러져 보여서 막는다(보통 90). 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Animation", meta = (AllowPrivateAccess = "true"))
 	float LegYawMaxAngle = 90.0f;
-
-
 
 	UPROPERTY()
 	APlayerController* PlayerControllerRef = nullptr;
@@ -206,9 +208,12 @@ private: //평범한 변수 및 함수
 	FVector LastCursorPoint = FVector::ZeroVector;
 	bool bHasLastCursorPoint = false;
 
-	// UI Variable
+	
+
+	// [UI]
 	UPROPERTY()
 	UMyCanvas* CanvasWidget = nullptr;
+
 
 
 	// [파티]
@@ -218,15 +223,23 @@ private: //평범한 변수 및 함수
 
 
 
+	// [Debug]
+	// 켜면 화면에 이동 입력 크기 / 실제 속도 / MaxWalkSpeed를 출력한다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug", meta = (AllowPrivateAccess = "true"))
+	bool bShowSpeedDebug = false;
 
-	// Debug Function
 	// true면 C 키로 디버그용 돈 획득(AddMoney)을 테스트할 수 있다.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Debug", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug", meta = (AllowPrivateAccess = "true"))
 	bool bDebugAddMoneyKey = true;
 
 
 
-	/////////////////////////////////////////////////////////////함수들
+
+
+
+
+
+	/////////////////////////////////////////////////  부품 함수들  /////////////////////////////////////////////////
 	//[생성자]
 	void InitCamera();
 	void InitController();
@@ -285,11 +298,15 @@ private: //평범한 변수 및 함수
 
 
 
-
+	// [UI] Property
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void SetCanvasWidget(UMyCanvas* CW);
 
-public: //PROPERTY FUNCTION
+	// [Debug]
+	// 속도 체크
+	void DebugWalkSpeed(const FVector2D& Move);
+
+public: //Property Function
 
 	// HUD 체력바 갱신.
 	virtual void SetHP(int32 new_hp) override; //  죽음/부활 "전환" 처리는 베이스가 OnDeath/OnRevive로 호출해준다.
@@ -324,7 +341,7 @@ public: //PROPERTY FUNCTION
 	UFUNCTION(BlueprintCallable)
 	void AddMoney();
 	
-	//근데 안 쓰이는 거 같다?
+	// 근데 안 쓰이는 거 같다?
 	// 키보드(WASD) Enhanced Input(IA_Move)에서 호출. 카메라가 고정된 월드축 기준으로 이동
 	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
 	void MoveTopDown(FVector2D Value);
