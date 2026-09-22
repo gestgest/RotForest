@@ -55,7 +55,6 @@ public:
 	
 	
 	// 강화 발판 AWeaponUpgradeZone이 호출 => WeaponLevel 증가 + 현재 직업의 Damage 상승.
-	UFUNCTION(BlueprintCallable, Category = "Player|Weapon")
 	void UpgradeWeapon();
 
 	// 파라미터 이름은 bDead — 베이스(ACombatCharacter)의 IsDead 멤버와 겹치면 UHT가 shadowing 에러를 냄.
@@ -320,12 +319,10 @@ public: //Property Function
 	virtual void SetHP(int32 new_hp) override; //  죽음/부활 "전환" 처리는 베이스가 OnDeath/OnRevive로 호출해준다.
 
 	//차감 성공하면 true
-	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
 	bool TrySpendMoney(int32 Amount);
 
 
 	// 레벨업 처리와 HUD 갱신까지 담당.
-	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
 	void AddExp(int32 Amount);
 
 
@@ -350,20 +347,16 @@ public: //Property Function
 	void AddMoney();
 
 	// 판매처럼 한 번에 여러 개를 얻을 때
-	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
 	void GainMoney(int32 Amount);
 	
 	// 근데 안 쓰이는 거 같다?
 	// 키보드(WASD) Enhanced Input(IA_Move)에서 호출. 카메라가 고정된 월드축 기준으로 이동
-	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
 	void MoveTopDown(FVector2D Value);
 
 	// 모바일 터치 가상 조이스틱(왼쪽: 이동)이 매 프레임 호출
-	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
 	void SetMoveInput(FVector2D Value);
 
 	// 모바일 터치 가상 조이스틱(오른쪽: 조준+공격)이 매 프레임 호출
-	UFUNCTION(BlueprintCallable, Category = "TopDown|Input")
 	void SetAimInput(FVector2D Value);
 
 

@@ -135,7 +135,6 @@ private:
 public:
 
 	// 공격 몽타주의 Notify에서 호출되는 실제 타격 판정. 기본 구현은 비어 있음. 
-	UFUNCTION(BlueprintCallable, Category = "Job")
 	virtual void OnAttackNotify(FName NotifyName);
 
 	// 공격 몽타주가 끝까지 재생됐을 때. 기본 구현 없음.

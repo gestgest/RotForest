@@ -41,7 +41,6 @@ public:
 	// 사망 연출 — 플레이어가 죽으면 적들의 시간을 멈춘다.
 	// 풀의 모든 적 시간 정지/해제 + 스폰·리쉬 타이머 일시정지/재개.
 	// 플레이어 AMyPlayer::OnDeath(정지) / OnRevive(해제)가 호출한다.
-	UFUNCTION(BlueprintCallable, Category = "Death")
 	void SetEnemiesFrozen(bool bFrozen);
 
 private:

@@ -21,7 +21,6 @@ public:
 	UPartyComponent();
 
 	// 동료 섭외 — 소유자 옆에 동료를 스폰해 따라다니며 싸우게 한다. 동료 소환 발판(ACompanionSpawnZone)이 호출.
-	UFUNCTION(BlueprintCallable, Category = "Party")
 	void RecruitCompanion(TSubclassOf<UJobComponent> JobComponent);
 
 	// 무기 한 자루를 파티에 배분한다. 받은 캐릭터를 반환하고, 아무도 못 쓰면 nullptr.
