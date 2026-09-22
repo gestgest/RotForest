@@ -198,14 +198,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI")
 	TSubclassOf<AActor> BossClass;
 
-	// [디버깅 변수]
-	// 켜면 POI 청크 생성 시 경계 박스(마을=초록, 좀비마을=빨강)와 로그를 남긴다. 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI|Debug")
-	bool bDebugDrawPOI = true;
-
-	//켜면 청크 생성/갱신을 전부 멈춤. 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Debug")
-	bool debugDisableGeneration = false;
 
 private:
 	
@@ -248,6 +240,20 @@ private:
 	 *  기본값과 같은 상태는 저장하지 않으므로 "플레이어가 손댄 POI"만큼만 자란다. */
 	UPROPERTY()
 	FPOIStateStore POIStateStore;
+
+	//[Debug]
+	// 안개 끄는 디버깅 변수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Debug")
+	bool bDebugOffFog = false; 
+
+
+	// 켜면 POI 청크 생성 시 경계 박스(마을=초록, 좀비마을=빨강)와 로그를 남긴다. 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Debug")
+	bool bDebugDrawPOI = true;
+
+	// 켜면 청크 생성/갱신을 전부 멈춤. 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Debug")
+	bool debugDisableGeneration = false;
 
 
 public:

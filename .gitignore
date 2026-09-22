@@ -117,4 +117,10 @@ Content/Characters/Enemy/Skeleton_Knight_07/*
 Content/StarterContent/*
 Content/Assassin/*
 Content/Necropolis/*
+
+#MI_floor_ground_mo 값만
+!Content/Necropolis/Materials/
+Content/Necropolis/Materials/*
+!Content/Necropolis/Materials/MI_floor_ground_mo.uasset
+
 Content/VFX_Magic/*

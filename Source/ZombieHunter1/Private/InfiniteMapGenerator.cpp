@@ -692,6 +692,11 @@ AStaticMeshActor* AInfiniteMapGenerator::SpawnObstacleMesh(UStaticMesh* Mesh, co
 
 void AInfiniteMapGenerator::SpawnFog(const FVector & Center, FMapChunk& Chunk)
 {
+	if (bDebugOffFog)
+	{
+		return;
+	}
+
 	if (FogClass)
 	{
 		const float Base = FMath::Max(1.f, FogBaseSize);

@@ -31,7 +31,7 @@ UItemDataAsset* UInventoryComponent::PopItem()
 {
 	while (Items.Num() > 0)
 	{
-		UItemDataAsset* Item = Items.Pop();
+		UItemDataAsset* Item = Items.Pop(EAllowShrinking::No);
 		if (Item)
 		{
 			return Item;
@@ -41,6 +41,13 @@ UItemDataAsset* UInventoryComponent::PopItem()
 	return nullptr;
 }
 ```
+
+- `TArray::Pop()`은 마지막 원소를 **반환하고 제거**한다. 뒤에서 꺼내므로 스택(LIFO).
+- 빈 배열에서 부르면 내부 `RangeCheck(0)`에 걸려 크래시다. `Num() > 0` 검사가 그걸 막는다.
+- `EAllowShrinking::No` — 기본값 `Yes`는 꺼낼 때마다 버퍼를 재할당할 수 있다.
+  `ClearAll()`의 `Empty()`가 어차피 해제하므로 중간에 줄일 이유가 없다.
+- 먼저 주운 것부터 팔고 싶으면(FIFO) 이 줄만 바꾼다:
+  `UItemDataAsset* Item = Items[0]; Items.RemoveAt(0, 1, EAllowShrinking::No);`
 
 ---
 
@@ -269,6 +276,9 @@ void AItemSellZone::OnTriggerEndOverlap(UPrimitiveComponent* /*OverlappedComp*/,
   개별 연출은 `OnItemSold`(BP 이벤트)로 넘기고, 텍스트는 다 팔렸을 때나 발판을 벗어날 때 한 줄로 낸다.
 - **`SellTimer = SellInterval`** 로 시작해서 밟자마자 첫 개가 나간다. 0으로 두면 0.3초 멍하니 기다리게 된다.
 - `AMoneyPadZone`을 상속하지 않는다. 그쪽은 돈을 **쓰는** 게이지고 여기는 **받는** 쪽이라 완성/쿨다운 개념이 없다.
+- 가방은 `TArray` 하나로 충분하다. `TQueue`는 순회가 안 돼서 `GetCurrentWeight` / `GetTotalSellPrice`를
+  만들 수 없고, `UPROPERTY`가 안 붙어 GC가 안에 든 UObject 포인터를 추적하지 못한다.
+  스택이냐 큐냐는 컨테이너가 아니라 꺼내는 쪽 끝을 고르는 문제다.
 
 ## 다른 방식으로 가고 싶다면
 
