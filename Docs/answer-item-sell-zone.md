@@ -277,6 +277,8 @@ void AItemSellZone::OnTriggerEndOverlap(UPrimitiveComponent* /*OverlappedComp*/,
   개별 연출은 `OnItemSold`(BP 이벤트)로 넘기고, 텍스트는 다 팔렸을 때나 발판을 벗어날 때 한 줄로 낸다.
 - **`SellTimer = SellInterval`** 로 시작해서 밟자마자 첫 개가 나간다. 0으로 두면 0.3초 멍하니 기다리게 된다.
 - `AMoneyPadZone`을 상속하지 않는다. 그쪽은 돈을 **쓰는** 게이지고 여기는 **받는** 쪽이라 완성/쿨다운 개념이 없다.
+  => 대신 추후 공통 베이스 `AGaugeZone`을 만들어 `MoneyPadZone`/`ItemSellZone`/퀘스트 존이 함께 상속한다.
+     동작 확인 후 별도 작업으로 진행 (`Docs/answer-gauge-zone.md`).
 - 가방은 `TArray` 하나로 충분하다. `TQueue`는 순회가 안 돼서 `GetCurrentWeight` / `GetTotalSellPrice`를
   만들 수 없고, `UPROPERTY`가 안 붙어 GC가 안에 든 UObject 포인터를 추적하지 못한다.
   스택이냐 큐냐는 컨테이너가 아니라 꺼내는 쪽 끝을 고르는 문제다.
