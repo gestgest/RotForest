@@ -67,3 +67,18 @@ void UInventoryComponent::ClearAll()
 {
 	Items.Empty();
 }
+
+//너무 자주 Pop으로 메모리 줄어드는 거 호출하면 언리얼도 부담부담
+UItemDataAsset* UInventoryComponent::PopItem()
+{
+	if (0 < Items.Num())
+	{
+		UItemDataAsset* Item = Items.Pop(EAllowShrinking::No);
+		if (Item)
+		{
+			return Item;
+		}
+	}
+
+	return nullptr;
+}

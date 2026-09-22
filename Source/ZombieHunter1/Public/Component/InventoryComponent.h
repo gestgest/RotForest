@@ -24,15 +24,13 @@ public:
 	// 상태를 바꾸지 않는 질문용. 넣을 때는 TryAddItem을 쓴다.
 	bool HasRoomFor(UItemDataAsset* Item) const;
 
-	UFUNCTION(BlueprintPure, Category = "Inventory")
 	float GetCurrentWeight() const;
 
 	// 가방 전체를 팔았을 때 받는 금액
-	UFUNCTION(BlueprintPure, Category = "Inventory")
 	int32 GetTotalSellPrice() const;
 
 	void ClearAll();
-
+	UItemDataAsset * PopItem(); //스택식 pop
 
 	FORCEINLINE const TArray<UItemDataAsset*>& GetItems() const { return Items; }
 	FORCEINLINE float GetMaxWeight() const { return MaxWeight; }
