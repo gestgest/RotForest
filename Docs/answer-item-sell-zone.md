@@ -53,6 +53,7 @@ UItemDataAsset* UInventoryComponent::PopItem()
 
 ## 3. 발판 헤더 — Source/ZombieHunter1/Public/Items/ItemSellZone.h
 
+- [ ] 그전에 저거 발판 GagueZone 구현하자
 파일 전체 교체.
 
 ```cpp
