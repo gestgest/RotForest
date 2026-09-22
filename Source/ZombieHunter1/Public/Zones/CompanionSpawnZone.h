@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "MoneyPadZone.h"
+#include "Zones/MoneyPadZone.h"
 #include "Jobs/JobComponent.h"
 #include "CompanionSpawnZone.generated.h"
 

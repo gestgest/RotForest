@@ -19,11 +19,9 @@ public:
 	UInventoryComponent();
 
 	// 무게가 넘치면 안 넣고 false
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool TryAddItem(UItemDataAsset* Item);
 
 	// 상태를 바꾸지 않는 질문용. 넣을 때는 TryAddItem을 쓴다.
-	UFUNCTION(BlueprintPure, Category = "Inventory")
 	bool HasRoomFor(UItemDataAsset* Item) const;
 
 	UFUNCTION(BlueprintPure, Category = "Inventory")
@@ -33,8 +31,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	int32 GetTotalSellPrice() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void ClearAll();
+
 
 	FORCEINLINE const TArray<UItemDataAsset*>& GetItems() const { return Items; }
 	FORCEINLINE float GetMaxWeight() const { return MaxWeight; }

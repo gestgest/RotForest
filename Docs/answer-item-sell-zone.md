@@ -1,24 +1,95 @@
-﻿# 답안지 — 판매 발판 게이지식 전환
+# 답안지 — 판매 발판 게이지식 전환
 
 즉발 전량 판매 → **발판 위에 있는 동안 한 개씩** 판매로 변경.
 기존 발판(`AMoneyPadZone`)들과 조작감을 맞추고, 중간에 벗어나면 멈춰서 실수를 되돌릴 수 있게 한다.
 
-작업 순서: 1 → 2 (가방에 꺼내기 API) → 3 → 4 (발판) → 리빌드
+작업 순서: 1 → 2 (가방 정리 + 꺼내기 API) → 3 → 4 (발판) → 풀 리빌드 → 에디터 확인
+
+> **보류 중인 선행 작업**
+> - [ ] 그전에 발판 공통 베이스 `AGaugeZone`을 먼저 구현할지 결정 (아래 설계 메모 참고).
+>   지금 답안지는 `AItemSellZone : AActor` 기준으로 쓰여 있다.
 
 ---
 
-## 1. 가방에서 한 개 꺼내기 — Source/ZombieHunter1/Public/Component/InventoryComponent.h:36
+## 1. 가방 컴포넌트 정리 + 꺼내기 API — Source/ZombieHunter1/Public/Component/InventoryComponent.h
 
-`ClearAll()` 선언 아래에 추가.
+파일 전체 교체. `PopItem()` 추가와 함께, 실제로 쓰이지 않는 블루프린트 노출 매크로를 걷어낸다.
 
 ```cpp
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Components/ActorComponent.h"
+#include "InventoryComponent.generated.h"
+
+class UItemDataAsset;
+
+
+// 아이템 보관 가방. 인벤토리 창은 없고 판매 발판이 한 개씩 꺼내 판다.
+UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+class ZOMBIEHUNTER1_API UInventoryComponent : public UActorComponent
+{
+	GENERATED_BODY()
+
+public:
+	UInventoryComponent();
+
+	// 무게가 넘치면 안 넣고 false
+	bool TryAddItem(UItemDataAsset* Item);
+
+	// 상태를 바꾸지 않는 질문용. 넣을 때는 TryAddItem을 쓴다.
+	bool HasRoomFor(UItemDataAsset* Item) const;
+
+	float GetCurrentWeight() const;
+
+	// 가방 전체를 팔았을 때 받는 금액
+	int32 GetTotalSellPrice() const;
+
 	void ClearAll();
 
 	// 가방에서 한 개 꺼낸다. 비어 있으면 nullptr.
-	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	UItemDataAsset* PopItem();
+
+	FORCEINLINE const TArray<UItemDataAsset*>& GetItems() const { return Items; }
+	FORCEINLINE float GetMaxWeight() const { return MaxWeight; }
+
+private:
+	// 담을 수 있는 총 무게
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true", ClampMin = "0.0"), Category = "Inventory")
+	float MaxWeight = 20.0f;
+
+	// UPROPERTY는 GC가 배열 안 UObject를 추적하게 하는 용도
+	UPROPERTY(Transient)
+	TArray<UItemDataAsset*> Items;
+};
 ```
+
+### 왜 매크로를 걷어내는가
+
+`UFUNCTION` / `UPROPERTY`는 "블루프린트에 연다"가 아니라 **"엔진 리플렉션에 등록한다"**는 뜻이다.
+BP 노출은 그 용도 중 하나일 뿐이고, 필요 없는데 붙이면 API 표면만 넓어진다.
+BP가 노드를 한 번 물면 나중에 이름을 바꾸거나 지울 때 BP가 컴파일 에러로 터진다.
+
+프로젝트 전체에서 맨 `UFUNCTION()`이 붙은 함수 11개 중 10개가 `On___` 콜백이고,
+전부 `AddDynamic`으로 델리게이트에 꽂혀서 **떼면 컴파일 에러가 나는** 것들이다.
+`ClearAll`만 그 패턴 밖에 있었다. => `CombatCharacter.h`의 `UFUNCTION() //몽타주의 delegate에 추가하려면 필수다.` 참고
+
+| 대상 | 판단 | 근거 |
+|---|---|---|
+| `TryAddItem` `ClearAll` `PopItem` | 매크로 제거 | 델리게이트도 아니고 호출처가 전부 C++ |
+| `HasRoomFor` `GetCurrentWeight` `GetTotalSellPrice` | `BlueprintPure` 제거 | BP 참조 0곳. 위젯이 실제로 필요해질 때 다시 연다 |
+| `MaxWeight`의 `EditAnywhere` | **유지** | 디테일 패널에서 값 조정. BP 노출과 무관한 에디터 기능 |
+| `MaxWeight`의 `BlueprintReadWrite` | 제거 | BP 그래프에서 읽고 쓸 일이 없음 |
+| `Items`의 `UPROPERTY` | **유지** | GC가 배열 안 `UObject*`를 추적하게 하는 용도. 떼면 조용히 수거돼 크래시 |
+| `Items`의 `BlueprintReadOnly` | 제거 | BP 참조 0곳 |
+
+`AllowPrivateAccess`는 private 멤버를 BP/에디터에 노출할 때만 필요한 메타다.
+`Items`는 노출이 사라지므로 같이 빠지고, `MaxWeight`는 `EditAnywhere`가 남으므로 유지한다.
+
+되돌리는 비용이 비대칭이라는 점이 기준이다. 나중에 붙이는 건 1초지만,
+BP가 이미 물고 있는 걸 떼는 건 BP를 고쳐야 한다.
 
 ---
 
@@ -51,9 +122,8 @@ UItemDataAsset* UInventoryComponent::PopItem()
 
 ---
 
-## 3. 발판 헤더 — Source/ZombieHunter1/Public/Items/ItemSellZone.h
+## 3. 발판 헤더 — Source/ZombieHunter1/Public/Zones/ItemSellZone.h
 
-- [ ] 그전에 저거 발판 GagueZone 구현하자
 파일 전체 교체.
 
 ```cpp
@@ -128,9 +198,16 @@ private:
 };
 ```
 
+여기 매크로는 1번과 달리 **뗄 수 없는 것들**이다. 기준이 뒤집힌 게 아니라 용도가 다르다.
+
+- `OnTriggerBeginOverlap` / `OnTriggerEndOverlap`의 맨 `UFUNCTION()`
+  => `AddDynamic`이 리플렉션으로 함수를 찾으므로 없으면 컴파일 에러
+- `OnItemSold`의 `BlueprintImplementableEvent`
+  => 구현이 BP 쪽에 있다. 동전 이펙트/사운드를 붙이는 지점
+
 ---
 
-## 4. 발판 구현 — Source/ZombieHunter1/Private/Items/ItemSellZone.cpp
+## 4. 발판 구현 — Source/ZombieHunter1/Private/Zones/ItemSellZone.cpp
 
 파일 전체 교체.
 
@@ -138,7 +215,7 @@ private:
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Items/ItemSellZone.h"
+#include "Zones/ItemSellZone.h"
 #include "Component/InventoryComponent.h"
 #include "Items/ItemDataAsset.h"
 #include "Characters/MyPlayer.h"

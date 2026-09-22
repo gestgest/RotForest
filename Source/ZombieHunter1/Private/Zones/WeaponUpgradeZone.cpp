@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "WeaponUpgradeZone.h"
+#include "Zones/WeaponUpgradeZone.h"
 #include "Characters/MyPlayer.h"
 #include "Engine/Engine.h"
 

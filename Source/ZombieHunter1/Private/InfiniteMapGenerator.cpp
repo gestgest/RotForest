@@ -8,7 +8,7 @@
 #include "NavigationSystem.h" // 런타임 스폰한 바닥을 NavMesh에 반영
 #include "NavMesh/NavMeshBoundsVolume.h" // 플레이어 따라 옮길 나비 경계 볼륨
 #include "DrawDebugHelpers.h" // POI 청크 디버그 박스
-#include "MoneyPadZone.h" // 마을 발판 상태 저장/복원
+#include "Zones/MoneyPadZone.h" // 마을 발판 상태 저장/복원
 #include "Characters/Companion.h" // 마을 경비병 (경비 모드로 스폰)
 #include "Characters/Villager.h" // 마을 주민 (비전투 배회 NPC)
 #include "Characters/Boss.h" 
