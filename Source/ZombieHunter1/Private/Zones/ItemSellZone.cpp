@@ -3,65 +3,91 @@
 
 #include "Zones/ItemSellZone.h"
 #include "Component/InventoryComponent.h"
+#include "Items/ItemDataAsset.h"
 #include "Characters/MyPlayer.h"
-#include "Components/BoxComponent.h"
-#include "Components/StaticMeshComponent.h"
-
+#include "Kismet/GameplayStatics.h"
 
 AItemSellZone::AItemSellZone()
 {
-	PrimaryActorTick.bCanEverTick = false;
-
-	TriggerBox = CreateDefaultSubobject<UBoxComponent>(TEXT("TriggerBox"));
-	RootComponent = TriggerBox;
-	TriggerBox->SetBoxExtent(FVector(150.0f, 150.0f, 100.0f));
-	TriggerBox->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
-	TriggerBox->SetGenerateOverlapEvents(true);
-
-	// 판정은 TriggerBox 하나만 담당한다.
-	PadMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PadMesh"));
-	PadMesh->SetupAttachment(RootComponent);
-	PadMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Cooldown = 0.0f;
 }
 
-
-void AItemSellZone::BeginPlay()
+// 여기서 OutAmount는 판 갯수
+bool AItemSellZone::TryFillOnce(AMyPlayer* Player, int32& OutAmount)
 {
-	Super::BeginPlay();
+	UInventoryComponent* Bag = Player ? Player->GetBag() : nullptr;
 
-	if (TriggerBox)
-	{
-		TriggerBox->OnComponentBeginOverlap.AddDynamic(this, &AItemSellZone::OnTriggerBeginOverlap);
-	}
-}
-
-
-void AItemSellZone::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*/, AActor* OtherActor,
-	UPrimitiveComponent* /*OtherComp*/, int32 /*OtherBodyIndex*/, bool /*bFromSweep*/, const FHitResult& /*Sweep*/)
-{
-	AMyPlayer* MyPlayer = Cast<AMyPlayer>(OtherActor);
-	if (!MyPlayer)
-	{
-		return;
-	}
-
-	UInventoryComponent* Bag = MyPlayer->GetBag();
 	if (!Bag)
 	{
-		return;
+		return false;
 	}
 
-	const int32 Total = Bag->GetTotalSellPrice();
-	if (Total <= 0)
+	//아이템
+	UItemDataAsset* Item = Bag->PopItem();
+	if (!Item)
 	{
+		return false;
+	}
+
+	//돈
+	int32 Money = Item->Price;
+	Player->GainMoney(Money);
+
+	//sold 값
+	SoldCount++;
+	SoldMoney += Money;
+
+	//사운드
+	UGameplayStatics::PlaySoundAtLocation(this, SellSound, GetActorLocation());
+
+	OutAmount = 1;
+	return true;
+}
+
+void AItemSellZone::HandleZoneFilled(AMyPlayer* Player)
+{
+	ShowSoldSummary(Player);
+}
+
+void AItemSellZone::OnPlayerEntered(AMyPlayer* Player)
+{
+	// Player가 null이면 nullptr
+	UInventoryComponent* Inventory = Player ? Player->GetBag() : nullptr;
+
+	RequiredAmount = Inventory ? FMath::Max(1, Inventory->GetItems().Num()) : 1;
+
+	//초기화
+	FilledAmount = 0;
+	Progress = 0.0f;
+
+	SoldCount = 0;
+	SoldMoney = 0;
+
+	// 시간을 쿨타임만큼 추가하면 바로 판매 가능
+	Fill_Timer = Fill_Interval;
+}
+
+//문구만 뜨고
+void AItemSellZone::OnPlayerExited(AMyPlayer* Player)
+{
+	ShowSoldSummary(Player);
+}
+
+void AItemSellZone::ShowSoldSummary(AMyPlayer * Player)
+{
+	//플레이어가 
+	if (SoldCount <= 0 || !IsValid(Player))
+	{
+		SoldCount = 0;
+		SoldMoney = 0;
 		return;
 	}
 
-	const int32 Count = Bag->GetItems().Num();
+	// 메세지 보여주고
+	FText Msg = FText::Format(FText::FromString(TEXT("아이템 {0}개를 팔아 {1}원을 받았습니다.")), SoldCount, SoldMoney);
+	Player->ShowOnItemText(Msg, EItemNotifyType::Gain);
 
-	Bag->ClearAll();
-	MyPlayer->GainMoney(Total);
-
-	FText Msg = FText::Format(FText::FromString(TEXT("아이템 {0}개를 팔아 {1}원을 받았습니다.")), Count, Total);
-	MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Gain);
+	// 초기화
+	SoldCount = 0;
+	SoldMoney = 0;
 }

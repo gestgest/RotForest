@@ -586,8 +586,8 @@ void AInfiniteMapGenerator::SavePadStateIfChanged(const FIntPoint& Coord, AMoney
 
 	//만약 안 바뀌었으면 그냥 무시.
 	const bool bIsDefault =
-		Pad->PaidMoney == Defaults->PaidMoney &&
-		Pad->MaxMoney == Defaults->MaxMoney &&
+		Pad->GetFilledAmount() == Defaults->GetFilledAmount() &&
+		Pad->GetRequiredAmount() == Defaults->GetRequiredAmount() &&
 		Pad->IsConsumed() == Defaults->IsConsumed();
 
 	FVillageState Existing;
@@ -601,10 +601,10 @@ void AInfiniteMapGenerator::SavePadStateIfChanged(const FIntPoint& Coord, AMoney
 	//todo POIStateStore.SavePad ...?
 	// 발판 세 필드만 덮어쓴다 — 같은 엔트리에 들어있는 bBossKilled는 건드리지 않는다.
 	// (마을과 좀비마을은 서로 다른 중심 청크라 실제로 섞일 일은 없지만, 그래도 남의 필드는 안 만진다)
-	POIStateStore.SavePad(Coord, Pad->PaidMoney, Pad->MaxMoney, Pad->IsConsumed());
+	POIStateStore.SavePad(Coord, Pad->GetFilledAmount(), Pad->GetRequiredAmount(), Pad->IsConsumed());
 
-	UE_LOG(LogTemp, Log, TEXT("[POIState] 저장: 청크(%d, %d) Paid %d / Max %d"),
-		Coord.X, Coord.Y, Pad->PaidMoney, Pad->MaxMoney);
+	UE_LOG(LogTemp, Log, TEXT("[POIState] 저장: 청크(%d, %d) Filled %d / Required %d"),
+		Coord.X, Coord.Y, Pad->GetFilledAmount(), Pad->GetRequiredAmount());
 }
 
 // 보스 처치 기록 — 보스가 죽는 순간 자기 소속 마을 좌표를 들고 여기로 온다.

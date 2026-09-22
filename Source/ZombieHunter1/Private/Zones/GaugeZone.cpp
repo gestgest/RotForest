@@ -68,31 +68,18 @@ void AGaugeZone::Tick(float DeltaTime)
 		{
 			Fill_Timer = 0.0f;
 
-			// 마지막 한 칸은 남은 금액(MaxMoney - PaidMoney)만 받아 초과 결제를 막는다.
-			const int32 Payment = FMath::Min(MoneyPerPayment, MaxMoney - PaidMoney);
-
-			if (Payment > 0 && CurrentPlayer->TrySpendMoney(Payment))
+			int32 Amount = 0;
+			if (TryFillOnce(CurrentPlayer, Amount) && Amount > 0)
 			{
-				// 결제 성공 → 누적 돈 증가, 게이지는 PaidMoney / MaxMoney로 계산.
-				PaidMoney += Payment;
-				Progress = FMath::Clamp((float)PaidMoney / (float)MaxMoney, 0.0f, 1.0f);
-				OnProgressChanged(Progress);
+				FilledAmount = FMath::Min(FilledAmount + Amount, RequiredAmount);
+				Progress = FMath::Clamp((float)FilledAmount / (float)RequiredAmount, 0.0f, 1.0f);
 
-				if (PaidMoney >= MaxMoney)
+				if (FilledAmount >= RequiredAmount)
 				{
 					CompleteZone();
 				}
 			}
-			else
-			{
-				// 돈이 부족하면 게이지를 올리지 않고 그대로 둔다(이미 낸 돈만큼은 유지).
-				OnInsufficientFunds();
-				if (GEngine)
-				{
-					GEngine->AddOnScreenDebugMessage(7001, 1.0f, FColor::Red,
-						FString::Printf(TEXT("[Zone] 돈 부족! (%d원 필요)"), MoneyPerPayment));
-				}
-			}
+			//else 는 TryFillOnce에
 		}
 	}
 	else
@@ -120,6 +107,8 @@ void AGaugeZone::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*/, 
 
 	CurrentPlayer = Player;
 	bPlayerInside = true;
+
+	OnPlayerEntered(Player);
 }
 
 //스폰존에 나간다면
@@ -145,30 +134,28 @@ void AGaugeZone::OnTriggerEndOverlap(UPrimitiveComponent* /*OverlappedComp*/, AA
 			{
 				CurrentPlayer = P;
 				bPlayerInside = true;
+				
+				OnPlayerExited(P);
 				break;
 			}
 		}
 	}
+
 }
 
 void AGaugeZone::CompleteZone()
 {
 	AMyPlayer* Payer = CurrentPlayer;
 
-	// 게이지/누적 돈을 먼저 리셋 — HandleZoneFilled가 MaxMoney를 키워도(강화 비용 증가) 안전하게.
-	PaidMoney = 0;
+	// HandleZoneFilled가 RequiredAmount를 키워도 안전하도록 먼저 리셋한다.
+	FilledAmount = 0;
 	Progress = 0.0f;
-	OnProgressChanged(0.0f);
 
-	// 보상은 서브클래스 몫(동료 소환/무기 강화 등)
 	if (IsValid(Payer))
 	{
 		HandleZoneFilled(Payer);
 	}
 
-	OnZoneCompleted(Payer);
-
-	// 다음 작동 제어: 일회성이면 소비, 아니면 쿨다운.
 	if (bOneShot)
 	{
 		bConsumed = true;
@@ -178,20 +165,6 @@ void AGaugeZone::CompleteZone()
 		CooldownRemaining = Cooldown;
 	}
 }
-
-
-// 상태 영속: 언로드 때 저장한 값을 재생성된 발판에 주입.
-// 새 액터는 기본값으로 태어나므로, 게이지/비용/소진 여부에 "이전 삶의 기억"을 돌려준다.
-void AGaugeZone::RestorePadState(int32 InPaidMoney, int32 InMaxMoney, bool bInConsumed)
-{
-	MaxMoney = FMath::Max(1, InMaxMoney);
-	PaidMoney = FMath::Clamp(InPaidMoney, 0, MaxMoney);
-	bConsumed = bInConsumed;
-
-	Progress = (float)PaidMoney / (float)MaxMoney;
-	OnProgressChanged(Progress); // BP 위젯/게이지 바에도 복원값 반영
-}
-
 
 // debug : 그리는 함수
 void AGaugeZone::DrawDebugGauge()
@@ -212,3 +185,16 @@ void AGaugeZone::DrawDebugGauge()
 	DrawDebugLine(World, Left, Right, FColor(60, 60, 60), false, -1.0f, 0, 8.0f);
 	DrawDebugLine(World, Left, FillRight, FColor::Green, false, -1.0f, 0, 8.0f);
 }
+
+
+// 상태 영속: 언로드 때 저장한 값을 재생성된 발판에 주입.
+// 새 액터는 기본값으로 태어나므로, 게이지/비용/소진 여부에 "이전 삶의 기억"을 돌려준다.
+void AGaugeZone::RestorePadState(int32 InFilledAmount, int32 InRequiredAmount, bool bInConsumed)
+{
+	RequiredAmount = FMath::Max(1, InRequiredAmount);
+	FilledAmount = FMath::Clamp(InFilledAmount, 0, RequiredAmount);
+	bConsumed = bInConsumed;
+
+	Progress = (float)FilledAmount / (float)RequiredAmount;
+}
+
