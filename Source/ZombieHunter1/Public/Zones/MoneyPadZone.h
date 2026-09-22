@@ -85,7 +85,7 @@ public:
 	// Variable - debug
 	///////////////////////////////////////////////////////////////////////////////////
 
-	/** 켜면 발판 위에 기본 디버그 게이지 바를 그려 BP 위젯 없이도 진행도를 확인할 수 있다. */
+	// 켜면 발판 위에 기본 디버그 게이지 바를 그려 BP 위젯 없이도 진행도를 확인할 수 있다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SpawnZone|Debug")
 	bool bShowDebugGauge = true; //remove
 

@@ -1,4 +1,4 @@
-
+﻿
 #pragma once
 
 #include "CoreMinimal.h"
@@ -26,58 +26,58 @@ public:
 
 	// [블루프린트 이벤트] (UI 연동용)
 	// 게이지가 바뀔 때마다 호출  (NewProgress: 0~1).
-	UFUNCTION(BlueprintImplementableEvent, Category = "SpawnZone")
+	UFUNCTION(BlueprintImplementableEvent, Category = "GaugeZone")
 	void OnProgressChanged(float NewProgress);
 
 	// 게이지가 가득 차서 보상(소환/강화)을 준 직후 호출. 이펙트/사운드 연출에 사용.
 	// 파라미터 이름 Recruiter는 옛 이름 그대로 — 바꾸면 기존 BP 이벤트 노드의 핀이 깨진다.
-	UFUNCTION(BlueprintImplementableEvent, Category = "SpawnZone")
+	UFUNCTION(BlueprintImplementableEvent, Category = "GaugeZone")
 	void OnZoneCompleted(AMyPlayer* Recruiter);
 
 private:
 	// [Component]
 	// 밟는 영역(트리거). 이 박스 안에 플레이어가 들어오면 게이지가 찬다. 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess="true"), Category = "SpawnZone")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess="true"), Category = "GaugeZone")
 	UBoxComponent* TriggerBox;
 
 	// 발판 바닥 메시(선택). BP에서 평평한 큐브/플레인 메시를 지정해 시각화. 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "SpawnZone")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "GaugeZone")
 	UStaticMeshComponent* PadMesh;
 
 
 	// [Variable]
 	// 결제(돈 소비) 간격(초). 발판 위에 서 있는 동안 이 간격마다 MoneyPerPayment씩 빠진다. 작을수록 빨리 참.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true", ClampMin = "0.02"), Category = "SpawnZone")
-	float PaymentInterval = 0.15f; 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true", ClampMin = "0.02"), Category = "GaugeZone")
+	float Fill_Interval = 0.15f; 
 
 	// 한 번 완성되면 더 이상 작동하지 않게 할지(일회성 발판).
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "SpawnZone")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "GaugeZone")
 	bool bOneShot = false; 
 
 	// 완성 후 다시 채울 수 있게 되기까지의 쿨다운(초). bOneShot이 false일 때만 의미 있음.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true", ClampMin = "0.0"), Category = "SpawnZone")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true", ClampMin = "0.0"), Category = "GaugeZone")
 	float Cooldown = 5.0f; 
 
 	// 현재 게이지(0.0 ~ 1.0). PaidMoney / MaxMoney로 계산되는 표시용 값. 
-	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "SpawnZone")
+	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "GaugeZone")
 	float Progress = 0.0f; 
 
 	// 이 발판에 지금까지 누적해서 낸 돈(원). MaxMoney에 도달하면 완성된다.
-	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "SpawnZone")
-	int32 PaidMoney = 0; 
+	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "GaugeZone")
+	int32 FilledAmount = 0; 
 
 	// 완성에 드는 총량
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true", ClampMin = "1"), Category = "SpawnZone")
-	int32 MaxMoney = 5; 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true", ClampMin = "1"), Category = "GaugeZone")
+	int32 RequiredAmount = 5;
 
 	// 현재 구역 안에 플레이어가 서 있는지.
-	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "SpawnZone")
+	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "GaugeZone")
 	bool bPlayerInside = false; 
 
 
-
+	// [Debug]
 	// 켜면 발판 위에 기본 디버그 게이지 바를 그려 BP 위젯 없이도 진행도를 확인할 수 있다.
-	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"), BlueprintReadWrite, Category = "SpawnZone|Debug")
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"), BlueprintReadWrite, Category = "Debug")
 	bool bShowDebugGauge = true; 
 
 
@@ -120,7 +120,7 @@ protected:
 	float CooldownRemaining = 0.0f; 
 
 	// 다음 결제까지 누적 시간(초). PaymentInterval에 도달하면 한 번 결제한다. 
-	float PaymentTimer = 0.0f; 
+	float Fill_Timer = 0.0f; 
 
 	// bOneShot 발판이 이미 한 번 작동했는지. 
 	bool bConsumed = false; 

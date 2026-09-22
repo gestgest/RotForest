@@ -6,8 +6,8 @@
 ```
 AGaugeZone (Abstract)          게이지, 트리거, 간격 타이머, 완성/쿨다운, 상태 영속
  ├─ AMoneyPadZone (Abstract)   돈으로 채움
- │   ├─ AWeaponUpgradeZone     (수정 없음)
- │   └─ ACompanionSpawnZone    (수정 없음)
+ │   ├─ AWeaponUpgradeZone     (HandleZoneFilled만 오버라이드)
+ │   └─ ACompanionSpawnZone    (HandleZoneFilled만 오버라이드)
  └─ AItemSellZone              가방 아이템으로 채움
 ```
 
@@ -36,6 +36,21 @@ BP가 참조하는 프로퍼티는 `TriggerBox` / `PadMesh` **둘뿐**이다.
 | `PaymentInterval` | `FillInterval` |
 | `PaymentTimer` | `FillTimer` |
 | `MoneyPerPayment` | 그대로 (`AMoneyPadZone`에 남음) |
+
+## BlueprintImplementableEvent 정리
+
+`OnProgressChanged` / `OnZoneCompleted` / `OnInsufficientFunds` 셋 다 구현한 BP가 없다.
+연출은 프로젝트 기존 방식(`AttackSound` / `HitSound` + `PlaySoundAtLocation`)에 맞춰 사운드 변수로 바꾼다.
+
+| 전 | 후 |
+|---|---|
+| `OnInsufficientFunds()` | `USoundBase* InsufficientFundsSound` (MoneyPadZone) |
+| `OnItemSold(Price, Remaining)` | `USoundBase* SellSound` (ItemSellZone) |
+| `OnProgressChanged(float)` | 삭제. 게이지 표시는 `DrawDebugGauge()`가 담당 |
+| `OnZoneCompleted(Player)` | 삭제. 서브클래스 알림은 `HandleZoneFilled()` (C++ virtual)로 충분 |
+
+결과적으로 `AGaugeZone`에 `BlueprintImplementableEvent`가 하나도 남지 않는다.
+BP 서브클래스 없이 C++ 액터를 레벨에 그대로 배치해도 전부 작동한다.
 
 ---
 
@@ -103,13 +118,6 @@ public:
 	// 완성까지 남은 양
 	FORCEINLINE int32 GetRemainingAmount() const { return FMath::Max(0, RequiredAmount - FilledAmount); }
 
-	// [블루프린트 이벤트]
-	UFUNCTION(BlueprintImplementableEvent, Category = "GaugeZone")
-	void OnProgressChanged(float NewProgress);
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "GaugeZone")
-	void OnZoneCompleted(AMyPlayer* Recruiter);
-
 	// [상태 영속]
 	bool IsConsumed() const { return bConsumed; }
 
@@ -158,9 +166,11 @@ protected:
 };
 ```
 
-`PURE_VIRTUAL` 매크로는 헤더 안에 본문을 만들어준다. 그냥 `virtual bool TryFillOnce(...);`로만 두면
-`UFUNCTION`이 아니어도 서브클래스가 안 만들었을 때 링크 에러가 나거나 조용히 실패한다.
-이 매크로를 쓰면 구현을 빠뜨렸을 때 런타임 로그로 알려준다.
+`FilledAmount` / `RequiredAmount` / `IsConsumed()` / `RestorePadState()`가 `public`인 이유:
+`InfiniteMapGenerator.cpp`가 밖에서 직접 읽고 호출한다. `private`으로 두면 컴파일 에러.
+
+`PURE_VIRTUAL` 매크로는 헤더 안에 본문을 만들어준다. 그냥 선언만 두면 서브클래스가 구현을 빠뜨렸을 때
+링크 에러가 나지만, 이 매크로를 쓰면 런타임 로그로 알려준다.
 
 ---
 
@@ -234,7 +244,6 @@ void AGaugeZone::Tick(float DeltaTime)
 			{
 				FilledAmount = FMath::Min(FilledAmount + Amount, RequiredAmount);
 				Progress = FMath::Clamp((float)FilledAmount / (float)RequiredAmount, 0.0f, 1.0f);
-				OnProgressChanged(Progress);
 
 				if (FilledAmount >= RequiredAmount)
 				{
@@ -261,14 +270,11 @@ void AGaugeZone::CompleteZone()
 	// HandleZoneFilled가 RequiredAmount를 키워도 안전하도록 먼저 리셋한다.
 	FilledAmount = 0;
 	Progress = 0.0f;
-	OnProgressChanged(0.0f);
 
 	if (IsValid(Payer))
 	{
 		HandleZoneFilled(Payer);
 	}
-
-	OnZoneCompleted(Payer);
 
 	if (bOneShot)
 	{
@@ -287,7 +293,6 @@ void AGaugeZone::RestorePadState(int32 InFilledAmount, int32 InRequiredAmount, b
 	bConsumed = bInConsumed;
 
 	Progress = (float)FilledAmount / (float)RequiredAmount;
-	OnProgressChanged(Progress);
 }
 
 void AGaugeZone::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*/, AActor* OtherActor,
@@ -364,7 +369,7 @@ void AGaugeZone::DrawDebugGauge()
 
 ## 3. 돈 발판 헤더 — Source/ZombieHunter1/Public/Zones/MoneyPadZone.h
 
-파일 전체 교체. 150줄이 20줄로 줄어든다.
+파일 전체 교체. 150줄이 25줄로 줄어든다.
 
 ```cpp
 #pragma once
@@ -374,6 +379,7 @@ void AGaugeZone::DrawDebugGauge()
 #include "MoneyPadZone.generated.h"
 
 class AMyPlayer;
+class USoundBase;
 
 /**
  * 돈으로 채우는 발판. 밟고 있으면 간격마다 MoneyPerPayment씩 빠지고 그만큼 게이지가 찬다.
@@ -391,9 +397,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MoneyPadZone", meta = (ClampMin = "1"))
 	int32 MoneyPerPayment = 1;
 
-	// 돈이 부족해 결제에 실패한 순간 호출
-	UFUNCTION(BlueprintImplementableEvent, Category = "MoneyPadZone")
-	void OnInsufficientFunds();
+	// 돈이 부족해 결제에 실패했을 때 재생
+	UPROPERTY(EditAnywhere, Category = "MoneyPadZone")
+	USoundBase* InsufficientFundsSound = nullptr;
 
 protected:
 	virtual bool TryFillOnce(AMyPlayer* Player, int32& OutAmount) override;
@@ -404,13 +410,14 @@ protected:
 
 ## 4. 돈 발판 구현 — Source/ZombieHunter1/Private/Zones/MoneyPadZone.cpp
 
-파일 전체 교체. 200줄이 30줄로 줄어든다.
+파일 전체 교체. 200줄이 35줄로 줄어든다.
 
 ```cpp
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Zones/MoneyPadZone.h"
 #include "Characters/MyPlayer.h"
+#include "Kismet/GameplayStatics.h"
 #include "Engine/Engine.h"
 
 bool AMoneyPadZone::TryFillOnce(AMyPlayer* Player, int32& OutAmount)
@@ -424,7 +431,7 @@ bool AMoneyPadZone::TryFillOnce(AMyPlayer* Player, int32& OutAmount)
 
 	if (!Player->TrySpendMoney(Payment))
 	{
-		OnInsufficientFunds();
+		UGameplayStatics::PlaySoundAtLocation(this, InsufficientFundsSound, GetActorLocation());
 
 		if (GEngine)
 		{
@@ -439,8 +446,9 @@ bool AMoneyPadZone::TryFillOnce(AMyPlayer* Player, int32& OutAmount)
 }
 ```
 
-`AWeaponUpgradeZone` / `ACompanionSpawnZone`은 **수정하지 않는다.**
-단 `AWeaponUpgradeZone::HandleZoneFilled`의 `MaxMoney`는 5번에서 같이 바꾼다.
+`PlaySoundAtLocation`은 사운드가 `nullptr`이면 아무것도 하지 않으므로 따로 검사하지 않는다.
+
+`AWeaponUpgradeZone` / `ACompanionSpawnZone`의 `.h`는 수정하지 않는다.
 
 ---
 
@@ -519,6 +527,7 @@ Details 패널에 `Required Amount`, `Money Per Payment`가 보이는지 확인�
 #include "ItemSellZone.generated.h"
 
 class AMyPlayer;
+class USoundBase;
 
 // 밟고 있는 동안 가방을 한 개씩 파는 발판. 올라온 시점의 가방 개수가 게이지 총량이 된다.
 UCLASS()
@@ -529,9 +538,9 @@ class ZOMBIEHUNTER1_API AItemSellZone : public AGaugeZone
 public:
 	AItemSellZone();
 
-	// BP에서 동전 이펙트/사운드를 붙인다.
-	UFUNCTION(BlueprintImplementableEvent, Category = "SellZone")
-	void OnItemSold(int32 Price, int32 RemainingCount);
+	// 한 개 팔릴 때마다 재생
+	UPROPERTY(EditAnywhere, Category = "SellZone")
+	USoundBase* SellSound = nullptr;
 
 protected:
 	virtual bool TryFillOnce(AMyPlayer* Player, int32& OutAmount) override;
@@ -565,6 +574,7 @@ private:
 #include "Component/InventoryComponent.h"
 #include "Items/ItemDataAsset.h"
 #include "Characters/MyPlayer.h"
+#include "Kismet/GameplayStatics.h"
 
 AItemSellZone::AItemSellZone()
 {
@@ -582,7 +592,6 @@ void AItemSellZone::OnPlayerEntered(AMyPlayer* Player)
 	RequiredAmount = Bag ? FMath::Max(1, Bag->GetItems().Num()) : 1;
 	FilledAmount = 0;
 	Progress = 0.0f;
-	OnProgressChanged(0.0f);
 
 	SoldCount = 0;
 	SoldTotal = 0;
@@ -615,7 +624,7 @@ bool AItemSellZone::TryFillOnce(AMyPlayer* Player, int32& OutAmount)
 	SoldCount++;
 	SoldTotal += Item->Price;
 
-	OnItemSold(Item->Price, Bag->GetItems().Num());
+	UGameplayStatics::PlaySoundAtLocation(this, SellSound, GetActorLocation());
 
 	OutAmount = 1;
 	return true;
@@ -659,6 +668,6 @@ void AItemSellZone::FlushSoldSummary(AMyPlayer* Player)
 2. 발판 밟고 돈 빠지면서 디버그 게이지 바가 차는가
 3. 가득 차면 동료 소환 / 무기 강화가 되는가
 4. **청크 왕복** — 발판을 절반쯤 채우고 멀리 걸어가 청크를 언로드시킨 뒤 돌아와서
-   게이지가 그대로 복원되는가 (`[POIState] 저장:` / 복원 로그 확인)
+   게이지가 그대로 복원되는가 (`[POIState] 저장:` 로그 확인)
 5. `AItemSellZone`을 레벨에 배치하고 가방을 채운 채 밟았을 때
    0.3초마다 하나씩 팔리고 게이지가 차는가, 다 팔면 알림 한 줄이 뜨는가
