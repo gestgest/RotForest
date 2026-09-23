@@ -203,36 +203,11 @@ void AWeaponPickup::BecomeWeapon(UWeaponDataAsset* NewItem)
 
 ---
 
-## 6. (연관) 가방 무기 자동 장착에도 같은 구멍 — Docs/answer-companion-bag-weapon.md 5-2
+## 6. (연관) 가방 무기 자동 장착에도 같은 구멍
 
-아직 적용 전이라면, 그 답안지의 마지막 `if` 블록을 이걸로 바꿔서 옮긴다.
-섭외된 동료가 가방 무기로 갈아낄 때도 기본 무기가 증발한다.
-
-```cpp
-// Before
-	if (Best && Companion->EquipWeaponItem(Best))
-	{
-		Bag->RemoveItem(Best);
-		NotifyWeaponTaken(Best, Companion);
-	}
-```
-
-```cpp
-	UWeaponDataAsset* Prev = Companion->GetEquippedWeapon();
-	if (Best && Companion->EquipWeaponItem(Best))
-	{
-		Bag->RemoveItem(Best);
-		NotifyWeaponTaken(Best, Companion);
-
-		if (Prev)
-		{
-			Bag->TryAddItem(Prev);
-		}
-	}
-```
-
-- `RemoveItem` **뒤에** `TryAddItem` — 빈 자리가 생긴 다음에 넣어야 가방이 꽉 찬 상태에서도 들어갈 확률이 높다.
-- 기본 무기가 꺼낸 무기보다 무거우면 여전히 안 들어갈 수 있다. 이 경우는 섭외 시점이라 바닥에 둘 픽업이 없어서 버린다(범위 밖 참고).
+`answer-companion-bag-weapon.md`(동료 섭외 시 가방 무기 자동 장착)에도 여기서 고친 것과 똑같은 문제가 있었다.
+`EquipBestWeaponFromBag`이 부르는 `Companion->EquipWeaponItem(Best)`도 동료의 기본 무기를 덮어쓰기 때문.
+**이미 그 답안지 5-2에 같은 방식(장착 전에 `GetEquippedWeapon()`으로 미리 읽기)으로 반영해 뒀다.** 여기서 다시 손댈 필요 없음.
 
 ---
 

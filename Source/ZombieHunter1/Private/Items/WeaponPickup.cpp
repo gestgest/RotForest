@@ -87,10 +87,12 @@ void AWeaponPickup::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*
 	// 누가 가져갈지(플레이어 우선, 없으면 동료)는 파티가 정한다. 획득 문구도 파티가 띄운다.
 	UWeaponDataAsset* Replaced = nullptr;
 	const ACombatCharacter* Receiver = Party->TryDistributeWeapon(WeaponItemData, Replaced);
+	UInventoryComponent* Bag = MyPlayer->GetBag();
+
+	// 받는 사람이 없다면
 	if (!Receiver)
 	{
 		// 아무도 못 쓰면 가방으로. 무게가 넘치면 바닥에 그대로 남는다.
-		UInventoryComponent* Bag = MyPlayer->GetBag();
 		if (!Bag || !Bag->TryAddItem(WeaponItemData))
 		{
 			if (!bNoTakerNotified)
@@ -105,8 +107,24 @@ void AWeaponPickup::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*
 		FText Msg = FText::Format(FText::FromString(TEXT("{0}을 가방에 넣었습니다.")), (WeaponItemData->Name));
 		MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Gain);
 	}
+	// 대체 됐다면
+	else if (Replaced)
+	{
+		if (!Bag || !Bag->TryAddItem(Replaced))
+		{
+			bNoTakerNotified = true;
+			FText Msg = FText::Format(FText::FromString(TEXT("가방이 가득 차 {0}을 바닥에 내려놓았습니다.")), (Replaced->Name));
+			MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Blocked);
 
-	//중복 오버랩 — 한 번 주운 뒤 이벤트가 또 들어오는 경우를 어떻게 막을지
+			BecomeWeapon(Replaced);
+			return;
+		}
+		// else 가방안에 들어감
+		FText Msg = FText::Format(FText::FromString(TEXT("{0}을 가방에 넣었습니다.")), (Replaced->Name));
+		MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Gain);
+	}
+
+	// 중복 오버랩 — 한 번 주운 뒤 이벤트가 또 들어오는 경우를 어떻게 막을지
 	TriggerBox->SetGenerateOverlapEvents(false);
 	Destroy();
 }

@@ -126,6 +126,7 @@ ACombatCharacter* UPartyComponent::TryDistributeWeapon(UWeaponDataAsset* Item, U
 		{
 			OutReplaced = Prev;
 			NotifyWeaponTaken(Item, OwnerCharacter);
+
 			return OwnerCharacter;
 		}
 	}

@@ -21,7 +21,7 @@
 - **장착 성공 뒤에 가방에서 뺀다.** 순서를 뒤집으면 장착 실패 시 무기가 증발한다.
 - 가방에서 뺄 때 `RemoveSingle` — 같은 에셋이 여러 개 들어 있을 수 있으니 한 개만 빼야 한다. `Remove`는 전부 뺀다.
   `RemoveSingleSwap`은 순서를 섞어서 `PopItem`(스택)의 판매 순서가 바뀐다.
-- 원래 들고 있던 기본 무기는 가방에 넣지 않는다. `TryDistributeWeapon`도 교체된 무기를 버리므로 그것과 규칙을 맞춘다.
+- **밀려난 기본 무기는 가방에 돌려넣는다.** `EquipWeaponItem`은 이전 무기를 어디에도 남기지 않고 덮어쓰므로(`answer-replaced-weapon-lost.md` 참고), 장착 **전에** `GetEquippedWeapon()`으로 미리 읽어둬야 한다.
 
 작업 순서: 1 → 2 (가방) → 3 → 4 → 5 (파티) → 풀 리빌드(헤더에 함수 추가) → PIE 확인
 
@@ -127,10 +127,16 @@ void UPartyComponent::EquipBestWeaponFromBag(ACompanion* Companion)
 		}
 	}
 
+	UWeaponDataAsset* Prev = Companion->GetEquippedWeapon(); // EquipWeaponItem보다 먼저 읽어야 한다
 	if (Best && Companion->EquipWeaponItem(Best))
 	{
 		Bag->RemoveItem(Best);
 		NotifyWeaponTaken(Best, Companion);
+
+		if (Prev)
+		{
+			Bag->TryAddItem(Prev); // 밀려난 기본 무기. RemoveItem 뒤라 자리가 하나 빈 상태
+		}
 	}
 }
 ```
@@ -138,6 +144,8 @@ void UPartyComponent::EquipBestWeaponFromBag(ACompanion* Companion)
 - 루프 안에서 `RemoveItem`을 부르지 않는다. `GetItems()`는 원본 배열의 참조라, 순회 중에 빼면 범위 기반 for가 깨진다(에디터에서 `ensure`/크래시).
 - `Cast<UWeaponDataAsset>` — 가방에는 무기 외 아이템도 들어갈 수 있으니 무기만 거른다.
 - 획득 문구는 기존 `NotifyWeaponTaken`을 그대로 쓴다 => "궁수 동료가 {무기}을 획득했습니다."
+- `Prev`는 `Best`가 없어도(장착할 게 없어도) 안전하게 읽지만, 실제로 쓰이는 건 장착이 성공했을 때뿐이다.
+- `TryAddItem(Prev)`가 실패해도(무게 초과) 무시한다 — 동료 섭외 시점이라 바닥에 둘 픽업이 없다. 기본 무기 하나는 버려진다(아래 "범위 밖" 참고).
 
 ---
 
@@ -148,7 +156,9 @@ void UPartyComponent::EquipBestWeaponFromBag(ACompanion* Companion)
 3. 판매 발판에서 팔리는 개수가 1 줄었는지 확인
 4. 반대 케이스: 가방 무기의 `WeaponPower`가 직업 기본 무기 이하이면 아무 일도 안 일어나야 정상
 
+4. 가방을 무게 한도까지 채운 뒤 위 2를 반복 → 동료는 가방 무기를 장착하고, 기본 무기는 가방에 못 들어가 조용히 사라짐(정상, 아래 참고)
+
 ### 이번 범위 밖 (결정만 해두기)
 
 - 이미 파티에 있는 동료가 **죽고 새로 뽑히기 전**, 혹은 플레이어가 직업을 바꿨을 때도 가방을 다시 볼지
-- 교체된 기존 무기를 가방에 돌려넣을지 (지금은 `TryDistributeWeapon`과 같이 버림)
+- 가방이 꽉 차 밀려난 기본 무기를 못 넣을 때, 바닥에 픽업으로 남길지 (지금은 버림)
