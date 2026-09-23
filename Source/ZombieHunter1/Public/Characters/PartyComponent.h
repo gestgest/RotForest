@@ -24,7 +24,8 @@ public:
 	void RecruitCompanion(TSubclassOf<UJobComponent> JobComponent);
 
 	// 무기 한 자루를 파티에 배분한다. 받은 캐릭터를 반환하고, 아무도 못 쓰면 nullptr.
-	ACombatCharacter* TryDistributeWeapon(UWeaponDataAsset* Item);
+	// OutReplaced: 받은 캐릭터가 원래 들고 있던 무기 (없으면 nullptr)
+	ACombatCharacter* TryDistributeWeapon(UWeaponDataAsset* Item, UWeaponDataAsset*& OutReplaced);
 
 	// 현재 섭외해 둔 동료 목록(읽기 전용)
 	FORCEINLINE const TArray<ACompanion*>& GetCompanions() const { return Companions; }

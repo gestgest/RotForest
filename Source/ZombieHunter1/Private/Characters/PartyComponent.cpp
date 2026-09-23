@@ -106,18 +106,28 @@ FTransform UPartyComponent::MakeSpawnTransform(UWorld* World) const
 
 // [장비]
 // 소유자(플레이어)가 먼저 판단하고, 안 쓰면 동료 중 한 명에게 넘긴다.
-ACombatCharacter* UPartyComponent::TryDistributeWeapon(UWeaponDataAsset* Item)
+ACombatCharacter* UPartyComponent::TryDistributeWeapon(UWeaponDataAsset* Item, UWeaponDataAsset *& OutReplaced)
 {
+	// 혹시 이상한 값 있을 수도 있으니
+	OutReplaced = nullptr;
+
 	if (!Item)
 	{
 		return nullptr;
 	}
 
 	ACombatCharacter* OwnerCharacter = Cast<ACombatCharacter>(GetOwner());
-	if (OwnerCharacter && OwnerCharacter->WantsWeaponItem(Item) && OwnerCharacter->EquipWeaponItem(Item))
+	if (OwnerCharacter && OwnerCharacter->WantsWeaponItem(Item))
 	{
-		NotifyWeaponTaken(Item, OwnerCharacter);
-		return OwnerCharacter;
+		UWeaponDataAsset* Prev = OwnerCharacter->GetEquippedWeapon();
+		
+		//장착. 만약 위의 if문 안에 있다면 EquipWeaponItem로 인해 Prev값이 달라짐
+		if (OwnerCharacter->EquipWeaponItem(Item))
+		{
+			OutReplaced = Prev;
+			NotifyWeaponTaken(Item, OwnerCharacter);
+			return OwnerCharacter;
+		}
 	}
 
 	// 쓸 수 있는 동료 중 지금 무기가 가장 약한 한 명 => 파티 전체 전투력 상승폭이 가장 크다
@@ -134,11 +144,18 @@ ACombatCharacter* UPartyComponent::TryDistributeWeapon(UWeaponDataAsset* Item)
 			Best = Companion;
 		}
 	}
-
-	if (Best && Best->EquipWeaponItem(Item))
+	
+	// 플레이어가 안 쓰면 가장 약한 동료가 받는다
+	if (Best)
 	{
-		NotifyWeaponTaken(Item, Best);
-		return Best;
+		UWeaponDataAsset* Prev = Best->GetEquippedWeapon();
+		//장착
+		if (Best->EquipWeaponItem(Item))
+		{
+			OutReplaced = Prev;
+			NotifyWeaponTaken(Item, Best);
+			return Best;
+		}
 	}
 
 	return nullptr;

@@ -85,7 +85,8 @@ void AWeaponPickup::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*
 	}
 
 	// 누가 가져갈지(플레이어 우선, 없으면 동료)는 파티가 정한다. 획득 문구도 파티가 띄운다.
-	const ACombatCharacter* Receiver = Party->TryDistributeWeapon(WeaponItemData);
+	UWeaponDataAsset* Replaced = nullptr;
+	const ACombatCharacter* Receiver = Party->TryDistributeWeapon(WeaponItemData, Replaced);
 	if (!Receiver)
 	{
 		// 아무도 못 쓰면 가방으로. 무게가 넘치면 바닥에 그대로 남는다.
@@ -120,4 +121,15 @@ void AWeaponPickup::EnablePickup()
 	
 	TriggerBox->SetGenerateOverlapEvents(true);
 	TriggerBox->UpdateOverlaps();
+}
+
+void AWeaponPickup::BecomeWeapon(UWeaponDataAsset * NewItem)
+{
+	WeaponItemData = NewItem;
+	WeaponMesh->SetSkeletalMeshAsset(NewItem ? NewItem->Mesh : nullptr);
+
+	//바로 주울 수 있으니 접촉 비활성화
+	TriggerBox->SetGenerateOverlapEvents(false);
+	GetWorldTimerManager().SetTimer(PickupDelayHandle, this,
+		&AWeaponPickup::EnablePickup, FMath::Max(PickupDelay, 0.5f));
 }

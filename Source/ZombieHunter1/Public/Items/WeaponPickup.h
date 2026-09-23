@@ -28,9 +28,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 
-
-
-
+	// 변수들
+	// [Weapon]
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data")
 	UWeaponDataAsset* WeaponItemData = nullptr;
 
@@ -47,7 +46,12 @@ protected:
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& Sweep);
 
 private:
+	//줍기 활성화
 	void EnablePickup();
+
+	// 다른 무기로 바꿔 바닥에 남김
+	void BecomeWeapon(UWeaponDataAsset* NewItem);
+
 
 	// 아무도 못 쓰는 무기라는 안내는 한 번만 — 오버랩이 반복 들어와도 도배되지 않게.
 	bool bNoTakerNotified = false;
