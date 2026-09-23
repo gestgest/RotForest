@@ -5,6 +5,19 @@
 #include "Characters/PartyComponent.h"
 #include "Engine/Engine.h"
 
+
+bool ACompanionSpawnZone::TryFillOnce(AMyPlayer * Player, int32 & OutAmount)
+{
+
+	UPartyComponent* Party = Player ? Player->GetParty() : nullptr;
+	if (!Party || !Party->CanRecruit(GetWorld()))
+	{
+		return false;
+	}
+
+	return Super::TryFillOnce(Player, OutAmount);
+}
+
 void ACompanionSpawnZone::HandleZoneFilled(AMyPlayer* Player)
 {
 	UPartyComponent* Party = Player ? Player->GetParty() : nullptr;

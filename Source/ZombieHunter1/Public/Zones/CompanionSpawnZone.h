@@ -20,9 +20,11 @@ class ZOMBIEHUNTER1_API ACompanionSpawnZone : public AMoneyPadZone
 
 
 protected:
-	// 게이지 완성 → 동료 소환 (C키 섭외와 동일 로직 재사용)
-	virtual void HandleZoneFilled(AMyPlayer* Player) override;
+	virtual bool TryFillOnce(AMyPlayer* Player, int32& OutAmount) override;
 
+	// 게이지 완성 → 동료 소환
+	virtual void HandleZoneFilled(AMyPlayer* Player) override;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
 	USkeletalMeshComponent* IconMeshComp = nullptr;
 

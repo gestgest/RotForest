@@ -29,6 +29,9 @@ public:
 	// 현재 섭외해 둔 동료 목록(읽기 전용)
 	FORCEINLINE const TArray<ACompanion*>& GetCompanions() const { return Companions; }
 
+	// 섭외 가능한 상태인지 검사하고, 죽은 동료를 명단에서 정리한다.
+	bool CanRecruit(UWorld* World);
+
 private:
 	// [명단]
 	// 스폰할 동료 클래스(BP_Companion 지정). 비우면 섭외 안 됨.
@@ -48,8 +51,6 @@ private:
 	TArray<ACompanion*> Companions;
 
 	// [섭외]
-	// 섭외 가능한 상태인지 검사하고, 죽은 동료를 명단에서 정리한다.
-	bool CanRecruit(UWorld* World);
 
 	// 소유자 옆 자리를 잡아 스폰 트랜스폼을 만든다.
 	FTransform MakeSpawnTransform(UWorld* World) const;

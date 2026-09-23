@@ -18,10 +18,12 @@ UPartyComponent::UPartyComponent()
 }
 
 
-// [섭외]
+// 섭외하는 함수
 void UPartyComponent::RecruitCompanion(TSubclassOf<UJobComponent> JobComponent)
 {
 	UWorld* World = GetWorld();
+
+	//비어있는지
 	if (!CanRecruit(World))
 	{
 		return;
@@ -48,6 +50,7 @@ void UPartyComponent::RecruitCompanion(TSubclassOf<UJobComponent> JobComponent)
 	Companions.Add(Companion);
 }
 
+// 섭외 가능한 직원 량인지 확인
 bool UPartyComponent::CanRecruit(UWorld* World)
 {
 	if (!CompanionClass)
