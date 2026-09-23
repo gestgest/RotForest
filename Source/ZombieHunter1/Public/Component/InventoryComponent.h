@@ -31,6 +31,7 @@ public:
 
 	void ClearAll();
 	UItemDataAsset * PopItem(); //스택식 pop
+	bool RemoveItem(UItemDataAsset* Item);
 
 	FORCEINLINE const TArray<UItemDataAsset*>& GetItems() const { return Items; }
 	FORCEINLINE float GetMaxWeight() const { return MaxWeight; }

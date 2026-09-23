@@ -10,6 +10,7 @@
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h" //동료 스폰 시 캡슐 반높이
 #include "Kismet/GameplayStatics.h"
+#include "Component/InventoryComponent.h" //섭외 시 가방 무기 장착
 #include "Engine/Engine.h" //GEngine 화면 디버그
 
 UPartyComponent::UPartyComponent()
@@ -48,6 +49,8 @@ void UPartyComponent::RecruitCompanion(TSubclassOf<UJobComponent> JobComponent)
 	UGameplayStatics::FinishSpawningActor(Companion, SpawnTM);
 
 	Companions.Add(Companion);
+
+	EquipWeaponFromBag(Companion);
 }
 
 // 섭외 가능한 직원 량인지 확인
@@ -162,6 +165,7 @@ ACombatCharacter* UPartyComponent::TryDistributeWeapon(UWeaponDataAsset* Item, U
 	return nullptr;
 }
 
+// 캐릭터에게 아이템을 장착했다는 메세지 전송
 void UPartyComponent::NotifyWeaponTaken(UWeaponDataAsset* Item, ACombatCharacter* Receiver) const
 {
 	AMyPlayer* Player = Cast<AMyPlayer>(GetOwner());
@@ -187,4 +191,50 @@ void UPartyComponent::NotifyWeaponTaken(UWeaponDataAsset* Item, ACombatCharacter
 	}
 
 	Player->ShowOnItemText(Msg);
+}
+
+
+//
+void UPartyComponent::EquipWeaponFromBag(ACompanion *Companion)
+{
+	AMyPlayer* Player = Cast<AMyPlayer>(GetOwner());
+	UInventoryComponent* Bag = Player ? Player->GetBag() : nullptr;
+	if (!Bag || !IsValid(Companion))
+	{
+		return;
+	}
+
+	// 아이템을 가져와라
+	UWeaponDataAsset* BestWeapon = nullptr;
+	for (UItemDataAsset * Item : Bag->GetItems())
+	{
+		UWeaponDataAsset* Weapon = Cast<UWeaponDataAsset>(Item);
+
+		// 무기타입에 맞는지, 쎈지
+		if (!Weapon || !Companion->WantsWeaponItem(Weapon))
+		{
+			continue;
+		}
+
+		//best보다 쎄다면 => 그게 BestWeapon임
+		if (!BestWeapon || Weapon->WeaponPower > BestWeapon->WeaponPower)
+		{
+			BestWeapon = Weapon;
+		}
+	}
+
+	// 동료의 무기를 가져오고
+	UWeaponDataAsset *PrevWeapon = Companion->GetEquippedWeapon();
+
+	// 장착됨
+	if (BestWeapon && Companion->EquipWeaponItem(BestWeapon))
+	{
+		Bag->RemoveItem(BestWeapon); //가방에 있는 무기는 제거
+		NotifyWeaponTaken(BestWeapon, Companion);
+		if (PrevWeapon)
+		{
+			Bag->TryAddItem(PrevWeapon);
+		}
+		
+	}
 }

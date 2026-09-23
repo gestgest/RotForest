@@ -59,4 +59,7 @@ private:
 	// [장비]
 	// 무기를 누가 가져갔는지 플레이어 UI에 알린다.
 	void NotifyWeaponTaken(UWeaponDataAsset* Item, ACombatCharacter* Receiver) const;
+
+	// 이 동료에게 무기 장착
+	void EquipWeaponFromBag(ACompanion* Companion);
 };

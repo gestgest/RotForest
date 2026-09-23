@@ -82,3 +82,10 @@ UItemDataAsset* UInventoryComponent::PopItem()
 
 	return nullptr;
 }
+
+
+bool UInventoryComponent::RemoveItem(UItemDataAsset* Item)
+{
+	//remove(Item)과 같다. 단, 하나만 제거
+	return Items.RemoveSingle(Item) > 0;
+}
