@@ -423,3 +423,20 @@ On Clicked (GamePlayButton)
 ## 다음 단계 (선택)
 
 `OpenLevel`의 마지막 짧은 멈춤(월드 초기화·BeginPlay)까지 가리려면 `MoviePlayer` 모듈의 로딩 스크린(`GetMoviePlayer()->SetupLoadingScreen`)을 `PreLoadMap`에 걸어야 한다. 이건 별도 답안지로.
+
+---
+
+## 트러블슈팅 — ULoadingWidget `GetPrivateStaticClass` 등 대량 에러 (2026-09-24)
+
+원인: `LoadingWidget.generated.h`가 **옛날 헤더 기준으로 생성된 채 남아 있음.**
+
+- `GENERATED_BODY()`는 `현재파일ID_<줄번호>_GENERATED_BODY` 매크로로 펼쳐진다.
+- 생성 파일엔 `..._LoadingWidget_h_12_GENERATED_BODY` (12번 줄 기준)만 정의돼 있다.
+- 현재 헤더의 `GENERATED_BODY()`는 **10번 줄** (맨 위 주석 2줄을 지움) → `..._h_10_GENERATED_BODY`를 찾는데 없음 → 생성자/StaticClass 등이 전부 사라져 에러 폭발.
+- 헤더와 generated.h 수정 시각이 같은 초(04:25:48)라 UHT가 "최신"으로 판단해 다시 만들지 않는다.
+
+해결: 헤더를 generated.h보다 새것으로 만든 뒤 빌드.
+- `LoadingWidget.h`에 빈 줄 하나 추가 → 저장 → 에디터 끄고 빌드, 또는
+- `Intermediate/Build/Win64/UnrealEditor/Inc/ZombieHunter1/UHT/LoadingWidget.generated.h` / `.gen.cpp` 삭제 후 빌드
+
+`FTextureBuildSettings` / `형식 지정자가 없습니다` 류는 IntelliSense 오류라 무시.
