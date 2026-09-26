@@ -1,7 +1,5 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "LevelLoaderSubsystem.h"
+﻿#include "LevelLoaderSubsystem.h"
+#include "Kismet/GameplayStatics.h"
 
 // 생성자
 void ULevelLoaderSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -53,19 +51,58 @@ void ULevelLoaderSubsystem::LoadLevelAynsc(TSoftObjectPtr<UWorld> Level,
 	LoadPackageAsync(PendingPackageName.ToString(),
 		FLoadPackageAsyncDelegate::CreateUObject(this, &ULevelLoaderSubsystem::OnPackageLoaded));
 
-	// Tick 설정
+	// Tick 설정 => 비동기 ing 함수
 	TickHandle = FTSTicker::GetCoreTicker().AddTicker(
 		FTickerDelegate::CreateUObject(this, &ULevelLoaderSubsystem::Tick));
 }
 
-//로드 됐다면
+//로드 됐다면 => 패키지를 로드하는 느낌
 void ULevelLoaderSubsystem::OnPackageLoaded(const FName & PackageName, UPackage * LoadedPackage, EAsyncLoadingResult::Type Result)
 {
+	//성공하지 못했다면
+	if (Result != EAsyncLoadingResult::Succeeded || !LoadedPackage)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[LevelLoader] 로드 실패: %s"), *PackageName.ToString());
+		Finish();
+		return;
+	}
 
+	LoadedMapPackage = LoadedPackage;
+	bPackageLoaded = true;
 }
 
 bool ULevelLoaderSubsystem::Tick(float DeltaTime)
 {
+	// 진행 업데이트
+	Elapsed += DeltaTime;
+
+	// 진행률
+	float Process = 0.95f;
+	if (bPackageLoaded)
+	{
+		Process = 1.0f;
+	}
+	else
+	{
+		const float RealProcess = GetAsyncLoadPercentage(PendingPackageName);
+
+		// PendingPackageName가 추적이 가능하다면
+		if (RealProcess >= 0.f)
+		{
+			Process = FMath::Min(Process, RealProcess / 100.f);
+		}
+	}
+	// 선형 보간
+	DisplayProgress = FMath::FInterpConstantTo(DisplayProgress, Process, DeltaTime, 1.0f);
+
+	// 전환
+	if (bPackageLoaded && DisplayProgress >= 1.0f && Elapsed >= MinTime)
+	{
+		UGameplayStatics::OpenLevelBySoftObjectPtr(GetGameInstance(), PendingLevel);
+		TickHandle.Reset();
+		return false;
+	}
+
 	return true;
 }
 
