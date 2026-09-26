@@ -22,7 +22,8 @@ public:
 	// TSubclassOf<ULoadingWidget> LoadingWidgetClass,
 	UFUNCTION(BlueprintCallable, Category="Level")
 	void LoadLevelAynsc(
-		TSoftObjectPtr<UWorld> Level,
+		TSoftObjectPtr<UWorld> Level, 
+		TSubclassOf<ULoadingWidget> LoadingWidgetClass,
 		float MinDisplayTime = 1.0f
 	);
 
@@ -50,6 +51,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UPackage> LoadedMapPackage;
+
+	UPROPERTY()
+	TObjectPtr<ULoadingWidget> LoadingWidget;
 
 
 	// [핸들]

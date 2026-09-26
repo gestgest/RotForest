@@ -1,5 +1,9 @@
-﻿#include "LevelLoaderSubsystem.h"
+﻿
+#include "LevelLoaderSubsystem.h"
+#include "UI/LoadingWidget.h"
+#include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
+#include "UObject/Package.h"
 
 // 생성자
 void ULevelLoaderSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -27,6 +31,7 @@ void ULevelLoaderSubsystem::Deinitialize()
 // 비동기 로드 (핵심 함수) => 여담으로 여기는 default 매개변수 적으면 안된다.
 // MinDisplayTime : 최소 몇 초는 보여줘라
 void ULevelLoaderSubsystem::LoadLevelAynsc(TSoftObjectPtr<UWorld> Level,
+	TSubclassOf<ULoadingWidget> LoadingWidgetClass,
 	float MinDisplayTime)
 {
 	// 로딩이 됐다면. 또는 로딩중인 레벨이 안 나왔다면
@@ -39,13 +44,21 @@ void ULevelLoaderSubsystem::LoadLevelAynsc(TSoftObjectPtr<UWorld> Level,
 	PendingLevel = Level;
 	PendingPackageName = FName(*Level.ToSoftObjectPath().GetLongPackageName());
 	bIsLoading = true;
-    bPackageLoaded = true;
+    bPackageLoaded = false;
 
 	MinTime = MinDisplayTime;
 	Elapsed = 0.f;
 	DisplayProgress = 0.f;
 
 	// todo 로딩 화면
+	if (LoadingWidgetClass)
+	{
+		LoadingWidget = CreateWidget<ULoadingWidget>(GetGameInstance(), LoadingWidgetClass);
+		if (LoadingWidget)
+		{
+			LoadingWidget->AddToViewport(100);
+		}
+	}
 
 	// 비동기 로드
 	LoadPackageAsync(PendingPackageName.ToString(),
@@ -134,5 +147,15 @@ void ULevelLoaderSubsystem::UnregisterTick()
 		FTSTicker::GetCoreTicker().RemoveTicker(TickHandle);
 		TickHandle.Reset();
 	}
+	if (LoadingWidget)
+	{
+		LoadingWidget->RemoveFromParent();
+		LoadingWidget = nullptr;
+	}
+
+	LoadedMapPackage = nullptr;
+	PendingLevel.Reset();
+	PendingPackageName = NAME_None;
+	bIsLoading = false;
 }
 

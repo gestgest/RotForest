@@ -440,3 +440,65 @@ On Clicked (GamePlayButton)
 - `Intermediate/Build/Win64/UnrealEditor/Inc/ZombieHunter1/UHT/LoadingWidget.generated.h` / `.gen.cpp` 삭제 후 빌드
 
 `FTextureBuildSettings` / `형식 지정자가 없습니다` 류는 IntelliSense 오류라 무시.
+
+---
+
+## 트러블슈팅 — 로딩 패널이 안 뜸 / 로딩을 안 기다림 (2026-09-26)
+
+BP 쪽(`WBP_MainMenuCanvas`, `WBP_GameReadyCanvas` → `LoadLevelAynsc` + `WBP_LoadingPanel`)은 정상. 원인은 C++.
+
+### T1. 위젯 생성 조건이 반대 — LevelLoaderSubsystem.cpp:54
+
+`LoadingWidget`(멤버)은 처음엔 항상 nullptr → 조건이 거짓 → 위젯이 한 번도 안 만들어짐.
+
+```cpp
+// Before
+	if (LoadingWidget)
+```
+```cpp
+	if (LoadingWidgetClass)
+```
+
+### T2. 로딩 시작하자마자 "로드 끝남" 처리 — LevelLoaderSubsystem.cpp:47
+
+```cpp
+// Before
+    bPackageLoaded = true;
+```
+```cpp
+	bPackageLoaded = false;
+```
+
+### T3. Finish에서 위젯/패키지 정리 누락 — LevelLoaderSubsystem.cpp:133
+
+```cpp
+void ULevelLoaderSubsystem::Finish()
+{
+	UnregisterTick();
+
+	if (LoadingWidget)
+	{
+		LoadingWidget->RemoveFromParent();
+		LoadingWidget = nullptr;
+	}
+
+	LoadedMapPackage = nullptr;
+	PendingLevel.Reset();
+	PendingPackageName = NAME_None;
+	bIsLoading = false;
+}
+```
+
+### T4. GameInstance null 체크 누락 — LoadingWidget.cpp:15~16
+
+디자이너 미리보기 등 GameInstance가 없는 상황에서 크래시 위험.
+
+```cpp
+// Before
+	UGameInstance* GI = GetGameInstance();
+	const ULevelLoaderSubsystem* Loader = GI->GetSubsystem<ULevelLoaderSubsystem>();
+```
+```cpp
+	UGameInstance* GI = GetGameInstance();
+	const ULevelLoaderSubsystem* Loader = GI ? GI->GetSubsystem<ULevelLoaderSubsystem>() : nullptr;
+```
