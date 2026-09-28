@@ -1,8 +1,8 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
+#include "UI/LoadingWidget.h" // 자기자신 헤더
 #include "LevelLoaderSubsystem.h"
-#include "UI/LoadingWidget.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 
