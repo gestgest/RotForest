@@ -21,6 +21,7 @@ void UMageJob::Attack()
 	Super::Attack();
 }
 
+// 화염구 소환
 void UMageJob::CastSpell()
 {
 	// 베이스 공용 헬퍼로 발사체를 스폰한 뒤, 폭발 반경만 마법사 값으로 설정한다.
@@ -28,6 +29,7 @@ void UMageJob::CastSpell()
 	if (Spell)
 	{
 		Spell->ExplosionRadius = ExplosionRadius;
+		PlayAttackSound();
 	}
 }
 
