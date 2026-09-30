@@ -2,7 +2,9 @@
 
 
 #include "UI/MyCanvas.h"
-#include "UI/DeathPanelWidget.h" //사망 패널 켜고 끄기 (SetVisibility에 완전한 타입 필요)
+#include "UI/DeathPanelWidget.h" 
+#include "UI/ExitPanelWidget.h"
+#include "kismet/GameplayStatics.h"
 #include "UI/VirtualJoystick.h"
 #include "Engine/Engine.h" //GEngine 화면 디버그
 
@@ -10,11 +12,14 @@ void UMyCanvas::NativeConstruct()
 {
     Super::NativeConstruct();
 
-    // 사망 패널은 기본 숨김. 버튼 배선은 패널 자신(UDeathPanelWidget)이 한다.
-    // (BP_Canvas에 DeathPanel을 아직 안 배치했으면 null — 조용히 건너뛴다)
+    // Deathpanel, ExitPanel 미리 숨기기
     if (DeathPanel)
     {
         DeathPanel->SetVisibility(ESlateVisibility::Collapsed);
+    }
+    if (ExitPanel)
+    {
+        ExitPanel->SetVisibility(ESlateVisibility::Collapsed);
     }
 
     // 모바일(안드로이드/iOS)에서만 터치 조이스틱 표시, PC에선 숨김.
@@ -75,6 +80,17 @@ void UMyCanvas::ShowDeathPanel(bool bShow)
     {
         DeathPanel->SetVisibility(bShow ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
     }
+}
+
+void UMyCanvas::ToggleExitPanel()
+{
+    if (!ExitPanel)
+    {
+        return;
+    }
+    const bool bOpen = ExitPanel->GetVisibility() == ESlateVisibility::Collapsed; // 비활성화라면
+    ExitPanel->SetVisibility(bOpen ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+    UGameplayStatics::SetGamePaused(this, bOpen); //열었다면 멈췃?
 }
 
 

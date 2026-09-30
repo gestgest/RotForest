@@ -88,6 +88,7 @@ UExitPanelWidget (WBP_ExitPanel의 부모)
 #include "ExitPanelWidget.generated.h"
 
 class UButton;
+class UWorld;
 
 // 뒤로가기로 여는 "메인메뉴로 나갈까요?" 패널 — WBP_ExitPanel의 부모 클래스
 // => 자세한 내용은 노션 개발문서 참고
@@ -104,7 +105,7 @@ public:
 	UButton* ExitButton;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exit")
-	FName MainMenuLevelName = TEXT("MainMenu");
+	TSoftObjectPtr<UWorld> MainMenuLevel;
 
 protected:
 	virtual void NativeConstruct() override;
@@ -151,7 +152,10 @@ void UExitPanelWidget::OnContinueClicked()
 void UExitPanelWidget::OnExitClicked()
 {
 	UGameplayStatics::SetGamePaused(this, false);
-	UGameplayStatics::OpenLevel(this, MainMenuLevelName);
+	if (!MainMenuLevel.IsNull())
+	{
+		UGameplayStatics::OpenLevelBySoftObjectPtr(this, MainMenuLevel);
+	}
 }
 ```
 
@@ -266,10 +270,22 @@ void AMyPlayer::OnBackPressed()
 
 ## 10. 에디터: WBP_ExitPanel 만들기 (풀 리빌드 후)
 
-1. 콘텐츠 브라우저 → 우클릭 → 유저 인터페이스 → 위젯 블루프린트 → **ExitPanel**(`WBP_ExitPanel`)
+1. 콘텐츠 브라우저 → 우클릭 → 유저 인터페이스 → 위젯 블루프린트 → **UserWidget** → `WBP_ExitPanel`
+   - 새 위젯을 만들면 루트가 **Canvas Panel**로 생긴다. 다른 위젯(Border, Button, Size Box 등 자식 1개만 받는 것)으로 바꾸지 않는다.
 2. Class Settings → Parent Class = **ExitPanelWidget**
-3. 디자이너: 어두운 배경 이미지, 문구(예: "메인메뉴로 나갈까요?"), 버튼 2개
-   - 이름을 **ContinueButton**, **ExitButton**으로 (BindWidget이라 이름이 틀리면 컴파일 에러)
+3. 디자이너 계층 구조 (루트는 Canvas Panel)
+   ```
+   Canvas Panel (루트)
+    ├ Image            어두운 배경 (앵커: 화면 전체 채우기)
+    ├ Text Block       "메인메뉴로 나갈까요?"
+    └ Vertical Box     (Horizontal Box도 가능)
+        ├ ContinueButton   (Button)
+        └ ExitButton       (Button)
+   ```
+   - 버튼은 **Button** 위젯이어야 하고, 이름을 **ContinueButton**, **ExitButton**으로 (BindWidget이라 이름이 틀리면 컴파일 에러)
+   - 두 버튼 모두 **Is Variable** 체크
+   - 버튼 안에 글자를 넣으려면 Button 아래에 Text Block을 자식으로 (Button도 자식 1개만 받는다)
+   - 클래스 디폴트의 **MainMenuLevel**에 MainMenu 맵 지정 (비어 있으면 나가기가 동작하지 않는다)
 4. `BP_Canvas` 디자이너에 `WBP_ExitPanel`을 배치하고 인스턴스 이름을 **ExitPanel**로
    - DeathPanel처럼 화면 전체를 덮는 위치/앵커로, Z 순서는 위로
 

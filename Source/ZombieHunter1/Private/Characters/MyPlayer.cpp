@@ -472,6 +472,16 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &AMyPlayer::OnRightMousePressed);
     PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Released, this, &AMyPlayer::OnRightMouseReleased);
 
+    // 뒤로가기 키
+    FInputKeyBinding& BackBinding = PlayerInputComponent->BindKey(
+        EKeys::Android_Back,
+        IE_Pressed,
+        this,
+        &AMyPlayer::OnBackPressed
+    );
+
+    BackBinding.bExecuteWhenPaused = true;
+
     // 디버그/테스트: C 키로 돈 획득(AddMoney). bDebugAddMoneyKey로 토글.
     if (bDebugAddMoneyKey)
     {
@@ -510,7 +520,13 @@ void AMyPlayer::OnLeftMouseReleased() { bLeftMouseHeld = false; }
 void AMyPlayer::OnRightMousePressed() { bRightMouseHeld = true; }
 void AMyPlayer::OnRightMouseReleased() { bRightMouseHeld = false; }
 
-
+void AMyPlayer::OnBackPressed()
+{
+    if (CanvasWidget)
+    {
+        CanvasWidget->ToggleExitPanel();
+    }
+}
 
 
 //////////////////////////////////      Property        //////////////////////////

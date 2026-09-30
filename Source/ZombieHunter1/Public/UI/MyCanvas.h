@@ -15,6 +15,7 @@
 
 class UVirtualJoystick;
 class UDeathPanelWidget;
+class UExitPanelWidget;
 
 // 알림 메시지 종류. 색은 UMyCanvas가 정한다 — 호출부는 "무슨 일인지"만 넘긴다.
 UENUM(BlueprintType)
@@ -71,13 +72,18 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     UDeathPanelWidget* DeathPanel;
 
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+    UExitPanelWidget* ExitPanel;
+
 
     //BlueprintCallable 함수들
 
-    /** 사망 패널 표시/숨김. 플레이어 OnDeath/OnRevive(및 SetHP 동기화)가 호출한다.
-     *  DeathPanel이 BP에 아직 없으면 조용히 넘어간다. */
+    // 사망 패널 표시/숨김. 플레이어 OnDeath/OnRevive(및 SetHP 동기화)가 호출한다.
     UFUNCTION(BlueprintCallable)
     void ShowDeathPanel(bool bShow);
+
+    UFUNCTION()
+    void ToggleExitPanel();
 
 
     void UpdateCoinText(int32 Money);
