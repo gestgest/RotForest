@@ -34,7 +34,7 @@ private:
 	void OnPackageLoaded(const FName& PackageName, UPackage* LoadedPackage, EAsyncLoadingResult::Type Result);
 	bool Tick(float DeltaTime);
 
-	void OnPostLoadMap(UWorld* LoadedWorld);
+	void OnPostLoadMap(UWorld* PreLoadedWorld);
 	void Finish();
 	void UnregisterTick();
 
@@ -50,7 +50,7 @@ private:
 	float DisplayProgress = 0.f;
 
 	UPROPERTY()
-	TObjectPtr<UPackage> LoadedMapPackage;
+	TObjectPtr<UWorld> LoadedWorld; //map
 
 	UPROPERTY()
 	TObjectPtr<ULoadingWidget> LoadingWidget;

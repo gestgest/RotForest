@@ -272,6 +272,8 @@ private: //평범한 변수 및 함수
 	void OnRightMousePressed();
 	void OnRightMouseReleased();
 
+	void OnBackPressed();
+
 	// 마우스 커서가 가리키는 지면(플레이어 높이의 수평면) 위치. 카메라 광선과 평면의 교점.
 	bool GetCursorGroundLocation(FVector& OutLocation) const;
 
@@ -302,7 +304,6 @@ private: //평범한 변수 및 함수
 	void OnMoveY(float Value);
 	void OnAimX(float Value);
 	void OnAimY(float Value);
-
 
 
 	// [UI] Property
