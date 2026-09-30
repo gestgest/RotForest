@@ -536,7 +536,7 @@ Travel Failure: [ClientTravelFailure]: Failed to load package '/Game/Maps/GameRe
 ```
 ```cpp
 	UPROPERTY()
-	TObjectPtr<UWorld> LoadedWorld;
+	TObjectPtr<UWorld> PreloadedWorld;
 ```
 
 ### T5-2. 로드 완료 시 월드를 잡기 — LevelLoaderSubsystem.cpp:73~85
@@ -557,8 +557,8 @@ void ULevelLoaderSubsystem::OnPackageLoaded(const FName & PackageName, UPackage 
 		return;
 	}
 
-	LoadedWorld = UWorld::FindWorldInPackage(LoadedPackage);
-	if (!LoadedWorld)
+	PreloadedWorld = UWorld::FindWorldInPackage(LoadedPackage);
+	if (!PreloadedWorld)
 	{
 		UE_LOG(LogTemp, Error, TEXT("[LevelLoader] 월드 없음: %s"), *PackageName.ToString());
 		Finish();
@@ -576,7 +576,7 @@ void ULevelLoaderSubsystem::OnPackageLoaded(const FName & PackageName, UPackage 
 	LoadedMapPackage = nullptr;
 ```
 ```cpp
-	LoadedWorld = nullptr;
+	PreloadedWorld = nullptr;
 ```
 
 헤더 멤버가 바뀌므로 **풀 리빌드** 후 다시 패키징. 확인은 PIE가 아니라 **기기 또는 Standalone**으로.

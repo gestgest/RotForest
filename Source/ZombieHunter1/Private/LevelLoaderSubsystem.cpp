@@ -80,7 +80,14 @@ void ULevelLoaderSubsystem::OnPackageLoaded(const FName & PackageName, UPackage 
 		return;
 	}
 
-	LoadedMapPackage = LoadedPackage;
+	LoadedWorld = UWorld::FindWorldInPackage(LoadedPackage);
+	if (!LoadedWorld)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[LevelLoader] 월드 없음 : %s"), *PackageName.ToString());
+		Finish();
+		return;
+	}
+
 	bPackageLoaded = true;
 }
 
@@ -120,7 +127,7 @@ bool ULevelLoaderSubsystem::Tick(float DeltaTime)
 }
 
 // 로드가 끝난 뒤. 
-void ULevelLoaderSubsystem::OnPostLoadMap(UWorld * LoadedWorld)
+void ULevelLoaderSubsystem::OnPostLoadMap(UWorld * PreLoadedWorld)
 {
 	// 로딩이 됐다면
 	if (bIsLoading)
@@ -153,7 +160,7 @@ void ULevelLoaderSubsystem::UnregisterTick()
 		LoadingWidget = nullptr;
 	}
 
-	LoadedMapPackage = nullptr;
+	LoadedWorld = nullptr;
 	PendingLevel.Reset();
 	PendingPackageName = NAME_None;
 	bIsLoading = false;
