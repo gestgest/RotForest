@@ -389,6 +389,7 @@ void AMyPlayer::UpdateAimAndAttack(float DeltaTime, const FVector2D& Aim, const 
     {
         const FVector AimDir(Aim.Y, Aim.X, 0.0f); // 이동과 동일한 축 매핑
         SetActorRotation(FRotator(0.0f, AimDir.Rotation().Yaw, 0.0f));
+        AttackAimDir = AimDir.GetSafeNormal();
     }
     // 공격중
     else if (AttackFacingHold > 0.0f)
