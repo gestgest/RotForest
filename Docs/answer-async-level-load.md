@@ -502,3 +502,81 @@ void ULevelLoaderSubsystem::Finish()
 	UGameInstance* GI = GetGameInstance();
 	const ULevelLoaderSubsystem* Loader = GI ? GI->GetSubsystem<ULevelLoaderSubsystem>() : nullptr;
 ```
+
+---
+
+## 트러블슈팅 — 패키지 빌드(안드로이드)에서 GameReady로 안 넘어감 (2026-09-30)
+
+증상: 로딩 화면은 뜨고 끝까지 차는데, 그대로 MainMenu에 남음. 에디터(PIE)에선 정상.
+
+로그 (`adb logcat -d -s UE`):
+```
+LogLoad: LoadMap: /Game/Maps/GameReady
+LogWorld: BeginTearingDown for /Game/Maps/MainMenu
+LogStreaming: ... RemoveUnreachableObjects ... Removed 128 (275->147) packages
+LogLoad: LoadMap: /Game/Maps/MainMenu?Name=Player
+Travel Failure: [ClientTravelFailure]: Failed to load package '/Game/Maps/GameReady'
+```
+
+원인: `UPackage`만 `UPROPERTY`로 잡아서는 **패키지 안의 `UWorld`와 그 에셋들이 GC를 피하지 못한다.**
+
+- GC에서 inner → outer 참조는 있지만 outer(`UPackage`) → inner(`UWorld`) 참조는 없다. 껍데기 패키지만 살아남는다.
+- `OpenLevel` → `LoadMap`은 이전 월드를 정리하면서 GC를 돌린다. 이때 미리 로드한 GameReady 월드가 수거된다.
+- `LoadMap`이 GameReady를 찾으면 내용물이 빠진 패키지만 있어서 로드 실패 → MainMenu로 되돌아감.
+- PIE에선 맵 이름에 `UEDPIE_0_` 접두사가 붙어 미리 로드한 패키지를 재사용하지 않고 새로 로드한다. 그래서 에디터에선 증상이 안 보였다.
+
+해결: 패키지 대신 **`UWorld`를 잡는다.**
+
+### T5-1. 멤버 타입 변경 — LevelLoaderSubsystem.h:52~53
+
+```cpp
+// Before
+	UPROPERTY()
+	TObjectPtr<UPackage> LoadedMapPackage;
+```
+```cpp
+	UPROPERTY()
+	TObjectPtr<UWorld> LoadedWorld;
+```
+
+### T5-2. 로드 완료 시 월드를 잡기 — LevelLoaderSubsystem.cpp:73~85
+
+```cpp
+// Before
+	LoadedMapPackage = LoadedPackage;
+	bPackageLoaded = true;
+```
+```cpp
+void ULevelLoaderSubsystem::OnPackageLoaded(const FName & PackageName, UPackage * LoadedPackage, EAsyncLoadingResult::Type Result)
+{
+	//성공하지 못했다면
+	if (Result != EAsyncLoadingResult::Succeeded || !LoadedPackage)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[LevelLoader] 로드 실패: %s"), *PackageName.ToString());
+		Finish();
+		return;
+	}
+
+	LoadedWorld = UWorld::FindWorldInPackage(LoadedPackage);
+	if (!LoadedWorld)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[LevelLoader] 월드 없음: %s"), *PackageName.ToString());
+		Finish();
+		return;
+	}
+
+	bPackageLoaded = true;
+}
+```
+
+### T5-3. 정리 — LevelLoaderSubsystem.cpp:156
+
+```cpp
+// Before
+	LoadedMapPackage = nullptr;
+```
+```cpp
+	LoadedWorld = nullptr;
+```
+
+헤더 멤버가 바뀌므로 **풀 리빌드** 후 다시 패키징. 확인은 PIE가 아니라 **기기 또는 Standalone**으로.
