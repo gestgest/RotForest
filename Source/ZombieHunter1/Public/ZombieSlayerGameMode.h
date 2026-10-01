@@ -49,7 +49,7 @@ private:
 	void initEnemy(int index);
 	void initCoin(int index);
 
-	void spawn();
+	void Spawn();
 	void spawnCoin();
 
 

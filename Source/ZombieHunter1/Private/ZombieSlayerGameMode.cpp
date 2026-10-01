@@ -23,13 +23,13 @@ void AZombieSlayerGameMode::StartPlay()
     AZombieSlayerGameMode::init();
 
     // 풀 전체를 5초 기다리지 않고 즉시 링에 배치 (드립피드 대신 배치 스폰)
-    AZombieSlayerGameMode::spawn();
+    AZombieSlayerGameMode::Spawn();
 
     // 이후로는 5초마다 spawn()을 불러 죽어서 빈 슬롯만 다시 채운다
     GetWorldTimerManager().SetTimer(
         SpawnTimerHandle,           // 타이머 핸들
         this,                        // 호출할 객체
-        &AZombieSlayerGameMode::spawn,  // 호출할 함수
+        &AZombieSlayerGameMode::Spawn,  // 호출할 함수
         5.0f,                        // 간격 (5초)
         true                         // 반복 여부 (true = 반복)
     );
@@ -117,7 +117,7 @@ void AZombieSlayerGameMode::initCoin(int index)
         newCoin->SetActorHiddenInGame(true);  // 비활성화
     }
 }
-void AZombieSlayerGameMode::spawn()
+void AZombieSlayerGameMode::Spawn()
 {
     SpawnEnemy();
     spawnCoin();
