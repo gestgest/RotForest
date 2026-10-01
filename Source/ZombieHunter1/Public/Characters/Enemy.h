@@ -97,6 +97,9 @@ public:
 	/** 풀에서 깨어남 — EnterPoolDormancy가 껐던 것들을 복구. 게임모드가 위치 배치 후 호출. */
 	void WakeFromPool();
 
+	// 새 적 상태로 리셋 (HP 등). 스폰/리쉬 시 호출
+	void ResetForSpawn();
+
 	/** 리쉬 회수용 순간이동 — 낙하 속도/진행 중 경로를 정리하고 새 위치로 옮긴다.
 	 *  (무한맵에서 뒤처져 지형을 잃은 적을 플레이어 근처로 재배치할 때 사용) */
 	void TeleportForLeash(const FVector& NewLocation);

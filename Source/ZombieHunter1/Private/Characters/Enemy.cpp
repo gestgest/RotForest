@@ -344,6 +344,11 @@ void AEnemy::WakeFromPool()
 	// 캡슐 콜리전 복구는 OnRevive(SetHP로 부활 전환 시)가 담당한다.
 }
 
+void AEnemy::ResetForSpawn()
+{
+	SetHP(GetMaxHP()); // 죽었던 적이면 OnRevive까지 발동
+}
+
 void AEnemy::TeleportForLeash(const FVector& NewLocation)
 {
 	// 언로드된 지형을 가로지르던 옛 경로 폐기 (다음 TrackingPlayer가 새 위치에서 다시 잡는다)

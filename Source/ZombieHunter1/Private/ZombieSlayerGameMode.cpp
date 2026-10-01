@@ -159,7 +159,7 @@ void AZombieSlayerGameMode::SpawnEnemy()
         //왜인지 모르지만 정 가운데가 pivot이라 +90을 해야한다.
         enemy->SetActorLocation(resultLocation.Location + upVector); 
         enemy->WakeFromPool();  // 숨김 해제 + 콜리전/이동/틱 복구
-        enemy->SetHP(enemy->GetMaxHP());        // 죽었던 적이면 부활 전환(OnRevive)까지 발동
+        enemy->ResetForSpawn();
 
         enemy_size++;
     }
@@ -200,6 +200,7 @@ void AZombieSlayerGameMode::RecycleFarEnemies()
         if (FindReachablePointInRing(playerLocation, resultLocation))
         {
             enemy->TeleportForLeash(resultLocation.Location + upVector);
+            enemy->ResetForSpawn(); // 리쉬된 적은 새 적 취급
         }
     }
 }

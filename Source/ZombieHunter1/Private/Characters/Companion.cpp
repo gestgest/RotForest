@@ -195,9 +195,9 @@ AEnemy* ACompanion::FindNearestEnemy() const
 	for (AActor* A : Enemies)
 	{
 		AEnemy* E = Cast<AEnemy>(A);
-		if (!E || E->GetIsDead())
+		if (!E || E->IsHidden() || E->GetIsDead())
 		{
-			continue; // 죽은 적은 무시
+			continue; // 풀 대기 중이거나 죽은 적은 무시
 		}
 		const float DSq = FVector::DistSquared(Loc, E->GetActorLocation());
 		if (DSq < BestDistSq)
