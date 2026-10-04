@@ -712,3 +712,182 @@ Canvas Panel
 - [ ] 보스 처치 → 0에서 1초 정지 → 페이드아웃
 - [ ] 컷인 도중 때려도 바가 나오면 현재 HP까지만 차오름
 - [ ] 보스 청크 언로드 시 바가 남지 않음
+
+---
+---
+
+# 부록 — 최소 테스트: "때리면 바가 줄어드는지"만 확인
+컷인/잔상/페이드 없이, 접근하면 바가 뜨고 때리면 줄어드는 것까지만. (클래스명은 현재 코드 기준 `UBossHPBar`)
+
+## A1. 전방 선언 + HPBar 바인딩 + 함수 추가 — BossHPBar.h
+```cpp
+class ACombatCharacter;
+class UProgressBar;
+class UTextBlock;
+```
+```cpp
+	UPROPERTY(meta = (BindWidget))
+	UProgressBar* HPBar;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* DamageText;
+
+private:
+	float TargetPercent = 0.0f;
+
+	int32 AccumDamage = 0;
+
+	TWeakObjectPtr<ACombatCharacter> Boss;
+	FDelegateHandle HPChangedHandle;
+
+	void UnbindBoss();
+	void BindBoss(ACombatCharacter* InBoss);
+	void HandleHPChanged(int32 NewHP, int32 Delta);
+	float GetBossPercent() const;
+```
+
+## A2. 시작 시 바 채우고 보이기 — BossHPBar.cpp StartEncounter 끝
+```cpp
+	UnbindBoss();
+	BindBoss(InBoss);
+
+	TargetPercent = GetBossPercent();
+	HPBar->SetPercent(TargetPercent);
+	SetVisibility(ESlateVisibility::HitTestInvisible);
+}
+```
+
+## A3. Native 함수에 Super 호출 — BossHPBar.cpp
+```cpp
+void UBossHPBar::NativeConstruct()
+{
+	Super::NativeConstruct();
+	SetVisibility(ESlateVisibility::Collapsed);
+	DamageText->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UBossHPBar::NativeDestruct()
+{
+	UnbindBoss();
+	Super::NativeDestruct();
+}
+
+void UBossHPBar::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+}
+```
+
+## A4. HP 변경 시 바 갱신 — BossHPBar.cpp HandleHPChanged
+```cpp
+void UBossHPBar::HandleHPChanged(int32 NewHP, int32 Delta)
+{
+	TargetPercent = GetBossPercent();
+	HPBar->SetPercent(TargetPercent);
+
+	if (Delta < 0)
+	{
+		AccumDamage -= Delta;
+		DamageText->SetText(FText::AsNumber(AccumDamage));
+		DamageText->SetVisibility(ESlateVisibility::HitTestInvisible);
+	}
+}
+
+float UBossHPBar::GetBossPercent() const
+{
+	ACombatCharacter* B = Boss.Get();
+	if (!B || B->GetMaxHP() <= 0)
+	{
+		return 0.0f;
+	}
+	return FMath::Clamp((float)B->GetHP() / (float)B->GetMaxHP(), 0.0f, 1.0f);
+}
+```
+
+## A5. 캔버스 — MyCanvas.h (전방 선언 + RemoveItemNotification 아래)
+```cpp
+class UBossHPBar;
+class ACombatCharacter;
+```
+```cpp
+    // [보스]
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+    UBossHPBar* BossHPBar;
+
+    void StartBossEncounter(ACombatCharacter* Boss, const FText& BossName);
+```
+
+## A6. 캔버스 — MyCanvas.cpp (include + 맨 아래)
+```cpp
+#include "UI/BossHPBar.h"
+```
+```cpp
+void UMyCanvas::StartBossEncounter(ACombatCharacter* Boss, const FText& BossName)
+{
+    if (BossHPBar)
+    {
+        BossHPBar->StartEncounter(Boss, BossName);
+    }
+}
+```
+
+## A7. 캔버스 게터 — MyPlayer.h:317
+```cpp
+public: //Property Function
+
+	UMyCanvas* GetCanvasWidget() const { return CanvasWidget; }
+```
+
+## A8. 보스 — Boss.h (public / protected / private 에 각각 추가)
+```cpp
+public:
+	virtual void Tick(float DeltaTime) override;
+```
+```cpp
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Boss")
+	float EngageRadius = 1500.0f;
+```
+```cpp
+private:
+	bool bEngaged = false;
+```
+
+## A9. 보스 — Boss.cpp (include + Tick)
+```cpp
+#include "Characters/MyPlayer.h"
+#include "UI/MyCanvas.h"
+```
+```cpp
+void ABoss::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    if (bEngaged || IsDead)
+    {
+        return;
+    }
+
+    AMyPlayer* Player = Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(this, 0));
+    if (!Player)
+    {
+        return;
+    }
+
+    if (FVector::DistSquared2D(GetActorLocation(), Player->GetActorLocation()) > FMath::Square(EngageRadius))
+    {
+        return;
+    }
+
+    if (UMyCanvas* Canvas = Player->GetCanvasWidget())
+    {
+        Canvas->StartBossEncounter(this, FText::FromString(TEXT("Boss")));
+        bEngaged = true;
+    }
+}
+```
+
+## A10. 에디터 (풀 리빌드 후)
+- WBP_BossHPBar: 부모 `BossHPBar`, 안에 **HPBar**(ProgressBar), **DamageText**(TextBlock) 두 개만 있으면 됨
+- BP_Canvas: WBP_BossHPBar를 넣고 이름 **BossHPBar**, 앵커 전체 화면
+- 확인: 보스에게 1500 안으로 접근 → 바 등장 → 때리면 줄어들고 숫자 누적

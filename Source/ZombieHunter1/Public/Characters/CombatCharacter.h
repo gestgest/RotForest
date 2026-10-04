@@ -18,6 +18,8 @@ class UWeaponDataAsset;
  *  (LogTemp에 섞어 쓰면 다른 노란 경고에 묻힌다) */
 DECLARE_LOG_CATEGORY_EXTERN(LogWeapon, Log, All);
 
+// 인자: 새 HP, 변화량(피해면 음수)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHPChanged, int32, int32);
 
 UENUM(BlueprintType)
 enum class ETeam : uint8
@@ -227,6 +229,10 @@ public: //Property
 
 	UJobComponent* GetJobComponent() const { return CurrentJob; }
 	USkeletalMeshComponent* GetWeaponMeshComponent() const { return WeaponMeshComponent; }
+
+	FOnHPChanged OnHPChanged;
+
+
 
 	// 죽음 상태, HP바 갱신 
 	UFUNCTION(BlueprintCallable, Category = "Combat")

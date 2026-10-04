@@ -7,6 +7,8 @@
 #include "BossHPBar.generated.h"
 
 class ACombatCharacter;
+class UTextBlock;
+class UProgressBar;
 
 UCLASS()
 class ZOMBIEHUNTER1_API UBossHPBar : public UUserWidget
@@ -20,4 +22,27 @@ protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 	virtual void NativeTick(const FGeometry & MyGeometry, float InDeltaTime) override;
+
+	UPROPERTY(meta = (BindWidget))
+	UProgressBar* HPBar;
+
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* DamageText;
+
+private:
+	float TargetPercent = 0.0f;
+
+	int32 AccumDamage = 0;
+
+	TWeakObjectPtr<ACombatCharacter> Boss;
+	FDelegateHandle HPChangedHandle;
+
+	void UnbindBoss();
+	void BindBoss(ACombatCharacter * InBoss);
+
+	void TickBar(float DeltaTime);
+
+	void HandleHPChanged(int32 NewHP, int32 Delta);
+	float GetBossPercent() const;
 };
