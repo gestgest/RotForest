@@ -315,6 +315,9 @@ private: //평범한 변수 및 함수
 	void DebugWalkSpeed(const FVector2D& Move);
 
 public: //Property Function
+	
+	// Boss에서 Player의 canvas 찾기용
+	UMyCanvas* GetCanvasWidget() const { return CanvasWidget; }
 
 	// HUD 체력바 갱신.
 	virtual void SetHP(int32 new_hp) override; //  죽음/부활 "전환" 처리는 베이스가 OnDeath/OnRevive로 호출해준다.

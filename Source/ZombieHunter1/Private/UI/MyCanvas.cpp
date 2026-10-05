@@ -4,8 +4,9 @@
 #include "UI/MyCanvas.h"
 #include "UI/DeathPanelWidget.h" 
 #include "UI/ExitPanelWidget.h"
-#include "kismet/GameplayStatics.h"
 #include "UI/VirtualJoystick.h"
+#include "UI/BossHPBar.h"
+#include "kismet/GameplayStatics.h"
 #include "Engine/Engine.h" //GEngine 화면 디버그
 
 void UMyCanvas::NativeConstruct()
@@ -134,5 +135,21 @@ void UMyCanvas::RemoveItemNotification()
     if (Vertical_ItemTextBox && Vertical_ItemTextBox->GetChildrenCount() > 0)
     {
         Vertical_ItemTextBox->RemoveChildAt(0);
+    }
+}
+
+void UMyCanvas::StartBossEncounter(ACombatCharacter* Boss, const FText& BossName)
+{
+    if (BossHPBar)
+    {
+        BossHPBar->StartEncounter(Boss, BossName);
+    }
+}
+
+void UMyCanvas::EndBossEncounter(ACombatCharacter* Boss)
+{
+    if (BossHPBar)
+    {
+        BossHPBar->EndEncounter(Boss);
     }
 }

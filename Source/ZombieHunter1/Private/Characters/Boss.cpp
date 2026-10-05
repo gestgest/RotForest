@@ -1,8 +1,30 @@
 ﻿#include "Characters/Boss.h"
+#include "Characters/MyPlayer.h"
 #include "InfiniteMapGenerator.h" // 클리어 기록을 남길 곳 (POIStates)
 #include "Items/WeaponPickup.h" // 바닥에 떨굴 전리품
 #include "Items/ItemDataAsset.h"
+#include "UI/MyCanvas.h"
 #include "Kismet/GameplayStatics.h" // FinishSpawningActor
+
+
+void ABoss::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+    UpdateEncounter();
+}
+
+void ABoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (bInCombat)
+    {
+        bInCombat = false;
+        if (UMyCanvas* Canvas = GetPlayerCanvas())
+        {
+            Canvas->EndBossEncounter(this);
+        }
+    }
+    Super::EndPlay(EndPlayReason);
+}
 
 void ABoss::SetHome(AInfiniteMapGenerator* InGenerator, const FIntPoint& InCenterChunk)
 {
@@ -70,4 +92,54 @@ void ABoss::SpawnDropPickup()
     {
         Generator->RegisterChunkActor(HomeChunk, Pickup);
     }
+}
+
+void ABoss::UpdateEncounter()
+{
+    if (IsDead)
+    {
+        bInCombat = false;
+        return;
+    }
+
+    // this는 월드 안에 사는 객체 => 즉 객체를 넣으면 알아서 월드를 알 수 있다.
+    AMyPlayer* Player = Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(this, 0));
+
+    bool bShouldCombat = false;
+
+    // 플레이어가 죽지 않았다면
+    if (Player && !Player->GetIsDead())
+    {
+        // 범위를 벗어나면 UI 종료
+        const float Radius = bInCombat ? LeaveCombatRadius : CombatRadius;
+        bShouldCombat = FVector::DistSquared2D(GetActorLocation(), Player->GetActorLocation()) <= FMath::Square(Radius);
+    }
+
+    if (bShouldCombat == bInCombat)
+    {
+        return;
+    }
+    bInCombat = bShouldCombat;
+
+    UMyCanvas* Canvas = GetPlayerCanvas();
+    if (!Canvas)
+    {
+        return;
+    }
+
+    // 전투중
+    if (bInCombat)
+    {
+        Canvas->StartBossEncounter(this, BossName);
+    }
+    else
+    {
+        Canvas->EndBossEncounter(this);
+    }
+}
+
+UMyCanvas * ABoss::GetPlayerCanvas() const 
+{
+    AMyPlayer* Player = Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(this, 0));
+    return Player ? Player->GetCanvasWidget() : nullptr;
 }
