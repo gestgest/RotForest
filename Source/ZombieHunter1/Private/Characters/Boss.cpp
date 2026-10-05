@@ -96,11 +96,6 @@ void ABoss::SpawnDropPickup()
 
 void ABoss::UpdateEncounter()
 {
-    if (IsDead)
-    {
-        bInCombat = false;
-        return;
-    }
 
     // this는 월드 안에 사는 객체 => 즉 객체를 넣으면 알아서 월드를 알 수 있다.
     AMyPlayer* Player = Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(this, 0));
@@ -108,7 +103,7 @@ void ABoss::UpdateEncounter()
     bool bShouldCombat = false;
 
     // 플레이어가 죽지 않았다면
-    if (Player && !Player->GetIsDead())
+    if (!IsDead && Player && !Player->GetIsDead())
     {
         // 범위를 벗어나면 UI 종료
         const float Radius = bInCombat ? LeaveCombatRadius : CombatRadius;

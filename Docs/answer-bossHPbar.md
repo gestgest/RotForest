@@ -891,3 +891,79 @@ void ABoss::Tick(float DeltaTime)
 - WBP_BossHPBar: 부모 `BossHPBar`, 안에 **HPBar**(ProgressBar), **DamageText**(TextBlock) 두 개만 있으면 됨
 - BP_Canvas: WBP_BossHPBar를 넣고 이름 **BossHPBar**, 앵커 전체 화면
 - 확인: 보스에게 1500 안으로 접근 → 바 등장 → 때리면 줄어들고 숫자 누적
+
+---
+
+# 부록 B. 보스가 죽어도 HP바가 안 사라짐
+
+원인 2개
+- B-1. `UBossHPBar::EndEncounter`가 비어 있음 → 누가 불러도 아무 일도 안 함
+- B-2. `ABoss::UpdateEncounter`에서 `IsDead`면 `bInCombat = false; return;` → 캔버스에 종료를 알리지 않고 끝남. 게다가 `bInCombat`이 이미 false라 `EndPlay`의 종료 호출도 건너뜀
+
+## B-1. EndEncounter 채우기 — Private/UI/BossHPBar.cpp:36
+
+```cpp
+void UBossHPBar::EndEncounter(ACombatCharacter* InBoss)
+{
+	// 다른 보스면 무시
+	if (InBoss && Boss.Get() != InBoss)
+	{
+		return;
+	}
+
+	UnbindBoss();
+	AccumDamage = 0;
+	DamageText->SetVisibility(ESlateVisibility::Collapsed);
+	SetVisibility(ESlateVisibility::Collapsed);
+}
+```
+
+## B-2. 죽음도 "전투 종료 전환"으로 처리 — Private/Characters/Boss.cpp UpdateEncounter
+
+```cpp
+// Before
+    if (IsDead)
+    {
+        bInCombat = false;
+        return;
+    }
+    ...
+    if (Player && !Player->GetIsDead())
+```
+
+```cpp
+void ABoss::UpdateEncounter()
+{
+    AMyPlayer* Player = Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(this, 0));
+
+    bool bShouldCombat = false;
+
+    // 보스, 플레이어 둘 다 살아있을 때만 전투
+    if (!IsDead && Player && !Player->GetIsDead())
+    {
+        const float Radius = bInCombat ? LeaveCombatRadius : CombatRadius;
+        bShouldCombat = FVector::DistSquared2D(GetActorLocation(), Player->GetActorLocation()) <= FMath::Square(Radius);
+    }
+
+    if (bShouldCombat == bInCombat)
+    {
+        return;
+    }
+    bInCombat = bShouldCombat;
+
+    UMyCanvas* Canvas = GetPlayerCanvas();
+    if (!Canvas)
+    {
+        return;
+    }
+
+    if (bInCombat)
+    {
+        Canvas->StartBossEncounter(this, BossName);
+    }
+    else
+    {
+        Canvas->EndBossEncounter(this);
+    }
+}
+```

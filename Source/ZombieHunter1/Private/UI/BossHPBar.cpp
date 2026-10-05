@@ -33,8 +33,19 @@ void UBossHPBar::StartEncounter(ACombatCharacter* InBoss, const FText& InBossNam
 	SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
+// 보스가 죽는 경우
 void UBossHPBar::EndEncounter(ACombatCharacter* InBoss)
 {
+	// 다른 보스면 무시
+	if (InBoss && Boss.Get() != InBoss)
+	{
+		return;
+	}
+
+	UnbindBoss();
+	AccumDamage = 0;
+	DamageText->SetVisibility(ESlateVisibility::Collapsed);
+	SetVisibility(ESlateVisibility::Collapsed);
 }
 
 void UBossHPBar::NativeConstruct()
