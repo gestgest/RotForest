@@ -29,7 +29,11 @@ void UBossStatusWidget::StartEncounter(ACombatCharacter* InBoss, const FText& In
 	BossNameText->SetText(InBossName);
 
 	TargetPercent = GetBossPercent();
-	HPBar->SetPercent(TargetPercent);
+	HPBar->SetPercent(0.0f);
+	DelayBar->SetPercent(0.0f);
+	CurrentPercent = 0.0f;
+	DelayPercent = 0.0f;
+	IntroCap = 0.0f;
 
 	ResetDamage();
 	HoldDelayBarRemainTime = 0.0f;
@@ -91,10 +95,9 @@ void UBossStatusWidget::UnbindBoss()
 
 void UBossStatusWidget::TickBar(float DeltaTime)
 {
-	// todo 페이드
+	// 페이드는 안 넣었음
 
 	// HP 차는 애니메이션
-	
 	// 줄어드는 퍼센트 선형 애니메이션
 	IntroCap = FMath::FInterpConstantTo(IntroCap, 1.0f, DeltaTime, 1.0f / FMath::Max(BarFadeTime, 0.01f));
 	const float Goal = FMath::Min(TargetPercent, IntroCap); // 목표 퍼센트보다 떨어지는 거 방지
@@ -143,7 +146,6 @@ void UBossStatusWidget::HandleHPChanged(int32 NewHP, int32 Delta)
 {
 	//퍼센트
 	TargetPercent = GetBossPercent();
-	HPBar->SetPercent(TargetPercent);
 
 	// 만약 데미지를 받았다면
 	if (Delta < 0)

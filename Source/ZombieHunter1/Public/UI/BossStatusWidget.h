@@ -63,8 +63,8 @@ private:
 	float DelayPercent = 0.0f; // 노란바 
 	int32 AccumDamage = 0;
 
-	// ?
-	float IntroCap;
+	// tick에서 HP 값 목표치
+	float IntroCap = 0.0f;
 	float DamageRemainTime = 0.0f;
 	float HoldDelayBarRemainTime = 0.0f;
 
