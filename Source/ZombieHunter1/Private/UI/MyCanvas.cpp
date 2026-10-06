@@ -5,7 +5,7 @@
 #include "UI/DeathPanelWidget.h" 
 #include "UI/ExitPanelWidget.h"
 #include "UI/VirtualJoystick.h"
-#include "UI/BossHPBar.h"
+#include "UI/BossStatusWidget.h"
 #include "kismet/GameplayStatics.h"
 #include "Engine/Engine.h" //GEngine 화면 디버그
 

@@ -96,7 +96,6 @@ void ABoss::SpawnDropPickup()
 
 void ABoss::UpdateEncounter()
 {
-
     // this는 월드 안에 사는 객체 => 즉 객체를 넣으면 알아서 월드를 알 수 있다.
     AMyPlayer* Player = Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(this, 0));
 

@@ -16,7 +16,7 @@
 class UVirtualJoystick;
 class UDeathPanelWidget;
 class UExitPanelWidget;
-class UBossHPBar;
+class UBossStatusWidget;
 class ACombatCharacter;
 
 // 알림 메시지 종류. 색은 UMyCanvas가 정한다 — 호출부는 "무슨 일인지"만 넘긴다.
@@ -73,7 +73,7 @@ protected:
     UExitPanelWidget* ExitPanel;
 
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
-    UBossHPBar* BossHPBar;
+    UBossStatusWidget* BossHPBar;
 
 
 public:
