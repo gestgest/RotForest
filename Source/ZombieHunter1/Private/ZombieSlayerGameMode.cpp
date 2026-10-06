@@ -23,13 +23,13 @@ void AZombieSlayerGameMode::StartPlay()
     AZombieSlayerGameMode::init();
 
     // 풀 전체를 5초 기다리지 않고 즉시 링에 배치 (드립피드 대신 배치 스폰)
-    AZombieSlayerGameMode::spawn();
+    AZombieSlayerGameMode::Spawn();
 
     // 이후로는 5초마다 spawn()을 불러 죽어서 빈 슬롯만 다시 채운다
     GetWorldTimerManager().SetTimer(
         SpawnTimerHandle,           // 타이머 핸들
         this,                        // 호출할 객체
-        &AZombieSlayerGameMode::spawn,  // 호출할 함수
+        &AZombieSlayerGameMode::Spawn,  // 호출할 함수
         5.0f,                        // 간격 (5초)
         true                         // 반복 여부 (true = 반복)
     );
@@ -117,7 +117,7 @@ void AZombieSlayerGameMode::initCoin(int index)
         newCoin->SetActorHiddenInGame(true);  // 비활성화
     }
 }
-void AZombieSlayerGameMode::spawn()
+void AZombieSlayerGameMode::Spawn()
 {
     SpawnEnemy();
     spawnCoin();
@@ -159,7 +159,7 @@ void AZombieSlayerGameMode::SpawnEnemy()
         //왜인지 모르지만 정 가운데가 pivot이라 +90을 해야한다.
         enemy->SetActorLocation(resultLocation.Location + upVector); 
         enemy->WakeFromPool();  // 숨김 해제 + 콜리전/이동/틱 복구
-        enemy->SetHP(enemy->GetMaxHP());        // 죽었던 적이면 부활 전환(OnRevive)까지 발동
+        enemy->ResetForSpawn();
 
         enemy_size++;
     }
@@ -200,6 +200,7 @@ void AZombieSlayerGameMode::RecycleFarEnemies()
         if (FindReachablePointInRing(playerLocation, resultLocation))
         {
             enemy->TeleportForLeash(resultLocation.Location + upVector);
+            enemy->ResetForSpawn(); // 리쉬된 적은 새 적 취급
         }
     }
 }

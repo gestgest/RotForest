@@ -289,9 +289,17 @@ void ACombatCharacter::AddHP(int32 add_hp)
 
 void ACombatCharacter::SetHP(int32 new_hp)
 {
+	const int32 OldHP = HP;
 	HP = new_hp;
 	SetDead(HP <= 0);
 	UpdateHPBar(); // 머리 위 바가 있는 캐릭터(적/동료)만 실제로 갱신된다
+	
+	// 오버킬 방지 : HP30인데 데미지가 50이면 음수임
+	const int32 Delta = FMath::Max(HP, 0) - FMath::Max(OldHP, 0);
+	if (Delta != 0) //피해를 입힌경우
+	{
+		OnHPChanged.Broadcast(HP, Delta);
+	}
 }
 
 // 머리 위 HP 바 생성 — 반드시 서브클래스 생성자에서 호출(CreateDefaultSubobject 제약).

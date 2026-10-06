@@ -124,3 +124,6 @@ Content/Necropolis/Materials/*
 !Content/Necropolis/Materials/MI_floor_ground_mo.uasset
 
 Content/VFX_Magic/*
+
+# Claude
+.claude/

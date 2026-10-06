@@ -16,6 +16,8 @@
 class UVirtualJoystick;
 class UDeathPanelWidget;
 class UExitPanelWidget;
+class UBossStatusWidget;
+class ACombatCharacter;
 
 // 알림 메시지 종류. 색은 UMyCanvas가 정한다 — 호출부는 "무슨 일인지"만 넘긴다.
 UENUM(BlueprintType)
@@ -33,10 +35,10 @@ class ZOMBIEHUNTER1_API UMyCanvas : public UUserWidget
 
 protected:
     virtual void NativeConstruct() override;
+    virtual void NativeTick(const FGeometry& MyGeometry, float IndDeltaTime) override;
 
-public:
 
-    //변수들
+    // [Variables]
     // CoinText와 자동으로 바인딩됨
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
     UTextBlock* CoinText;
@@ -54,7 +56,7 @@ public:
 
     UPROPERTY(meta = (BindWidgetOptional))
     UVerticalBox* Vertical_ItemTextBox;
-    
+
 
     // 경험치 표시 (선택) — BP_Canvas에 이 이름으로 배치하면 자동 연결, 없어도 컴파일에 지장 없음.
     // ExpText: "Lv.3  12 / 20" 형식 텍스트, ExpBar: 다음 레벨까지 진행도(0~1)
@@ -64,20 +66,26 @@ public:
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     UProgressBar* ExpBar;
 
-    //////////////////////////////////////////////////////////////////////////
-    // 사망 패널 — 별도 위젯 WBP_DeathPanel(부모: UDeathPanelWidget)을
-    // BP_Canvas에 "DeathPanel"이라는 이름으로 배치하면 자동 연결된다(없어도 컴파일/실행 지장 없음).
-    // 여기(MyCanvas)는 켜고 끄기만 하고, 버튼 로직은 UDeathPanelWidget이 자체 처리한다.
-
+    // 사망 패널
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     UDeathPanelWidget* DeathPanel;
 
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     UExitPanelWidget* ExitPanel;
 
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+    UBossStatusWidget* BossHPBar;
 
-    //BlueprintCallable 함수들
+    UPROPERTY(meta =(BindWidgetOptional))
+    UImage* BossArrow;
 
+    // 마우스 가장자리에서 띄울 거리
+    UPROPERTY(EditAnywhere, Category = "Boss")
+    float BossArrowEdgeMargin = 60.0f;
+
+
+
+public:
     // 사망 패널 표시/숨김. 플레이어 OnDeath/OnRevive(및 SetHP 동기화)가 호출한다.
     UFUNCTION(BlueprintCallable)
     void ShowDeathPanel(bool bShow);
@@ -89,10 +97,21 @@ public:
     void UpdateCoinText(int32 Money);
     void SetProgressUISize(FVector2D size);
 
-    /** 경험치 HUD 갱신 — AMyPlayer::UpdateExpUI가 호출. 위젯이 배치돼 있을 때만 그린다. */
+    // 경험치 HUD 갱신 — AMyPlayer::UpdateExpUI가 호출. 위젯이 배치돼 있을 때만 그린다. 
     void UpdateExp(int32 Level, int32 Exp, int32 ExpToNext);
-
 
     void AddItemNotification(const FText& Text, EItemNotifyType Type = EItemNotifyType::Gain);
     void RemoveItemNotification();
+
+    void StartBossEncounter(ACombatCharacter* Boss, const FText& BossName);
+    void EndBossEncounter(ACombatCharacter* Boss);
+
+    UVirtualJoystick* GetMoveJoystick() const { return MoveJoystick; }
+    UVirtualJoystick* GetAimJoystick() const { return AimJoystick; }
+
+private:
+    TWeakObjectPtr<ACombatCharacter> TargetBoss; //추격하는 보스. 화살표 쓰기 위함
+
+    // Tick - 보스 추격
+    void UpdateBossArrow(); 
 };

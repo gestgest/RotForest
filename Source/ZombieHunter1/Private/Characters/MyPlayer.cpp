@@ -760,15 +760,15 @@ void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
         const ESlateVisibility JoystickVis =
             IsMobilePlatform() ? ESlateVisibility::Visible : ESlateVisibility::Collapsed;
 
-        if (CanvasWidget->MoveJoystick)
+        if (UVirtualJoystick* MoveStick = CanvasWidget->GetMoveJoystick())
         {
-            CanvasWidget->MoveJoystick->SetVisibility(JoystickVis);
-            CanvasWidget->MoveJoystick->OnJoystickMoved.AddUniqueDynamic(this, &AMyPlayer::OnMoveJoystickMoved);
+            MoveStick->SetVisibility(JoystickVis);
+            MoveStick->OnJoystickMoved.AddUniqueDynamic(this, &AMyPlayer::OnMoveJoystickMoved);
         }
-        if (CanvasWidget->AimJoystick)
+        if (UVirtualJoystick* AimStick = CanvasWidget->GetAimJoystick())
         {
-            CanvasWidget->AimJoystick->SetVisibility(JoystickVis);
-            CanvasWidget->AimJoystick->OnJoystickMoved.AddUniqueDynamic(this, &AMyPlayer::OnAimJoystickMoved);
+            AimStick->SetVisibility(JoystickVis);
+            AimStick->OnJoystickMoved.AddUniqueDynamic(this, &AMyPlayer::OnAimJoystickMoved);
         }
 
         // 위젯이 막 연결된 시점에 현재 HP 기준으로 사망 UI/HP바를 동기화한다.

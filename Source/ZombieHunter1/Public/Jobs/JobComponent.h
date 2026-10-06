@@ -89,15 +89,13 @@ public:
 
 
 protected:
-	/** 소유 캐릭터 — 플레이어 또는 동료 AI (InitializeForOwner에서 설정) */
+	// 소유 캐릭터 — 플레이어 또는 동료 AI (InitializeForOwner에서 설정) 
 	UPROPERTY()
 	ACombatCharacter* OwnerCharacter = nullptr;
-
 
 	// 동료 AI 교전 사거리(cm) — 적이 이 거리 안에 들면 멈춰서 공격한다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Combat")
 	float EngageRange = 500.0f;
-
 
 	//직업의 공격 판정 범위를 화면에 그린다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Debug")

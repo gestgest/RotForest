@@ -12,6 +12,7 @@
 #include "Characters/Companion.h" // 마을 경비병 (경비 모드로 스폰)
 #include "Characters/Villager.h" // 마을 주민 (비전투 배회 NPC)
 #include "Characters/Boss.h" 
+#include "Components/CapsuleComponent.h"
 
 
 //초기
@@ -768,7 +769,15 @@ void AInfiniteMapGenerator::SetupZombieVillage(bool bIsPOIChunk, FPOIInfo& POI, 
 		VillagerParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 		VillagerParams.Owner = this;
 
-		ABoss* Boss = GetWorld()->SpawnActor<ABoss>(BossClass, Center, FRotator::ZeroRotator, VillagerParams);
+		// 캡슐 중심 기준이라 반높이만큼 띄워야 바닥에 선다
+		float HalfHeight = 100.f;
+		if (const ACharacter* BossCDO = BossClass->GetDefaultObject<ACharacter>())
+		{
+			HalfHeight = BossCDO->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+		}
+		const FVector SpawnLoc = Center + FVector(0.f, 0.f, HalfHeight + 5.f);
+
+		ABoss* Boss = GetWorld()->SpawnActor<ABoss>(BossClass, SpawnLoc, FRotator::ZeroRotator, VillagerParams);
 		if (!Boss)
 		{
 			// BossClass가 ABoss 계열이 아니거나 스폰이 막힌 경우 — 아래에서 널 역참조로 죽지 않게 막는다

@@ -80,13 +80,20 @@ void AEnemy::TrackingPlayer()
 		return;
 	}
 
-	// 갱신 간격 제한 — BP가 매 프레임 호출해도 여기서 걸러진다.
+	// 갑자기 보스가 행동을 위해 멈춘경우
+	if (!CanTrack())
+	{
+		return;
+	}
+
+
 	// 경로 재요청은 프레임 단위로 할 필요가 없고, 매 프레임 하면 적 수만큼 길찾기 비용이 쌓인다.
 	const float Now = GetWorld()->GetTimeSeconds();
 	if (Now < NextTrackTime)
 	{
 		return;
 	}
+
 	if(IsDead)
 	{
 		return;
@@ -342,6 +349,11 @@ void AEnemy::WakeFromPool()
 		Move->SetMovementMode(MOVE_Walking);
 	}
 	// 캡슐 콜리전 복구는 OnRevive(SetHP로 부활 전환 시)가 담당한다.
+}
+
+void AEnemy::ResetForSpawn()
+{
+	SetHP(GetMaxHP()); // 죽었던 적이면 OnRevive까지 발동
 }
 
 void AEnemy::TeleportForLeash(const FVector& NewLocation)
