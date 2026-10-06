@@ -1,11 +1,13 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
+#include "Characters/Boss.h"
 
 #include "UI/MyCanvas.h"
 #include "UI/DeathPanelWidget.h" 
 #include "UI/ExitPanelWidget.h"
 #include "UI/VirtualJoystick.h"
 #include "UI/BossStatusWidget.h"
+
 #include "kismet/GameplayStatics.h"
 #include "Engine/Engine.h" //GEngine 화면 디버그
 
@@ -22,6 +24,10 @@ void UMyCanvas::NativeConstruct()
     {
         ExitPanel->SetVisibility(ESlateVisibility::Collapsed);
     }
+    if (BossArrow)
+    {
+        BossArrow->SetVisibility(ESlateVisibility::Collapsed);
+    }
 
     // 모바일(안드로이드/iOS)에서만 터치 조이스틱 표시, PC에선 숨김.
     // 위젯이 만들어질 때 자동 실행되므로 BP가 SetCanvasWidget을 호출하든 말든 항상 적용됨.
@@ -34,6 +40,14 @@ void UMyCanvas::NativeConstruct()
     if (AimJoystick)  { AimJoystick->SetVisibility(JoystickVis); }
 
 }
+
+void UMyCanvas::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+    UpdateBossArrow();
+}
+
+
 
 void UMyCanvas::UpdateCoinText(int32 Money)
 {
@@ -140,6 +154,8 @@ void UMyCanvas::RemoveItemNotification()
 
 void UMyCanvas::StartBossEncounter(ACombatCharacter* Boss, const FText& BossName)
 {
+    TargetBoss = Boss;
+
     if (BossHPBar)
     {
         BossHPBar->StartEncounter(Boss, BossName);
@@ -148,8 +164,88 @@ void UMyCanvas::StartBossEncounter(ACombatCharacter* Boss, const FText& BossName
 
 void UMyCanvas::EndBossEncounter(ACombatCharacter* Boss)
 {
+    if (TargetBoss.Get() == Boss)
+    {
+        TargetBoss.Reset();
+        if (BossArrow)
+        {
+            BossArrow->SetVisibility(ESlateVisibility::Collapsed);
+        }
+    }
+
     if (BossHPBar)
     {
         BossHPBar->EndEncounter(Boss);
     }
+}
+
+// 화살표 tick 함수
+void UMyCanvas::UpdateBossArrow()
+{
+    if (!BossArrow)
+    {
+        return;
+    }
+
+    ACombatCharacter* Boss = TargetBoss.Get();
+    APlayerController* PC = GetOwningPlayer(); // 2d 스크린 정보 가져오는 용도
+
+    if (!Boss || !PC)
+    {
+        BossArrow->SetVisibility(ESlateVisibility::Collapsed);
+        return;
+    }
+
+    // 화면 관련 코드
+    const float Scale = UWidgetLayoutLibrary::GetViewportScale(this); // DPI => 대충 1920 x 1080이면 1.0 반환 (1080p 기준)
+    const FVector2D Viewport = UWidgetLayoutLibrary::GetViewportSize(this) / Scale;
+    const FVector2D Center = Viewport * 0.5f;
+
+    FVector2D Screen = FVector2D::ZeroVector;;
+    const bool bInFront = UGameplayStatics::ProjectWorldToScreen(PC, Boss->GetActorLocation(), Screen);
+
+    if (!bInFront)
+    {
+        return;
+    }
+    Screen /= Scale;
+
+    const bool bOnScreen = bInFront
+        && Screen.X >= 0.0f && Screen.X <= Viewport.X
+        && Screen.Y >= 0.0f && Screen.Y <= Viewport.Y;
+
+    // 화면안에 보스가 있다면
+    if (bOnScreen)
+    {
+        BossArrow->SetVisibility(ESlateVisibility::Collapsed);
+        return;
+    }
+
+    // 방향
+    FVector2D Dir = Screen - Center; // 나눗셈 제로 오류 방지
+    if (Dir.IsNearlyZero())
+    {
+        return;
+    }
+
+    // 보스를 향한 화살표 벡터
+    const FVector2D Half = Center - FVector2D(BossArrowEdgeMargin, BossArrowEdgeMargin);
+
+    // 위, 오른쪽 벽면중에 가장 가까운 벽을 찾기
+    // KINDA_SMALL_NUMBER => 0.000000000
+    const float T = FMath::Min(
+        Half.X / FMath::Max(FMath::Abs(Dir.X), KINDA_SMALL_NUMBER),
+        Half.Y / FMath::Max(FMath::Abs(Dir.Y), KINDA_SMALL_NUMBER)
+    );
+
+    if (UCanvasPanelSlot* ArrowSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(BossArrow))
+    {
+        ArrowSlot->SetPosition(Center + Dir * T);
+    }
+
+
+    // 방향 표시
+    BossArrow->SetRenderTransformAngle(FMath::RadiansToDegrees(FMath::Atan2(Dir.Y, Dir.X)));
+    BossArrow->SetVisibility(ESlateVisibility::HitTestInvisible);
+
 }

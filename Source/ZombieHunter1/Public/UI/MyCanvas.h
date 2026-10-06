@@ -35,6 +35,7 @@ class ZOMBIEHUNTER1_API UMyCanvas : public UUserWidget
 
 protected:
     virtual void NativeConstruct() override;
+    virtual void NativeTick(const FGeometry& MyGeometry, float IndDeltaTime) override;
 
 
     // [Variables]
@@ -75,6 +76,14 @@ protected:
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     UBossStatusWidget* BossHPBar;
 
+    UPROPERTY(meta =(BindWidgetOptional))
+    UImage* BossArrow;
+
+    // 마우스 가장자리에서 띄울 거리
+    UPROPERTY(EditAnywhere, Category = "Boss")
+    float BossArrowEdgeMargin = 60.0f;
+
+
 
 public:
     // 사망 패널 표시/숨김. 플레이어 OnDeath/OnRevive(및 SetHP 동기화)가 호출한다.
@@ -100,4 +109,9 @@ public:
     UVirtualJoystick* GetMoveJoystick() const { return MoveJoystick; }
     UVirtualJoystick* GetAimJoystick() const { return AimJoystick; }
 
+private:
+    TWeakObjectPtr<ACombatCharacter> TargetBoss; //추격하는 보스. 화살표 쓰기 위함
+
+    // Tick - 보스 추격
+    void UpdateBossArrow(); 
 };

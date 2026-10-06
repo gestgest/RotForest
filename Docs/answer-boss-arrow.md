@@ -100,7 +100,7 @@ void UMyCanvas::UpdateBossArrow()
     const FVector2D Viewport = UWidgetLayoutLibrary::GetViewportSize(this) / Scale;
     const FVector2D Center = Viewport * 0.5f;
 
-    FVector2D Screen;
+    FVector2D Screen = FVector2D::ZeroVector;
     const bool bInFront = UGameplayStatics::ProjectWorldToScreen(PC, Boss->GetActorLocation(), Screen);
     Screen /= Scale;
 
@@ -114,10 +114,19 @@ void UMyCanvas::UpdateBossArrow()
         return;
     }
 
-    FVector2D Dir = Screen - Center;
-    if (!bInFront)
+    FVector2D Dir;
+    if (bInFront)
     {
-        Dir = -Dir;
+        Dir = Screen - Center;
+    }
+    else
+    {
+        // 카메라 뒤 => 카메라 기준 좌우/상하로 방향만 구함
+        const FVector ToBoss = Boss->GetActorLocation() - PC->PlayerCameraManager->GetCameraLocation();
+        const FQuat CamQuat = PC->PlayerCameraManager->GetCameraRotation().Quaternion();
+        Dir = FVector2D(
+            FVector::DotProduct(ToBoss, CamQuat.GetRightVector()),
+            -FVector::DotProduct(ToBoss, CamQuat.GetUpVector()));
     }
     if (Dir.IsNearlyZero())
     {
