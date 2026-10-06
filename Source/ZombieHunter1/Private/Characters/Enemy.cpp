@@ -80,13 +80,20 @@ void AEnemy::TrackingPlayer()
 		return;
 	}
 
-	// 갱신 간격 제한 — BP가 매 프레임 호출해도 여기서 걸러진다.
+	// 갑자기 보스가 행동을 위해 멈춘경우
+	if (!CanTrack())
+	{
+		return;
+	}
+
+
 	// 경로 재요청은 프레임 단위로 할 필요가 없고, 매 프레임 하면 적 수만큼 길찾기 비용이 쌓인다.
 	const float Now = GetWorld()->GetTimeSeconds();
 	if (Now < NextTrackTime)
 	{
 		return;
 	}
+
 	if(IsDead)
 	{
 		return;

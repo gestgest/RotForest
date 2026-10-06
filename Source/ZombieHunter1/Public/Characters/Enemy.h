@@ -40,8 +40,8 @@ protected:
 	virtual void OnDeath() override;
 	virtual void OnRevive() override;
 
+
 public:
-	
 	virtual void Tick(float DeltaTime) override;
 	//ㄴ TrackingPlayer
 
@@ -114,8 +114,12 @@ public:
 
 	//Enemy를 깨우는 함수?
 	void OnAIController();
-private:
 
+protected:
+	// 추격 가능한지 => 보스에서 갑자기 멈추는 기능으로 참조
+	virtual bool CanTrack() const { return true; }
+
+private:
 	bool hit();
 	void DebugHPShow();
 

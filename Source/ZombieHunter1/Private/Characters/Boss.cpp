@@ -1,9 +1,18 @@
 ﻿#include "Characters/Boss.h"
 #include "Characters/MyPlayer.h"
+#include "Characters/CombatRegistrySubsystem.h"
+
+#include "GameFramework/CharacterMovementComponent.h"
+
+#include "Engine/OverlapResult.h"
+
 #include "InfiniteMapGenerator.h" // 클리어 기록을 남길 곳 (POIStates)
+
 #include "Items/WeaponPickup.h" // 바닥에 떨굴 전리품
 #include "Items/ItemDataAsset.h"
+
 #include "UI/MyCanvas.h"
+
 #include "Kismet/GameplayStatics.h" // FinishSpawningActor
 
 
@@ -11,6 +20,7 @@ void ABoss::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     UpdateEncounter();
+    UpdatePattern(DeltaTime);
 }
 
 void ABoss::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -31,6 +41,64 @@ void ABoss::SetHome(AInfiniteMapGenerator* InGenerator, const FIntPoint& InCente
     HomeGenerator = InGenerator;
     HomeChunk = InCenterChunk;
     bHomeSet = (InGenerator != nullptr);
+}
+
+void ABoss::UpdatePattern(float DeltaTime)
+{
+    // 죽었거나 전투중이 아닌 경우
+    if (IsDead || !bInCombat)
+    {
+        if (Pattern != EBossPattern::Chase)
+        {
+            SetPattern(EBossPattern::Chase);
+        }
+        return;
+    }
+
+    PatternTime += DeltaTime;
+
+    switch (Pattern)
+    {
+    case EBossPattern::Chase:
+        ChargeRemainTime -= DeltaTime;
+
+        // 돌진 쿨타임
+        if (ChargeRemainTime <= 0.0f)
+        {
+            ChargeRemainTime = ChargeCheckInterval;
+            TryStartCharge();
+        }
+        break;
+
+    // 대기
+    case EBossPattern::Windup:
+        if (PatternTime >= WindupTime)
+        {
+            // 충분히 쉬었다면 돌진
+            SetPattern(EBossPattern::Charge);
+        }
+        break;
+
+    case EBossPattern::Charge:
+        TickCharge();
+        if (PatternTime >= ChargeTime)
+        {
+            SetPattern(EBossPattern::Recover);
+        }
+        break;
+    case EBossPattern::Recover:
+        if (PatternTime >= RecoverTime)
+        {
+            SetPattern(EBossPattern::Chase);
+        }
+        break;
+    }
+}
+
+
+bool ABoss::CanTrack() const
+{
+    return Pattern == EBossPattern::Chase;
 }
 
 void ABoss::OnDeath()
@@ -132,8 +200,158 @@ void ABoss::UpdateEncounter()
     }
 }
 
-UMyCanvas * ABoss::GetPlayerCanvas() const 
+UMyCanvas* ABoss::GetPlayerCanvas() const 
 {
     AMyPlayer* Player = Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(this, 0));
     return Player ? Player->GetCanvasWidget() : nullptr;
+}
+
+void ABoss::SetPattern(EBossPattern NewPattern)
+{
+    Pattern = NewPattern;
+    PatternTime = 0.0f; // 일단 패턴 시간 초기화
+
+    AAIController* AI = Cast<AAIController>(GetController());
+    UCharacterMovementComponent* Move = GetCharacterMovement();
+
+    switch (NewPattern) {
+    case EBossPattern::Chase:
+        Move->MaxWalkSpeed = TempWalkSpeed;
+        PatternTarget.Reset();
+        ChargeRemainTime = ChargeCheckInterval;
+        break;
+
+    case EBossPattern::Windup:
+        TempWalkSpeed = Move->MaxWalkSpeed;
+
+        // 멈춰
+        if (AI)
+        {
+            AI->StopMovement(); // 명령 취소 (관성은 있음)
+            AI->SetFocus(PatternTarget.Get());
+        }
+        Move->StopMovementImmediately(); // 즉시 속도 0
+
+        if (WindupMontage)
+        {
+            PlayAnimMontage(WindupMontage);
+        }
+        break;
+
+    case EBossPattern::Charge:
+        if (AI)
+        {
+            AI->ClearFocus(EAIFocusPriority::Gameplay);
+        }
+
+        ChargeDir = GetActorForwardVector();
+        if (ACombatCharacter* Target = PatternTarget.Get())
+        {
+            ChargeDir = Target->GetActorLocation() - GetActorLocation();
+        }
+        ChargeDir.Z = 0.0f;
+        ChargeDir = ChargeDir.GetSafeNormal(); // 정규화
+
+        SetActorRotation(ChargeDir.Rotation()); // 벡터 -> 쿼터니언
+        Move->MaxWalkSpeed = ChargeSpeed;
+        bChargeHit = false;
+        if (ChargeMontage)
+        {
+            PlayAnimMontage(ChargeMontage);
+        }
+        break;
+    case EBossPattern::Recover:
+        Move->MaxWalkSpeed = TempWalkSpeed;
+        Move->StopMovementImmediately(); //멈추기
+        break;
+    }
+
+}
+
+// 돌진 주사위 시도
+void ABoss::TryStartCharge()
+{
+    UAnimInstance* Anim = GetMesh()->GetAnimInstance();
+    if (Anim && Anim->IsAnyMontagePlaying())
+    {
+        return;
+    }
+
+    // 랜덤에 실패한 경우
+    if (FMath::FRand() > ChargeChance)
+    {
+        return;
+    }
+
+    UCombatRegistrySubsystem* Reg = GetWorld()->GetSubsystem<UCombatRegistrySubsystem>();
+    if (!Reg)
+    {
+        return;
+    }
+
+    ACombatCharacter* Target = Reg->FindNearestOfEnemy(GetActorLocation(), ETeam::Ally, ChargeMaxDistance);
+    if (!Target)
+    {
+        return;
+    }
+
+    // 거리가 가깝다면
+    if (FVector::Dist2D(GetActorLocation(), Target->GetActorLocation()) < ChargeMinDistance)
+    {
+        return;
+    }
+    PatternTarget = Target;
+    SetPattern(EBossPattern::Windup);
+}
+
+// 돌진중... => 닿았다면 피해를 입히는 함수
+void ABoss::TickCharge()
+{
+    AddMovementInput(ChargeDir, 1.0f);
+
+    // 한번 때린 경우
+    if (bChargeHit)
+    {
+        return;
+    }
+
+    TArray<FOverlapResult> Overlaps;
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this); //자기자신은 무시
+
+    GetWorld()->OverlapMultiByChannel(
+        Overlaps, // output
+        GetActorLocation(),
+        FQuat::Identity,
+        ECC_Pawn,
+        FCollisionShape::MakeSphere(ChargeHitRadius),
+        Params
+    );
+
+    for (const FOverlapResult& Overlap : Overlaps)
+    {
+        // 맞는 사람
+        ACombatCharacter* Victim = Cast<ACombatCharacter>(Overlap.GetActor());
+
+        // 그 캐릭터가 죽지 않은 경우, 아군이 아닌 경우 => 맞아버림
+        if (Victim && !Victim->GetIsDead() && Victim->TeamType != TeamType)
+        {
+            Victim->AddHP(-Damage * ChargeDamageMultiplier);
+
+            Victim->LaunchCharacter(ChargeDir * ChargePower + FVector(0, 0, ChargeDamagedHeight), true, true);
+            bChargeHit = true;
+
+            if (AttackSound)
+            {
+                continue;
+            }
+
+            // 사운드
+            UGameplayStatics::PlaySoundAtLocation(
+                this, //GetWorld 참조용. 플레이어 뿐만 아니라 월드에 있는 아무 오브젝트 사용 가능
+                AttackSound,
+                this->GetActorLocation()
+            );
+        }
+    }
 }
