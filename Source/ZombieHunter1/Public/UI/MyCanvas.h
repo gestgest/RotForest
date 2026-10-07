@@ -45,11 +45,11 @@ protected:
 
 
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-    UImage* HPBar;
+    UProgressBar* HPBar;
 
 
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-    UImage* HPDelayBar;
+    UProgressBar* HPDelayBar;
 
 
 
@@ -91,18 +91,21 @@ protected:
     float BossArrowEdgeMargin = 60.0f;
 
 
+
     // [HP]
     UPROPERTY(EditAnywhere, Category = "Player|HPBar")
-    float HPBarFullWidth = 500.0f;
+    float HPIntroTime = 500.0f;
 
     UPROPERTY(EditAnywhere, Category = "Player|HPBar")
-    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
-    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
-    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
-    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
+    float HPHealFillSpeed = 0.4f;
 
+    // 노란바가 버티는 시간
+    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
+    float HPHoldDelayBarTime = 0.4f;
 
-
+    // 노란피 줄어드는 스피드
+    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
+    float HPDelayDrainSpeed = 0.4f;
 
 
 public:

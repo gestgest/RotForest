@@ -78,9 +78,9 @@ void UMyCanvas::UpdateExp(int32 Level, int32 Exp, int32 ExpToNext)
 
 void UMyCanvas::SetProgressUISize(FVector2D size)
 {
-    if (hp_bar)
+    if (HPBar)
     {
-        UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(hp_bar);
+        UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(HPBar);
         if (CanvasSlot)
         {
             CanvasSlot->SetSize(size);
