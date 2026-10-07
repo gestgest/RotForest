@@ -43,8 +43,15 @@ protected:
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
     UTextBlock* CoinText;
 
+
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-    UImage* hp_bar;
+    UImage* HPBar;
+
+
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+    UImage* HPDelayBar;
+
+
 
     // BP_Canvas에 배치한 조이스틱 인스턴스. 이름이 MoveJoystick / AimJoystick 이어야 자동 연결됨
     UPROPERTY(meta = (BindWidgetOptional))
@@ -82,6 +89,19 @@ protected:
     // 마우스 가장자리에서 띄울 거리
     UPROPERTY(EditAnywhere, Category = "Boss")
     float BossArrowEdgeMargin = 60.0f;
+
+
+    // [HP]
+    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
+    float HPBarFullWidth = 500.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
+    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
+    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
+    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
+    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
+
+
 
 
 

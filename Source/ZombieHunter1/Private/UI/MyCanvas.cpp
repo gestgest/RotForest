@@ -1,12 +1,13 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Characters/Boss.h"
 
 #include "UI/MyCanvas.h"
 #include "UI/DeathPanelWidget.h" 
 #include "UI/ExitPanelWidget.h"
 #include "UI/VirtualJoystick.h"
 #include "UI/BossStatusWidget.h"
+
+#include "Characters/Boss.h"
 
 #include "kismet/GameplayStatics.h"
 #include "Engine/Engine.h" //GEngine 화면 디버그
