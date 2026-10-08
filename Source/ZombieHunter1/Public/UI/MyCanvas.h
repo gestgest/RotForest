@@ -94,7 +94,7 @@ protected:
 
     // [HP]
     UPROPERTY(EditAnywhere, Category = "Player|HPBar")
-    float HPIntroTime = 500.0f;
+    float HPIntroTime = 0.4f;
 
     UPROPERTY(EditAnywhere, Category = "Player|HPBar")
     float HPHealFillSpeed = 0.4f;
@@ -118,7 +118,7 @@ public:
 
 
     void UpdateCoinText(int32 Money);
-    void SetProgressUISize(FVector2D size);
+    void SetHPPercent(float Percent);
 
     // 경험치 HUD 갱신 — AMyPlayer::UpdateExpUI가 호출. 위젯이 배치돼 있을 때만 그린다. 
     void UpdateExp(int32 Level, int32 Exp, int32 ExpToNext);
@@ -135,6 +135,15 @@ public:
 private:
     TWeakObjectPtr<ACombatCharacter> TargetBoss; //추격하는 보스. 화살표 쓰기 위함
 
-    // Tick - 보스 추격
+    float HPTargetPercent = 0.0f; // 실제 퍼센트
+    float HPCurrentPercent = 0.0f; // 빨간색 바
+    float HPDelayPercent = 0.0f; // 노란색 바
+    float HPIntroCap = 0.0f;  // 처음에 HP 촥 오를때 필요한 변수
+    float HPHoldDelayRemainTime = 0.0f; // 노란색 바가 버티는 시간
+
+
+    // [Tick]
+    void TickHPBar(float DeltaTime);
+    // 보스 추격
     void UpdateBossArrow(); 
 };

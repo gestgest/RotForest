@@ -33,7 +33,7 @@
 	UProgressBar* HPBar;
 
 	// 잔상(노란) 바
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UProgressBar* HPDelayBar;
 ```
 
@@ -88,10 +88,7 @@ private 블록(`TWeakObjectPtr<ACombatCharacter> TargetBoss;` 아래):
 	HPCurrentPercent = 0.0f;
 	HPDelayPercent = 0.0f;
 	HPBar->SetPercent(0.0f);
-	if (HPDelayBar)
-	{
-		HPDelayBar->SetPercent(0.0f);
-	}
+	HPDelayBar->SetPercent(0.0f);
 ```
 
 ## 5. NativeTick — MyCanvas.cpp:44
@@ -154,10 +151,7 @@ void UMyCanvas::TickHPBar(float DeltaTime)
     }
 
     HPBar->SetPercent(HPCurrentPercent);
-    if (HPDelayBar)
-    {
-        HPDelayBar->SetPercent(HPDelayPercent);
-    }
+    HPDelayBar->SetPercent(HPDelayPercent);
 }
 ```
 
@@ -188,16 +182,52 @@ void AMyPlayer::UpdateHPUI()
 ---
 
 ## 9. 에디터 작업 — WBP_Canvas
-1. 기존 `hp_bar`(Image)를 지우고 **Progress Bar** 두 개를 배치: `HPDelayBar`, `HPBar`
-2. Hierarchy 순서: `HPDelayBar`가 위(= 먼저 그려짐), `HPBar`가 아래. 노란바가 뒤에 깔려야 한다.
-3. 두 바의 Position/Size를 똑같이 맞춘다.
-4. `HPBar`
-   - Style > Background Image > Tint 알파 0 => 배경 투명 (안 하면 노란바를 가림)
-   - Fill Color and Opacity: 빨강
-5. `HPDelayBar`
-   - Background: 어두운색 (빈 칸 배경 역할)
-   - Fill Color and Opacity: 노랑 (예: `1, 0.8, 0.2`)
-6. 두 바 모두 Bar Fill Type: Left to Right, Percent: 0
+기준: HUD 시안 캔버스 `모바일 · 추천 — 위쪽 한 줄` (1280 시안 × 1.5 = 1920×1080 기준 값)
+
+### 9-1. 계층 구조
+기존 `hp_bar`(Image)는 삭제. `hp_background`는 테두리로 재사용.
+```
+[Canvas Panel] (루트)
+ └ SafeZone_Top          ← 노치/펀치홀 회피
+    └ PlayerStatusPanel  (Canvas Panel)
+       ├ Portrait        (Image)
+       ├ hp_background   (Image)        ← 테두리
+       ├ HPDelayBar      (Progress Bar) ← 노란 잔상
+       ├ HPBar           (Progress Bar) ← 빨강
+       ├ ExpBar          (Progress Bar)
+       └ ExpText         (Text)
+```
+Hierarchy는 **위가 먼저 그려짐(뒤)**. `hp_background → HPDelayBar → HPBar` 순서를 지킨다.
+
+### 9-2. 배치 (전부 Anchor: 왼쪽 위, Alignment 0,0)
+| 위젯 | Position | Size | 비고 |
+|---|---|---|---|
+| SafeZone_Top | Anchor 전체 채움, Offset 0 | — | Pad Left/Top만 체크 |
+| PlayerStatusPanel | (90, 36) | 600 × 150 | Size To Content 끔 |
+| Portrait | (0, 0) | 96 × 96 | 초상화 텍스처 없으면 비워둠 |
+| hp_background | (87, 24) | 375 × 33 | 테두리 |
+| HPDelayBar | (91, 28) | 367 × 25 | hp_background 안쪽 4px |
+| HPBar | (91, 28) | 367 × 25 | HPDelayBar와 **완전히 동일** |
+| ExpBar | (100, 66) | 300 × 9 | HP 아래 얇게 |
+| ExpText | (410, 58) | Auto | 글자 크기 14 |
+
+### 9-3. 스타일 (색은 Hex sRGB로 입력)
+| 위젯 | 항목 | 값 |
+|---|---|---|
+| hp_background | Brush Tint | `3A3129` |
+| HPDelayBar | Background Image > Tint | `0D0B09` (빈 칸 배경) |
+| HPDelayBar | Fill Color and Opacity | `D9A441` (노랑) |
+| HPBar | Background Image > Tint | 알파 **0** => 배경 투명 |
+| HPBar | Fill Color and Opacity | `B8321F` (빨강) |
+| ExpBar | Background Image > Tint | `0D0B09` |
+| ExpBar | Fill Color and Opacity | `5A8FB8` (파랑) |
+| ExpText | Color | `A89A85`, 그림자 켜기 |
+
+공통: Bar Fill Type `Left to Right`, Percent `0`, Fill Image의 Draw As `Box` 또는 `Image`.
+
+### 9-4. 같이 확인
+- 화면 위 가운데(약 X 600~1320)는 보스바 자리. PlayerStatusPanel 오른쪽 끝(약 X 690)을 넘기지 않는다.
+- 위쪽 가장자리는 보스 화살표가 지나가는 자리라 `BossArrowEdgeMargin`(60)보다 바가 아래에 있으면 겹치지 않는다.
 
 ## 확인 사항
 - HUD가 뜰 때 바가 0에서 차오르는지

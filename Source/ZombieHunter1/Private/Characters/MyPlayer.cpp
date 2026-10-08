@@ -623,7 +623,7 @@ void AMyPlayer::UpdateHPUI()
 {
     if (CanvasWidget)
     {
-        CanvasWidget->SetProgressUISize(FVector2D(HP * 500 / FMath::Max(1, MaxHP), 50));
+        CanvasWidget->SetHPPercent((float)HP / (float)FMath::Max(1, MaxHP));
     }
 }
 

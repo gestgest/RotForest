@@ -12,6 +12,7 @@
 #include "kismet/GameplayStatics.h"
 #include "Engine/Engine.h" //GEngine 화면 디버그
 
+// 초기 함수
 void UMyCanvas::NativeConstruct()
 {
     Super::NativeConstruct();
@@ -40,11 +41,21 @@ void UMyCanvas::NativeConstruct()
     if (MoveJoystick) { MoveJoystick->SetVisibility(JoystickVis); }
     if (AimJoystick)  { AimJoystick->SetVisibility(JoystickVis); }
 
+
+    //HP 초기화
+    
+    HPIntroCap = 0.0f;
+    HPCurrentPercent = 0.0f;
+    HPDelayPercent = 0.0f;
+    HPBar->SetPercent(0.0f);
+    HPDelayBar->SetPercent(0.0f);
 }
+
 
 void UMyCanvas::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
+    TickHPBar(InDeltaTime);
     UpdateBossArrow();
 }
 
@@ -76,17 +87,16 @@ void UMyCanvas::UpdateExp(int32 Level, int32 Exp, int32 ExpToNext)
     }
 }
 
-void UMyCanvas::SetProgressUISize(FVector2D size)
+void UMyCanvas::SetHPPercent(float Percent)
 {
-    if (HPBar)
+    const float NewPercent = FMath::Clamp(Percent, 0.0f, 1.0f);
+
+    // 피해를 받았다면 잠시 붙 잡는다 => Hold
+    if (NewPercent < HPTargetPercent)
     {
-        UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(HPBar);
-        if (CanvasSlot)
-        {
-            CanvasSlot->SetSize(size);
-            //UE_LOG(LogTemp, Log, TEXT("hp_bar size set to: %s"), *size.ToString());
-        }
+        HPHoldDelayRemainTime = HPHoldDelayBarTime;
     }
+    HPTargetPercent = NewPercent;
 }
 
 // 사망 패널 표시/숨김 — 패널 위젯 하나만 토글하면 안의 텍스트/버튼이 전부 따라간다.
@@ -178,6 +188,46 @@ void UMyCanvas::EndBossEncounter(ACombatCharacter* Boss)
     {
         BossHPBar->EndEncounter(Boss);
     }
+}
+
+
+void UMyCanvas::TickHPBar(float DeltaTime)
+{
+    // 초반 확 차오르는 HP 속도 계산
+    HPIntroCap = FMath::FInterpConstantTo(HPIntroCap, 1.0f, DeltaTime, 1.0f / FMath::Max(HPIntroTime, 0.01f));
+    const float Goal = FMath::Min(HPTargetPercent, HPIntroCap);
+
+    // 빨간바 => 피해나 초반
+    if (Goal < HPCurrentPercent || HPIntroCap < 1.0f)
+    {
+        // 피해 받으면 즉시
+        // 그러나 처음일경우 Goal값이 프레임 단위임
+        HPCurrentPercent = Goal; 
+    }
+    else  // 회복
+    {
+        HPCurrentPercent = FMath::FInterpConstantTo(HPCurrentPercent, Goal, DeltaTime, HPHealFillSpeed);
+    }
+
+    // 노란바
+    if (HPDelayPercent <= HPCurrentPercent) // 회복
+    {
+        HPDelayPercent = HPCurrentPercent;
+    }
+    else if (HPHoldDelayRemainTime > 0.0f) // 버티는 중
+    {
+        HPHoldDelayRemainTime -= DeltaTime;
+    }
+    else
+    {
+        HPDelayPercent = FMath::FInterpConstantTo(
+            HPDelayPercent, HPCurrentPercent, DeltaTime, HPDelayDrainSpeed);
+    }
+
+    // 세팅
+    HPBar->SetPercent(HPCurrentPercent);
+    HPDelayBar->SetPercent(HPDelayPercent);
+
 }
 
 // 화살표 tick 함수
