@@ -17,6 +17,7 @@ class UVirtualJoystick;
 class UDeathPanelWidget;
 class UExitPanelWidget;
 class UBossStatusWidget;
+class UHPBar;
 class ACombatCharacter;
 
 // 알림 메시지 종류. 색은 UMyCanvas가 정한다 — 호출부는 "무슨 일인지"만 넘긴다.
@@ -43,14 +44,12 @@ protected:
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
     UTextBlock* CoinText;
 
+    // [HP]
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+    UHPBar* PlayerHPBar;
 
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-    UProgressBar* HPBar;
-
-
-    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-    UProgressBar* HPDelayBar;
-
+    UBossStatusWidget* BossStatusWidget;
 
 
     // BP_Canvas에 배치한 조이스틱 인스턴스. 이름이 MoveJoystick / AimJoystick 이어야 자동 연결됨
@@ -80,8 +79,6 @@ protected:
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     UExitPanelWidget* ExitPanel;
 
-    UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
-    UBossStatusWidget* BossHPBar;
 
     UPROPERTY(meta =(BindWidgetOptional))
     UImage* BossArrow;
@@ -90,22 +87,6 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Boss")
     float BossArrowEdgeMargin = 60.0f;
 
-
-
-    // [HP]
-    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
-    float HPIntroTime = 0.4f;
-
-    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
-    float HPHealFillSpeed = 0.4f;
-
-    // 노란바가 버티는 시간
-    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
-    float HPHoldDelayBarTime = 0.4f;
-
-    // 노란피 줄어드는 스피드
-    UPROPERTY(EditAnywhere, Category = "Player|HPBar")
-    float HPDelayDrainSpeed = 0.4f;
 
 
 public:
@@ -135,15 +116,7 @@ public:
 private:
     TWeakObjectPtr<ACombatCharacter> TargetBoss; //추격하는 보스. 화살표 쓰기 위함
 
-    float HPTargetPercent = 0.0f; // 실제 퍼센트
-    float HPCurrentPercent = 0.0f; // 빨간색 바
-    float HPDelayPercent = 0.0f; // 노란색 바
-    float HPIntroCap = 0.0f;  // 처음에 HP 촥 오를때 필요한 변수
-    float HPHoldDelayRemainTime = 0.0f; // 노란색 바가 버티는 시간
-
-
     // [Tick]
-    void TickHPBar(float DeltaTime);
     // 보스 추격
     void UpdateBossArrow(); 
 };
