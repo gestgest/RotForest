@@ -326,8 +326,12 @@ void ACombatCharacter::UpdateHPBar()
 		Bar->SetHPPercent(MaxHP > 0 ? (float)HP / (float)MaxHP : 0.0f);
 	}
 
+	// 아군: 살아있으면 항상 / 적: 맞았을 때만
+	const bool bDamaged = HP < MaxHP;
+	const bool bShow = !IsDead && (TeamType == ETeam::Ally || bDamaged);
+
 	// 죽으면 시체 위에 바가 남지 않게 숨긴다. 풀 재사용/부활(SetHP>0) 시 다시 보인다.
-	HPBarComponent->SetVisibility(!IsDead);
+	HPBarComponent->SetVisibility(bShow);
 }
 
 void ACombatCharacter::SetDead(bool bNewDead)

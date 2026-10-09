@@ -5,42 +5,41 @@
 ## 지금 상태 vs 목표
 ```
 지금 : AMyPlayer::UpdateHPUI ─▶ MyCanvas::SetProgressUISize(FVector2D(HP*500/MaxHP, 50))
-                                 └▶ 슬롯 Size 즉시 대입. 애니메이션 없음, 즉시 끊김
+                                 └▶ UImage 슬롯 Size 즉시 대입. 애니메이션 없음
 
 목표 : AMyPlayer::UpdateHPUI ─▶ MyCanvas::SetHPPercent(HP/MaxHP)  = 목표값만 저장
        MyCanvas::NativeTick  ─▶ TickHPBar(DeltaTime)
                                  ├ IntroCap  : HUD 뜰 때 0 → 현재 HP까지 차오름
-                                 ├ hp_bar       (빨강) : 피해는 즉시, 회복은 천천히 차오름
-                                 └ hp_bar_delay (노랑) : 피해 후 0.4초 버티고 따라 내려옴
+                                 ├ HPBar      (빨강) : 피해는 즉시, 회복은 천천히 차오름
+                                 └ HPDelayBar (노랑) : 피해 후 0.4초 버티고 따라 내려옴
 ```
 
-BossStatusWidget과 다른 점은 **바를 ProgressBar가 아니라 UImage 슬롯 폭으로 그린다**는 것 하나뿐.
-`SetPercent(P)` 자리에 `ApplyHPBarWidth(Bar, P)`가 들어간다.
+`hp_bar`(UImage)를 **UProgressBar로 교체**한다. BossStatusWidget과 같은 방식이라 폭/높이 계산이 필요 없다.
 
-순서: 1~3(헤더) → 4~8(cpp) → 9(플레이어 연결) → 10(에디터 작업)
-**UPROPERTY가 추가되므로 Live Coding 금지, 풀 리빌드.**
+순서: 1~3(헤더) → 4~7(cpp) → 8(플레이어 연결) → 9(에디터 작업)
+**UPROPERTY 타입이 바뀌므로 Live Coding 금지, 풀 리빌드.**
 
 ---
 
-## 1. 잔상 바 바인딩 추가 — MyCanvas.h:47 (hp_bar 바로 아래)
+## 1. 바 바인딩 교체 — MyCanvas.h:46
 ```cpp
+	// Before
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UImage* hp_bar;
+```
+```cpp
+	// After
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UProgressBar* HPBar;
 
-	// 잔상(노란) 바. 배치 안 해도 빨간 바만으로 동작
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
-	UImage* hp_bar_delay;
+	// 잔상(노란) 바
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UProgressBar* HPDelayBar;
 ```
 
 ## 2. 튜닝값 — MyCanvas.h:84 (BossArrowEdgeMargin 아래)
 ```cpp
 	// [플레이어 HP바]
-	UPROPERTY(EditAnywhere, Category = "Player|HPBar")
-	float HPBarFullWidth = 500.0f;
-
-	UPROPERTY(EditAnywhere, Category = "Player|HPBar")
-	float HPBarHeight = 50.0f;
-
 	// 0 => 현재 HP까지 차오르는 시간
 	UPROPERTY(EditAnywhere, Category = "Player|HPBar")
 	float HPIntroTime = 0.4f;
@@ -57,8 +56,8 @@ BossStatusWidget과 다른 점은 **바를 ProgressBar가 아니라 UImage 슬�
 	float HPDelayDrainSpeed = 0.4f;
 ```
 
-## 3. 상태 변수 + 함수 선언 — MyCanvas.h:98 / 112
-`SetProgressUISize`를 `SetHPPercent`로 교체한다. public 선언:
+## 3. 함수/상태 변수 — MyCanvas.h:98 / 112
+public:
 ```cpp
 	// Before
 	void SetProgressUISize(FVector2D size);
@@ -79,7 +78,6 @@ private 블록(`TWeakObjectPtr<ACombatCharacter> TargetBoss;` 아래):
 	float HPHoldDelayRemainTime = 0.0f;
 
 	void TickHPBar(float DeltaTime);
-	void ApplyHPBarWidth(UImage* Bar, float Percent);
 ```
 
 ---
@@ -89,8 +87,8 @@ private 블록(`TWeakObjectPtr<ACombatCharacter> TargetBoss;` 아래):
 	HPIntroCap = 0.0f;
 	HPCurrentPercent = 0.0f;
 	HPDelayPercent = 0.0f;
-	ApplyHPBarWidth(hp_bar, 0.0f);
-	ApplyHPBarWidth(hp_bar_delay, 0.0f);
+	HPBar->SetPercent(0.0f);
+	HPDelayBar->SetPercent(0.0f);
 ```
 
 ## 5. NativeTick — MyCanvas.cpp:44
@@ -120,12 +118,13 @@ void UMyCanvas::SetHPPercent(float Percent)
 ```
 
 ## 7. TickHPBar — MyCanvas.cpp (SetHPPercent 아래에 새로 추가)
+BossStatusWidget::TickBar와 같은 로직. 마지막 SetPercent 두 줄만 다르다.
 ```cpp
 void UMyCanvas::TickHPBar(float DeltaTime)
 {
     // 처음 뜰 때 0 => 현재 HP까지 차오름
     HPIntroCap = FMath::FInterpConstantTo(HPIntroCap, 1.0f, DeltaTime, 1.0f / FMath::Max(HPIntroTime, 0.01f));
-    const float Goal = FMath::Min(HPTargetPercent, HPIntroCap); // 목표보다 넘어가는 거 방지
+    const float Goal = FMath::Min(HPTargetPercent, HPIntroCap);
 
     // 빨간바 : 피해는 즉시, 회복은 천천히
     if (Goal < HPCurrentPercent || HPIntroCap < 1.0f)
@@ -151,31 +150,14 @@ void UMyCanvas::TickHPBar(float DeltaTime)
         HPDelayPercent = FMath::FInterpConstantTo(HPDelayPercent, HPCurrentPercent, DeltaTime, HPDelayDrainSpeed);
     }
 
-    ApplyHPBarWidth(hp_bar_delay, HPDelayPercent);
-    ApplyHPBarWidth(hp_bar, HPCurrentPercent);
-}
-```
-
-## 8. ApplyHPBarWidth — MyCanvas.cpp (TickHPBar 아래)
-```cpp
-// ProgressBar의 SetPercent 역할. 슬롯 폭으로 그린다
-void UMyCanvas::ApplyHPBarWidth(UImage* Bar, float Percent)
-{
-    if (!Bar)
-    {
-        return;
-    }
-
-    if (UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(Bar))
-    {
-        CanvasSlot->SetSize(FVector2D(HPBarFullWidth * Percent, HPBarHeight));
-    }
+    HPBar->SetPercent(HPCurrentPercent);
+    HPDelayBar->SetPercent(HPDelayPercent);
 }
 ```
 
 ---
 
-## 9. 플레이어 쪽 호출 교체 — MyPlayer.cpp:620 (UpdateHPUI)
+## 8. 플레이어 쪽 호출 교체 — MyPlayer.cpp:620 (UpdateHPUI)
 ```cpp
 // Before
 void AMyPlayer::UpdateHPUI()
@@ -197,22 +179,58 @@ void AMyPlayer::UpdateHPUI()
 }
 ```
 
-`SetProgressUISize`를 부르는 다른 곳이 없는지 확인 (`SetHP`, `SetCanvasWidget` 경유만 있음).
-
 ---
 
-## 10. 에디터 작업 — WBP_Canvas
-1. `hp_bar`를 복제해서 이름을 **hp_bar_delay**로 바꾼다.
-2. Hierarchy에서 `hp_bar_delay`를 `hp_bar` **위쪽(= 먼저 그려짐)** 으로 옮긴다. 노란바가 뒤에 깔려야 한다.
-3. 두 Image 모두 Canvas 슬롯에서:
-   - Anchors: 왼쪽 (Minimum/Maximum X 동일)
-   - **Alignment X = 0** => 왼쪽 고정, 오른쪽으로 줄어든다. 0.5면 가운데서 양쪽으로 줄어 보인다
-   - Position 동일하게 맞춘다
-4. `hp_bar_delay` 색을 노란색(예: `1, 0.8, 0.2`), `hp_bar`는 빨간색으로.
-5. Size는 코드가 매 프레임 덮으므로 값은 아무래도 상관없다.
+## 9. 에디터 작업 — WBP_Canvas
+기준: HUD 시안 캔버스 `모바일 · 추천 — 위쪽 한 줄` (1280 시안 × 1.5 = 1920×1080 기준 값)
+
+### 9-1. 계층 구조
+기존 `hp_bar`(Image)는 삭제. `hp_background`는 테두리로 재사용.
+```
+[Canvas Panel] (루트)
+ └ SafeZone_Top          ← 노치/펀치홀 회피
+    └ PlayerStatusPanel  (Canvas Panel)
+       ├ Portrait        (Image)
+       ├ hp_background   (Image)        ← 테두리
+       ├ HPDelayBar      (Progress Bar) ← 노란 잔상
+       ├ HPBar           (Progress Bar) ← 빨강
+       ├ ExpBar          (Progress Bar)
+       └ ExpText         (Text)
+```
+Hierarchy는 **위가 먼저 그려짐(뒤)**. `hp_background → HPDelayBar → HPBar` 순서를 지킨다.
+
+### 9-2. 배치 (전부 Anchor: 왼쪽 위, Alignment 0,0)
+| 위젯 | Position | Size | 비고 |
+|---|---|---|---|
+| SafeZone_Top | Anchor 전체 채움, Offset 0 | — | Pad Left/Top만 체크 |
+| PlayerStatusPanel | (90, 36) | 600 × 150 | Size To Content 끔 |
+| Portrait | (0, 0) | 96 × 96 | 초상화 텍스처 없으면 비워둠 |
+| hp_background | (87, 24) | 375 × 33 | 테두리 |
+| HPDelayBar | (91, 28) | 367 × 25 | hp_background 안쪽 4px |
+| HPBar | (91, 28) | 367 × 25 | HPDelayBar와 **완전히 동일** |
+| ExpBar | (100, 66) | 300 × 9 | HP 아래 얇게 |
+| ExpText | (410, 58) | Auto | 글자 크기 14 |
+
+### 9-3. 스타일 (색은 Hex sRGB로 입력)
+| 위젯 | 항목 | 값 |
+|---|---|---|
+| hp_background | Brush Tint | `3A3129` |
+| HPDelayBar | Background Image > Tint | `0D0B09` (빈 칸 배경) |
+| HPDelayBar | Fill Color and Opacity | `D9A441` (노랑) |
+| HPBar | Background Image > Tint | 알파 **0** => 배경 투명 |
+| HPBar | Fill Color and Opacity | `B8321F` (빨강) |
+| ExpBar | Background Image > Tint | `0D0B09` |
+| ExpBar | Fill Color and Opacity | `5A8FB8` (파랑) |
+| ExpText | Color | `A89A85`, 그림자 켜기 |
+
+공통: Bar Fill Type `Left to Right`, Percent `0`, Fill Image의 Draw As `Box` 또는 `Image`.
+
+### 9-4. 같이 확인
+- 화면 위 가운데(약 X 600~1320)는 보스바 자리. PlayerStatusPanel 오른쪽 끝(약 X 690)을 넘기지 않는다.
+- 위쪽 가장자리는 보스 화살표가 지나가는 자리라 `BossArrowEdgeMargin`(60)보다 바가 아래에 있으면 겹치지 않는다.
 
 ## 확인 사항
 - HUD가 뜰 때 바가 0에서 차오르는지
 - 피해를 받으면 빨간바는 즉시 줄고 노란바가 0.4초 뒤 따라오는지
 - 회복하면 천천히 차오르는지
-- 사망 후 ReStart에서 바가 다시 꽉 차는지 (`HPIntroCap`은 이미 1.0이므로 회복 보간으로 올라감)
+- 사망 후 ReStart에서 바가 다시 꽉 차는지

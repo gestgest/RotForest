@@ -17,6 +17,7 @@ class UVirtualJoystick;
 class UDeathPanelWidget;
 class UExitPanelWidget;
 class UBossStatusWidget;
+class UHPBar;
 class ACombatCharacter;
 
 // 알림 메시지 종류. 색은 UMyCanvas가 정한다 — 호출부는 "무슨 일인지"만 넘긴다.
@@ -43,8 +44,13 @@ protected:
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
     UTextBlock* CoinText;
 
+    // [HP]
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-    UImage* hp_bar;
+    UHPBar* PlayerHPBar;
+
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+    UBossStatusWidget* BossStatusWidget;
+
 
     // BP_Canvas에 배치한 조이스틱 인스턴스. 이름이 MoveJoystick / AimJoystick 이어야 자동 연결됨
     UPROPERTY(meta = (BindWidgetOptional))
@@ -73,8 +79,6 @@ protected:
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     UExitPanelWidget* ExitPanel;
 
-    UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
-    UBossStatusWidget* BossHPBar;
 
     UPROPERTY(meta =(BindWidgetOptional))
     UImage* BossArrow;
@@ -95,7 +99,7 @@ public:
 
 
     void UpdateCoinText(int32 Money);
-    void SetProgressUISize(FVector2D size);
+    void SetHPPercent(float Percent);
 
     // 경험치 HUD 갱신 — AMyPlayer::UpdateExpUI가 호출. 위젯이 배치돼 있을 때만 그린다. 
     void UpdateExp(int32 Level, int32 Exp, int32 ExpToNext);
@@ -112,6 +116,7 @@ public:
 private:
     TWeakObjectPtr<ACombatCharacter> TargetBoss; //추격하는 보스. 화살표 쓰기 위함
 
-    // Tick - 보스 추격
+    // [Tick]
+    // 보스 추격
     void UpdateBossArrow(); 
 };

@@ -1,16 +1,19 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Characters/Boss.h"
 
 #include "UI/MyCanvas.h"
 #include "UI/DeathPanelWidget.h" 
 #include "UI/ExitPanelWidget.h"
 #include "UI/VirtualJoystick.h"
 #include "UI/BossStatusWidget.h"
+#include "UI/HPBar.h"
+
+#include "Characters/Boss.h"
 
 #include "kismet/GameplayStatics.h"
 #include "Engine/Engine.h" //GEngine 화면 디버그
 
+// 초기 함수
 void UMyCanvas::NativeConstruct()
 {
     Super::NativeConstruct();
@@ -40,6 +43,7 @@ void UMyCanvas::NativeConstruct()
     if (AimJoystick)  { AimJoystick->SetVisibility(JoystickVis); }
 
 }
+
 
 void UMyCanvas::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
@@ -75,17 +79,9 @@ void UMyCanvas::UpdateExp(int32 Level, int32 Exp, int32 ExpToNext)
     }
 }
 
-void UMyCanvas::SetProgressUISize(FVector2D size)
+void UMyCanvas::SetHPPercent(float Percent)
 {
-    if (hp_bar)
-    {
-        UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(hp_bar);
-        if (CanvasSlot)
-        {
-            CanvasSlot->SetSize(size);
-            //UE_LOG(LogTemp, Log, TEXT("hp_bar size set to: %s"), *size.ToString());
-        }
-    }
+    PlayerHPBar->SetPercent(Percent);
 }
 
 // 사망 패널 표시/숨김 — 패널 위젯 하나만 토글하면 안의 텍스트/버튼이 전부 따라간다.
@@ -156,9 +152,9 @@ void UMyCanvas::StartBossEncounter(ACombatCharacter* Boss, const FText& BossName
 {
     TargetBoss = Boss;
 
-    if (BossHPBar)
+    if (BossStatusWidget)
     {
-        BossHPBar->StartEncounter(Boss, BossName);
+        BossStatusWidget->StartEncounter(Boss, BossName);
     }
 }
 
@@ -173,9 +169,9 @@ void UMyCanvas::EndBossEncounter(ACombatCharacter* Boss)
         }
     }
 
-    if (BossHPBar)
+    if (BossStatusWidget)
     {
-        BossHPBar->EndEncounter(Boss);
+        BossStatusWidget->EndEncounter(Boss);
     }
 }
 
