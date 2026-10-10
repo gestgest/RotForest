@@ -54,20 +54,12 @@ public:
 private:
 	void UpdateChunks(const FIntPoint& Center);
 	void GenerateChunk(const FIntPoint& Coord); //핵심
-	void SpawnObstacles(FRandomStream& Stream, FMapChunk& Chunk, FVector Origin, bool bIsPOIChunk);
 	void UnloadChunk(const FIntPoint& Coord);
 
 protected:
 	virtual void BeginPlay() override;
 
-	//[Generate 함수]
-	//청크가 생성될때 실행된다.
-	void SetupFloor(const FVector& Center, FMapChunk& Chunk, FPOIInfo & POI, bool bIsPOIChunk);
-	void SpawnFog(const FVector& Center, FMapChunk& Chunk);
-	void SetupVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
-	void SpawnVillageGuards(const FVector& Center, FMapChunk& Chunk);
-	void SpawnVillagers(const FVector& Center, FMapChunk& Chunk);
-	void SetupZombieVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
+
 
 	// 마을 외곽 구조물 배치 
 	void SpawnVillageStructures(const FVector& Center, FMapChunk& Chunk, FRandomStream& Stream);
@@ -198,6 +190,35 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI")
 	TSubclassOf<AActor> BossClass;
 
+	// [역병마을 소품]
+	// 충돌 없는 작은 장식 (뼈, 해골)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map|PlagueVillege")
+	TArray<TObjectPtr<UStaticMesh>> PlagueVillageDecoMeshes;
+
+	// 충돌 기능 있는 큰 장식 ex) 교수대
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
+	TArray<TObjectPtr<UStaticMesh>> PlagueVillagePropMeshes;
+
+	// BP 소품 (조명, 해골, 데칼)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
+	TArray<TObjectPtr<AActor>> PlagueVillageActorClasses;
+
+	// 갯수들
+	// 청크 하나당 데코 갯수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
+	int32 PlagueVillageDecoPerChunk = 12;
+
+	// 청크당 큰 부품 갯수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
+	int32 PlagueVillagePropPerChunk = 2;
+
+	// 청크당 큰 BP부품 갯수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
+	int32 PlagueVillageActorPerChunk = 3;
+
+	// 중심 반지름. 보스 스폰자리에 부품 스폰되지말라고
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
+	float PlagueVillageClearRadius = 600.0f;
 
 private:
 	
@@ -213,6 +234,18 @@ private:
 	FIntPoint LastPlayerChunk = FIntPoint(MAX_int32, MAX_int32);
 	float TimeSinceUpdate = 0.f;
 	bool bHasGenerated = false;
+
+
+	//[Generate 함수]
+	//청크가 생성될때 실행된다.
+	void SetupFloor(const FVector& Center, FMapChunk& Chunk, FPOIInfo& POI, bool bIsPOIChunk);
+	void SpawnFog(const FVector& Center, FMapChunk& Chunk);
+	void SetupVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
+	void SpawnVillageGuards(const FVector& Center, FMapChunk& Chunk);
+	void SpawnVillagers(const FVector& Center, FMapChunk& Chunk);
+	// [역병마을]
+	void SetupPlagueVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
+	void SpawnPlagueVillageObjects(const FVector& Center, FMapChunk& Chunk, FRandomStream& Stream, bool bIsCenter);
 
 
 	// NavMeshBoundsVolume를 플레이어 위치로 옮기고 내비 시스템에 갱신을 통지
@@ -265,4 +298,12 @@ public:
 
 	// 런타임에 생긴 액터(보스 전리품 등)를 청크 소유물로 등록한다.
 	bool RegisterChunkActor(const FIntPoint& ChunkCoord, AActor* Actor);
+
+private:
+	bool PickPlagueLocation(FRandomStream& Stream, const FVector& Center, bool bIsCenter, FVector& OutLoc) const;
+	void SpawnPlagueMeshes(bool bBlocking, FRandomStream& Stream, const FVector& Center, bool bIsCenter, FMapChunk& Chunk);
+	AStaticMeshActor* SpawnDecoMesh(UStaticMesh * Mesh, const FVector& Location, const FRotator & Rotation, const FVector& Scale);
+	AActor* SpawnDecoActor(TSubclassOf<AActor> ActorClass, const FVector& Location, const FRotator & Rotation);
+	// 장애물 배치
+	void SpawnObstacles(FRandomStream& Stream, FMapChunk& Chunk, FVector Origin, bool bIsPOIChunk);
 };
