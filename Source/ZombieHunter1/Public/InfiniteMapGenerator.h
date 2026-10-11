@@ -28,7 +28,7 @@ struct FMapChunk // 한 청크가 스폰한 액터 묶음
 enum class EPOIType : uint8
 {
 	Village,		// 마을
-	ZombieVillage,	// 역병마을
+	PlagueVillage,	// 역병마을
 };
 
 // 리전 하나의 POI 정보
@@ -192,33 +192,44 @@ protected:
 
 	// [역병마을 소품]
 	// 충돌 없는 작은 장식 (뼈, 해골)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map|PlagueVillege")
-	TArray<TObjectPtr<UStaticMesh>> PlagueVillageDecoMeshes;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map|PlagueVillege")
+	//TArray<TObjectPtr<UStaticMesh>> PlagueVillageDecoMeshes;
 
-	// 충돌 기능 있는 큰 장식 ex) 교수대
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
-	TArray<TObjectPtr<UStaticMesh>> PlagueVillagePropMeshes;
+	//// 충돌 기능 있는 큰 장식 ex) 교수대
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
+	//TArray<TObjectPtr<UStaticMesh>> PlagueVillagePropMeshes;
 
-	// BP 소품 (조명, 해골, 데칼)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
-	TArray<TObjectPtr<AActor>> PlagueVillageActorClasses;
+	//// BP 소품 (조명, 해골, 데칼)
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
+	//TArray<TSubclassOf<AActor>> PlagueVillageActorClasses;
 
-	// 갯수들
-	// 청크 하나당 데코 갯수
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
-	int32 PlagueVillageDecoPerChunk = 12;
+	//// 갯수들
+	//// 청크 하나당 데코 갯수
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
+	//int32 PlagueVillageDecoPerChunk = 12;
 
-	// 청크당 큰 부품 갯수
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
-	int32 PlagueVillagePropPerChunk = 2;
+	//// 청크당 큰 부품 갯수
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
+	//int32 PlagueVillagePropPerChunk = 2;
 
-	// 청크당 큰 BP부품 갯수
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
-	int32 PlagueVillageActorPerChunk = 3;
+	//// 청크당 큰 BP부품 갯수
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
+	//int32 PlagueVillageActorPerChunk = 3;
 
-	// 중심 반지름. 보스 스폰자리에 부품 스폰되지말라고
+	//// 중심 반지름. 보스 스폰자리에 부품 스폰되지말라고
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
+	//float PlagueVillageClearRadius = 600.0f;
+
+	// 촛불 BP
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
-	float PlagueVillageClearRadius = 600.0f;
+	TSubclassOf<AActor> PlagueVillageCandleClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege", meta = (ClampMin = "0"))
+	int32 PlagueVillageCandleCount = 8;
+
+	// 결투장 반지름 =>1300이면 지름 26m
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege", meta = (ClampMin = "0"))
+	float PlagueVillageCandleRadius = 1300.0f;
 
 private:
 	
@@ -300,10 +311,16 @@ public:
 	bool RegisterChunkActor(const FIntPoint& ChunkCoord, AActor* Actor);
 
 private:
-	bool PickPlagueLocation(FRandomStream& Stream, const FVector& Center, bool bIsCenter, FVector& OutLoc) const;
-	void SpawnPlagueMeshes(bool bBlocking, FRandomStream& Stream, const FVector& Center, bool bIsCenter, FMapChunk& Chunk);
-	AStaticMeshActor* SpawnDecoMesh(UStaticMesh * Mesh, const FVector& Location, const FRotator & Rotation, const FVector& Scale);
+	void SpawnPlagueCandle(const FVector& Center, FMapChunk& Chunk);
 	AActor* SpawnDecoActor(TSubclassOf<AActor> ActorClass, const FVector& Location, const FRotator & Rotation);
+
+
+	// bool PickPlagueLocation(FRandomStream& Stream, const FVector& Center, bool bIsCenter, FVector& OutLoc) const;
+	// void SpawnPlagueMeshes(bool bBlocking, FRandomStream& Stream, const FVector& Center, bool bIsCenter, FMapChunk& Chunk);
+	// AStaticMeshActor* SpawnDecoMesh(UStaticMesh * Mesh, const FVector& Location, const FRotator & Rotation, const FVector& Scale);
+	
+	
+	
 	// 장애물 배치
 	void SpawnObstacles(FRandomStream& Stream, FMapChunk& Chunk, FVector Origin, bool bIsPOIChunk);
 };
