@@ -7,6 +7,7 @@
 ### 전투 시스템
 ![bandicam 2025-12-14 21-58-13-948](https://github.com/user-attachments/assets/6d7ee84f-4018-4288-8023-b7dcdfd99186)
 - 적은 플레이어와 마주치면 따라갑니다.
+- 마우스(데스크톱)나 터치(모바일) 지점을 기준으로 공격 방향을 정합니다. 공격 순간의 방향을 고정해두기 때문에, 타격 판정이 0.2~0.4초 뒤에 일어나도 방향이 틀어지지 않습니다.
 
 
 ### 코인 수집
@@ -32,7 +33,7 @@
 | 직업 | 공격 방식 | MaxHP | 데미지 | 이동속도 | 공격 간격 |
 |---|---|---|---|---|---|
 | 전사 | 전방 구체 스윕(다중 타격 + 넉백) | 25 | 1 | 700 | 0.6s |
-| 궁수 | 화살 발사, 시위 당김 애니 연동 | 10 | 1 | 900 | 0.4s |
+| 궁수 | 화살 발사, 시위 당김 애니 연동 | 10 | 1 | 900 | 1.3s |
 | 마법사 | 느린 발사체 + 착탄 지점 범위 폭발 | 8 | 4 | 600 | 1.2s |
 | 힐러 | 공격 대신 전방 아군 회복(적에겐 무효) | 8 | 1 | 600 | 10s |
 
@@ -46,6 +47,9 @@
 <td><img width="400" src="https://github.com/user-attachments/assets/19722ab5-d22d-4d89-916c-114a040a2b29" /><br>힐러</td>
 </tr>
 </table>
+
+- 플레이어와 동료가 같은 `UJobComponent`를 씁니다. 직업을 바꾸면 컴포넌트만 교체되고, 캐릭터 코드는 그대로입니다.
+- 궁수는 몽타주가 끝나는 순간(시위를 놓는 순간) 화살을 발사하고, 활 시위 애니메이션의 재생 속도를 몽타주 남은 시간에 맞춰 자동으로 계산합니다.
 
 ---
 
@@ -79,8 +83,12 @@
 - 마을 외곽 구조물은 고정 슬롯 6곳에 배치되며, 구조물끼리 겹치지 않습니다.
 
 #### 역병마을
+
+![](https://velog.velcdn.com/images/gestgest/post/e51ca240-a224-425b-8227-4c92dec19bc6/image.png)
+
 - 적이 밀집해 있고, 보스(`Boss`)가 등장합니다.
 - 보스는 자신이 속한 마을의 청크 좌표를 알고 있어서, 죽을 때 그 좌표를 클리어로 기록합니다.
+- 맵 생성기가 POI를 만들 때 촛불과 장식물을 원형으로 배치하고, 전용 바닥 머티리얼(`M_PlagueGround`, `MI_PlagueVillage`)을 깝니다.
 
 #### 상태 영속
 청크가 사라져도 진행도는 남습니다.
@@ -91,19 +99,102 @@
 
 ---
 
+## 보스
+
+![](https://velog.velcdn.com/images/gestgest/post/a7e6af25-9797-4d3b-89c7-cb5d6483b1ef/image.png)
+
+### 돌진 패턴
+
+![](https://velog.velcdn.com/images/gestgest/post/b7a94374-aa2b-464a-b54c-4c1affd71cac/image.gif)
+
+보스는 네 가지 상태를 순서대로 돕니다.
+
+```
+Chase(추격) → Windup(노려봄) → Charge(돌진) → Recover(숨고르기) → Chase
+```
+
+- Chase 중 1.2초마다 주사위를 굴려 30% 확률로 돌진을 시작합니다. 대상과의 거리가 3m~20m일 때만 돌진합니다.
+- 돌진 방향은 Windup(0.5초)이 끝나는 순간 고정됩니다. 노려보는 동안 플레이어가 피할 여지를 줍니다.
+- 돌진에 맞으면 평타의 2배 데미지와 넉백을 받습니다.
+- 돌진 속도·거리·대기 시간은 `Pattern|Charge` 카테고리에서 BP로 조절합니다.
+- 처치하면 정해진 무기 중 하나를 바닥에 떨굽니다.
+
+### 보스 HP바
+
+![](https://velog.velcdn.com/images/gestgest/post/316aebf5-10b6-43af-b09a-3163394734c4/image.gif)
+
+- `OnHPChanged` 델리게이트로 UI가 보스를 구독합니다.
+- 빨간 바는 피격 즉시 줄고, 노란 잔상 바는 0.4초 버틴 뒤 따라서 줄어듭니다.
+- 받은 데미지를 텍스트로 띄우고, 보스가 죽으면 HP바가 자동으로 사라집니다.
+- HP바는 `UHPBar` 클래스 하나로 플레이어·보스가 같이 씁니다.
+
+### 화면 밖 보스 화살표
+
+![](https://velog.velcdn.com/images/gestgest/post/bbbef4be-7f8a-4ba1-b89a-b181929a5efa/image.png)
+
+보스 위치를 화면 좌표로 투영해서, 화면 밖이면 가장자리에 화살표를 붙이고 보스 방향으로 회전시킵니다.
+
+```cpp
+// 화면 중심 → 보스 방향
+FVector2D Dir = Screen - Center;
+
+// 가장 먼저 닿는 화면 벽까지의 비율
+const float T = FMath::Min(
+    Half.X / FMath::Abs(Dir.X),
+    Half.Y / FMath::Abs(Dir.Y));
+ArrowSlot->SetPosition(Center + Dir * T);
+```
+
+---
+
 ## 성장
 <img width="400" height="225" alt="bandicam 2026-08-20_spawnzone" src="https://github.com/user-attachments/assets/b415613b-5c2b-4733-8a54-a889e380b32a" /><br>
 코인으로 모은 돈은 발판 위에 서 있는 동안 소비됩니다.
 
 ```
-AMoneyPadZone (공통 베이스)
- ├─ 게이지가 가득 차면 HandleZoneFilled() 호출
- ├─ ACompanionSpawnZone  → 랜덤 직업 동료 소환
- └─ AWeaponUpgradeZone   → 무기 강화 (강화할수록 다음 비용 상승)
+AGaugeZone (밟으면 게이지가 차는 공통 베이스)
+ ├─ AMoneyPadZone (돈을 내는 발판)
+ │   ├─ ACompanionSpawnZone  → 랜덤 직업 동료 소환
+ │   └─ AWeaponUpgradeZone   → 무기 강화 (강화할수록 다음 비용 상승)
+ └─ AItemSellZone            → 가방 속 아이템 판매
 ```
 
 - 진행도는 `FPOIStateStore`에 저장되므로, 청크가 언로드되어도 이어서 채울 수 있습니다.
-- 결제·게이지·쿨다운·디버그 바는 베이스가 처리하므로, 새 발판은 `HandleZoneFilled()`만 구현하면 추가됩니다.
+- 결제 간격·게이지·쿨다운·일회성 여부·디버그 바는 베이스가 처리하므로, 새 발판은 `TryFillOnce()`와 `HandleZoneFilled()`만 구현하면 추가됩니다.
+
+---
+
+## 무기 · 아이템
+
+### 데이터 에셋
+```
+UItemDataAsset   : 이름 · 무게 · 판매 가격
+ └─ UWeaponDataAsset : 공격력 · 메시 · 사용 가능 직업 · 쥐는 각도/위치
+```
+- 새 무기는 코드 수정 없이 데이터 에셋만 추가하면 됩니다.
+- 무기마다 손에 쥐는 각도(`GripRotation`)와 위치(`GripLocation`)를 에셋에 저장해, 메시마다 다른 축 방향을 에셋에서 맞춥니다.
+
+### 무기 줍기와 파티 배분
+- 바닥의 무기(`WeaponPickup`)를 밟으면 플레이어가 먼저 판단하고, 플레이어가 안 쓰면 같은 직업 동료 중 무기가 가장 약한 동료에게 넘깁니다(`PartyComponent`).
+- 아무도 못 쓰는 무기라는 안내는 한 번만 띄웁니다.
+
+### 교체된 무기
+- 밀려난 무기는 가방(`InventoryComponent`, 최대 무게 20)으로 들어갑니다.
+- 가방이 차면 픽업 액터가 그 무기로 바뀌어 바닥에 남습니다.
+- 인벤토리 창은 따로 없고, 판매 발판에서 가방을 통째로 팔아 돈으로 바꿉니다.
+
+---
+
+## 레벨 로딩
+
+![](https://velog.velcdn.com/images/gestgest/post/ea85f18e-723f-412c-a914-eb24d58839d2/image.png)
+
+- `ULevelLoaderSubsystem`이 다음 레벨을 비동기로 불러오고, 진행률을 로딩 위젯에 표시합니다.
+- 실제 진행률은 95%까지만 반영하고, 패키지 로드가 끝나야 100%로 채웁니다. 최소 표시 시간을 둬서 로딩 화면이 깜빡이고 사라지지 않게 했습니다.
+
+## 모바일 · 데스크톱
+- 데스크톱은 마우스, 모바일은 가상 조이스틱(`VirtualJoystick`)으로 조작합니다.
+- 안드로이드 뒤로가기를 누르면 게임이 일시정지되고 "계속하기 / 나가기" 창(`ExitPanelWidget`)이 뜹니다.
 
 ---
 
@@ -114,7 +205,7 @@ AMoneyPadZone (공통 베이스)
 - 플레이어와 동료 중 가까운 쪽을 추격합니다.
 - 거리 기반 LOD: 가까우면 0.25초, 20m 이상 멀면 0.8초마다 경로를 갱신합니다. 매 프레임 경로를 재요청하지 않습니다.
 - 스폰 링: 적은 최대한 시야 밖(22~35m)의 NavMesh 위에 생성됩니다.
-- 리쉬(회수): 45m 이상 떨어진 적은 파괴하지 않고, 위치만 다시 스폰 지점으로 옮겨 재사용합니다.
+- 리쉬(회수): 45m 이상 떨어진 적은 파괴하지 않고, 위치만 다시 스폰 지점으로 옮겨 재사용합니다. 재사용할 때 HP를 초기화합니다.
 
 ### 동료 AI (`Companion`)
 <img width="400" height="225" alt="bandicam 2026-08-20_ai" src="https://github.com/user-attachments/assets/86d00dd1-9405-4740-a112-9b9213d94d88" />
@@ -122,6 +213,7 @@ AMoneyPadZone (공통 베이스)
 - 의사결정(적 스캔·이동 명령)은 0.2초 간격으로 돌고, 조준과 공격 타이밍은 매 프레임 갱신합니다.
 - 동료마다 시작 오프셋을 랜덤화해 여러 동료의 연산이 같은 프레임에 몰리지 않게 분산했습니다.
 - 이동 명령과 공격이 사용하는 사거리 값은 같은 함수(`GetEngageRange`)에서 가져옵니다. 두 값이 어긋나면 사거리 밖에 멈춰 서서 공격을 못 하는 버그가 생깁니다.
+- 더 좋은 무기를 얻으면 동료가 자동으로 교체합니다.
 
 ---
 
@@ -141,23 +233,36 @@ AMoneyPadZone (공통 베이스)
 ## 코드 구조
 
 ```
-ACombatCharacter (전투 공통 베이스: HP · 죽음 · Notify 배선 · HP바)
+ACombatCharacter (전투 공통 베이스: HP · 죽음 · Notify 배선 · HP바 · 무기 슬롯)
  ├─ AMyPlayer      : 입력 · 카메라 · 돈/레벨 · 동료 관리
  ├─ ACompanion     : 아군 AI (추종/교전, 경비 모드)
  ├─ AEnemy         : 적 AI (추격 · 풀 · 리쉬)
- │   └─ ABoss      : 역병마을 보스 (처치 시 POI 상태 기록)
+ │   └─ ABoss      : 역병마을 보스 (돌진 패턴 · 무기 드롭 · 처치 시 POI 상태 기록)
  └─ AVillager      : 비전투 NPC (배회)
 
 UJobComponent (전투 방식 캡슐화 — 플레이어/동료 공용)
  ├─ UWarriorJob  ├─ UArcherJob  ├─ UMageJob  └─ UHealerJob
 
+UPartyComponent       : 동료 섭외 · 명단 · 무기 배분
+UInventoryComponent   : 무게 제한 가방
+
 AInfiniteMapGenerator : 청크 생성/언로드 · POI 배치 · FPOIStateStore
 AZombieSlayerGameMode : 적/코인 풀 · 스폰 링 · 리쉬 · 사망 시 시간 정지
 
-AMoneyPadZone         : 돈 발판 베이스
-├─ ACompanionSpawnZone
-└─ AWeaponUpgradeZone
+AGaugeZone            : 발판 공통 베이스
+├─ AMoneyPadZone
+│   ├─ ACompanionSpawnZone
+│   └─ AWeaponUpgradeZone
+└─ AItemSellZone
+
+UItemDataAsset
+└─ UWeaponDataAsset
+AWeaponPickup         : 바닥에 떨어진 무기
+
+UHPBar                : 플레이어·보스 공용 HP바 (잔상 애니메이션)
+UBossStatusWidget     : 보스 HP바 · 이름 · 데미지 텍스트
 
 UZombieGameInstance   : 레벨을 넘어 다른 레벨에게 전송되는 데이터(선택한 직업)
+GameInstance Subsystem: ULevelLoaderSubsystem : 비동기 레벨 로딩
 World Subsystems      : UProjectilePoolSubsystem · UCombatRegistrySubsystem : Pool시스템
 ```
