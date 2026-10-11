@@ -46,4 +46,12 @@ public:
 	// 이 무기를 쓸 수 있는 직업. 다른 직업은 장착할 수 없다.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	EJobType JobType = EJobType::Warrior;
+
+	// 손에 쥐는 각도. 기본값: Roll -90
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Grip")
+	FRotator GripRotation = FRotator(0.0f, 0.0f, 0.0f);
+
+	// 손에 쥐는 위치(cm)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Grip")
+	FVector GripLocation = FVector::ZeroVector;
 };

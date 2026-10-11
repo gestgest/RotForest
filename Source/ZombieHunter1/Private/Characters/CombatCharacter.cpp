@@ -119,9 +119,7 @@ void ACombatCharacter::InitWeaponSlot()
 		if (MeshComp->DoesSocketExist(SocketName))
 		{
 			// KeepRelativeTransform: 슬롯 컴포넌트에 설정해둔 Relative Location/Rotation을 유지한 채 붙인다.
-			// 무기를 잡는 각도는 이 상대 회전으로 맞춘다 — 캐릭터 BP의 WeaponRight/WeaponLeft Details에서 조정.
-			// (SnapToTarget을 쓰면 상대 트랜스폼이 리셋돼서 BP에서 맞춘 각도가 통째로 날아간다)
-			Slot->AttachToComponent(MeshComp, FAttachmentTransformRules::KeepRelativeTransform, SocketName);
+			Slot->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 			UE_LOG(LogWeapon, Log, TEXT("[%s] %s: 소켓 '%s' 부착 OK"), *GetName(), HandLabel, *SocketName.ToString());
 		}
 		else
@@ -279,6 +277,11 @@ void ACombatCharacter::RefreshWeaponMesh()
 {
 	const EWeaponHand Hand = CurrentJob ? CurrentJob->GetWeaponHand() : EWeaponHand::Right;
 	EquipWeaponInHand(EquippedWeapon ? EquippedWeapon->Mesh : nullptr, Hand);
+
+	if (WeaponMeshComponent && EquippedWeapon)
+	{
+		WeaponMeshComponent->SetRelativeLocationAndRotation(EquippedWeapon->GripLocation, EquippedWeapon->GripRotation);
+	}
 }
 
 
