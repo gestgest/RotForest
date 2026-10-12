@@ -175,13 +175,11 @@ protected: //변수
 
 
 
-	/** 오른손 무기 슬롯 — 생성자에서 만들어 RightHandSocket에 붙는다. BP에서 추가할 필요 없음.
-	 *  ★ 무기를 잡는 각도/위치는 이 컴포넌트의 Relative Rotation/Location으로 맞춘다.
-	 *    (소켓이 아니라 여기서 맞추는 이유: 부착이 KeepRelativeTransform이라 이 값이 그대로 유지된다) */
+	// 오른손 무기 슬롯. 쥐는 각도는 무기 DA의 GripRotation
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	UChildActorComponent* WeaponRight = nullptr;
 
-	/** 왼손 무기 슬롯 — 생성자에서 만들어 LeftHandSocket에 붙는다. 각도 조정은 WeaponRight와 동일. */
+	// 왼손 무기 슬롯. 쥐는 각도는 무기 DA의 GripRotation
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	UChildActorComponent* WeaponLeft = nullptr;
 

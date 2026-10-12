@@ -60,9 +60,17 @@ void ULevelLoaderSubsystem::LoadLevelAynsc(TSoftObjectPtr<UWorld> Level,
 		}
 	}
 
-	// 비동기 로드
-	LoadPackageAsync(PendingPackageName.ToString(),
-		FLoadPackageAsyncDelegate::CreateUObject(this, &ULevelLoaderSubsystem::OnPackageLoaded));
+	// 비동기 로드 (PIE에서는 생략)
+	const UWorld* World = GetGameInstance() ? GetGameInstance()->GetWorld() : nullptr;
+	if (World && World->IsPlayInEditor())
+	{
+		bPackageLoaded = true;
+	}
+	else
+	{
+		LoadPackageAsync(PendingPackageName.ToString(),
+			FLoadPackageAsyncDelegate::CreateUObject(this, &ULevelLoaderSubsystem::OnPackageLoaded));
+	}
 
 	// Tick 설정 => 비동기 ing 함수
 	TickHandle = FTSTicker::GetCoreTicker().AddTicker(

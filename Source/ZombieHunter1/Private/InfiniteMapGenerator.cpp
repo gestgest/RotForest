@@ -232,7 +232,7 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 	SetupFloor(Center, Chunk, POI, bIsPOIChunk);
 	SpawnFog(Center, Chunk);
 	SetupVillage(bIsPOIChunk, POI, Center, Chunk, Stream);
-	SetupZombieVillage(bIsPOIChunk, POI, Center, Chunk, Stream);
+	SetupPlagueVillage(bIsPOIChunk, POI, Center, Chunk, Stream);
 
 	//POI : 마을이나 좀비마을 와이어 박스 만듬
 	if (bIsPOIChunk && bDebugDrawPOI && POI.bIsCenter)
@@ -400,7 +400,7 @@ FPOIInfo AInfiniteMapGenerator::GetPOIForRegion(const FIntPoint& RegionCoord) co
 	Info.CenterChunk = FIntPoint(RegionCoord.X * Size + LocalX, RegionCoord.Y * Size + LocalY);
 
 	Info.Type = (bStartRegion || Stream.FRand() < VillageRatio)
-		? EPOIType::Village : EPOIType::ZombieVillage;
+		? EPOIType::Village : EPOIType::PlagueVillage;
 	return Info;
 }
 
@@ -639,57 +639,6 @@ bool AInfiniteMapGenerator::RegisterChunkActor(const FIntPoint& ChunkCoord, AAct
 }
 
 
-//오브젝트 배치라고 생각하면 됨
-AStaticMeshActor* AInfiniteMapGenerator::SpawnObstacleMesh(UStaticMesh* Mesh, const FVector& Location,
-	const FRotator& Rotation, const FVector& Scale, UMaterialInterface* OverrideMat)
-{
-	if (!Mesh || !GetWorld())
-	{
-		return nullptr;
-	}
-
-	FActorSpawnParameters Params;
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	Params.Owner = this;
-
-	AStaticMeshActor* Actor = GetWorld()->SpawnActor<AStaticMeshActor>(
-		AStaticMeshActor::StaticClass(), Location, Rotation, Params);
-	if (!Actor)
-	{
-		return nullptr;
-	}
-
-#if WITH_EDITOR
-	// 아웃라이너 정리용 폴더 (에디터/PIE 전용 — 패키징 빌드에선 컴파일 제외)
-	Actor->SetFolderPath(TEXT("Spawned/Map"));
-#endif
-
-	if (UStaticMeshComponent* Comp = Actor->GetStaticMeshComponent())
-	{
-		// 런타임에 변형/메시 설정을 하려면 Movable 이어야 함 (기본은 Static)
-		Comp->SetMobility(EComponentMobility::Movable);
-		Actor->SetActorScale3D(Scale);
-		Comp->SetStaticMesh(Mesh);
-		if (OverrideMat)
-		{
-			Comp->SetMaterial(0, OverrideMat);
-		}
-		Comp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		Comp->SetCollisionProfileName(TEXT("BlockAll"));
-
-		// NavMesh 반영 — 런타임 스폰 시 컴포넌트는 "메시 없는 상태"로 내비에 등록되므로,
-		// 메시/충돌을 다 세팅한 뒤 내비 관련성을 켜고 옥트리를 갱신해 줘야 이 바닥 위에 NavMesh가 깔린다.
-		// (이게 없으면 동적 NavMesh가 런타임 바닥을 못 잡아서 적/동료가 길찾기를 못 함)
-		Comp->SetCanEverAffectNavigation(true);
-		if (UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld()))
-		{
-			NavSys->UpdateComponentInNavOctree(*Comp);
-		}
-	}
-
-	return Actor;
-}
-
 
 void AInfiniteMapGenerator::SpawnFog(const FVector & Center, FMapChunk& Chunk)
 {
@@ -749,53 +698,303 @@ void AInfiniteMapGenerator::SetupFloor(const FVector & Center, FMapChunk & Chunk
 	}
 }
 
-//보스 나오는 구역 생성
-void AInfiniteMapGenerator::SetupZombieVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream)
+//보스 나오는 구역(역병마을) 생성
+void AInfiniteMapGenerator::SetupPlagueVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream)
 {
-	if (bIsPOIChunk && POI.bIsCenter && POI.Type == EPOIType::ZombieVillage && BossClass)
+	// POI 구역과 역병마을이 아니라면
+	if (!bIsPOIChunk || POI.Type != EPOIType::PlagueVillage)
 	{
-		//아마 전리품이나 구조는 이런곳에?
+		return;
+	}
 
+	SpawnPlagueVillageObjects(Center, Chunk, Stream, POI.bIsCenter);
+	if (POI.bIsCenter)
+	{
+		SpawnPlagueCandle(Center, Chunk);
+	}
+	if (!POI.bIsCenter || !BossClass)
+	{
+		return;
+	}
+	
+	// 이미 이번 판에 클리어한 좀비마을이면 보스를 다시 세우지 않는다.
+	// (없으면 보스를 죽이고 멀리 갔다 오는 것만으로 풀피 보스가 부활한다)
+	if (POIStateStore.IsBossKilled(POI.CenterChunk))
+	{
+		return;
+	}
 
-		// todo : 나중에 보스 따로 함수 만들어야 함
-		// 이미 이번 판에 클리어한 좀비마을이면 보스를 다시 세우지 않는다.
-		// (없으면 보스를 죽이고 멀리 갔다 오는 것만으로 풀피 보스가 부활한다)
-		if (POIStateStore.IsBossKilled(POI.CenterChunk))
-		{
-			return;
-		}
+	FActorSpawnParameters VillagerParams;
+	VillagerParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	VillagerParams.Owner = this;
 
-		FActorSpawnParameters VillagerParams;
-		VillagerParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-		VillagerParams.Owner = this;
+	// 캡슐 중심 기준이라 반높이만큼 띄워야 바닥에 선다
+	float HalfHeight = 100.f;
+	if (const ACharacter* BossCDO = BossClass->GetDefaultObject<ACharacter>())
+	{
+		HalfHeight = BossCDO->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	}
+	const FVector SpawnLoc = Center + FVector(0.f, 0.f, HalfHeight + 5.f);
 
-		// 캡슐 중심 기준이라 반높이만큼 띄워야 바닥에 선다
-		float HalfHeight = 100.f;
-		if (const ACharacter* BossCDO = BossClass->GetDefaultObject<ACharacter>())
-		{
-			HalfHeight = BossCDO->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-		}
-		const FVector SpawnLoc = Center + FVector(0.f, 0.f, HalfHeight + 5.f);
-
-		ABoss* Boss = GetWorld()->SpawnActor<ABoss>(BossClass, SpawnLoc, FRotator::ZeroRotator, VillagerParams);
-		if (!Boss)
-		{
-			// BossClass가 ABoss 계열이 아니거나 스폰이 막힌 경우 — 아래에서 널 역참조로 죽지 않게 막는다
-			UE_LOG(LogTemp, Warning, TEXT("[POI] 좀비마을(%d, %d) 보스 스폰 실패 — BossClass 확인 필요"),
-				POI.CenterChunk.X, POI.CenterChunk.Y);
-			return;
-		}
+	ABoss* Boss = GetWorld()->SpawnActor<ABoss>(BossClass, SpawnLoc, FRotator::ZeroRotator, VillagerParams);
+	if (!Boss)
+	{
+		// BossClass가 ABoss 계열이 아니거나 스폰이 막힌 경우 — 아래에서 널 역참조로 죽지 않게 막는다
+		UE_LOG(LogTemp, Warning, TEXT("[POI] 좀비마을(%d, %d) 보스 스폰 실패 — BossClass 확인 필요"),
+			POI.CenterChunk.X, POI.CenterChunk.Y);
+		return;
+	}
 
 #if WITH_EDITOR
-		Boss->SetFolderPath(TEXT("Spawned/Enemies"));
+	Boss->SetFolderPath(TEXT("Spawned/Enemies"));
 #endif
 
-		// 죽을 때 "어느 마을을 클리어했는지" 스스로 기록할 수 있게 소속을 알려준다
-		Boss->SetHome(this, POI.CenterChunk);
+	// 죽을 때 "어느 마을을 클리어했는지" 스스로 기록할 수 있게 소속을 알려준다
+	Boss->SetHome(this, POI.CenterChunk);
 
-		//플레이어 추적 기능.
-		Boss->OnAIController();
+	//플레이어 추적 기능.
+	Boss->OnAIController();
 
-		Chunk.SpawnedActors.Add(Boss); // 청크와 함께 언로드/재생성
+	Chunk.SpawnedActors.Add(Boss); // 청크와 함께 언로드/재생성
+}	
+
+// 소품 생성
+void AInfiniteMapGenerator::SpawnPlagueVillageObjects(const FVector& Center, FMapChunk & Chunk, FRandomStream & Stream, bool bIsCenter)
+{
+
+
+	// 작은, 큰 소품
+	// SpawnPlagueMeshes(false, Stream, Center, bIsCenter, Chunk); 
+	// SpawnPlagueMeshes(true, Stream, Center, bIsCenter, Chunk);
+	
+	// BP
+	//int32 Size = PlagueVillageActorClasses.Num();
+	//if (Size == 0)
+	//{
+	//	return;
+	//}
+
+	//// BP 소품 라인
+	//for (int32 i = 0; i < PlagueVillageActorPerChunk; i++)
+	//{
+	//	TSubclassOf<AActor> ActorClass = PlagueVillageActorClasses[Stream.RandRange(0, Size - 1)];
+	//	FVector Loc;
+	//	if (!PickPlagueLocation(Stream, Center, bIsCenter, Loc))
+	//	{
+	//		continue;
+	//	}
+	//	const FRotator Rot(0.f, Stream.FRandRange(0.f, 360.f), 0.f);
+
+	//	if (AActor* Actor = SpawnDecoActor(ActorClass, Loc, Rot))
+	//	{
+	//		Chunk.SpawnedActors.Add(Actor);
+	//	}
+	//}
+}
+
+
+// 중간 역병마을 spawn 함수
+//void AInfiniteMapGenerator::SpawnPlagueMeshes(bool bBlocking, FRandomStream& Stream, const FVector& Center, bool bIsCenter, FMapChunk& Chunk)
+//{
+//	// bBlocking 변수로 어떤 배열을 가져올지 판단
+//
+//	const TArray<TObjectPtr<UStaticMesh>>& Meshes = bBlocking ? PlagueVillagePropMeshes : PlagueVillageDecoMeshes;
+//	const int32 Count = bBlocking ? PlagueVillagePropPerChunk : PlagueVillageDecoPerChunk;
+//
+//	if (Meshes.Num() == 0)
+//	{
+//		return;
+//	}
+//
+//	for (int32 i = 0; i < Count; i++)
+//	{
+//		UStaticMesh* Mesh = Meshes[Stream.RandRange(0, Meshes.Num() - 1)];
+//
+//		FVector Loc;
+//		// 불가능
+//		if (!PickPlagueLocation(Stream, Center, bIsCenter, Loc))
+//		{
+//			continue;
+//		}
+//
+//		const FRotator Rot(0.f, Stream.FRandRange(0.f, 360.f), 0.f);
+//
+//		AStaticMeshActor* Actor = bBlocking ? 
+//			SpawnObstacleMesh(Mesh, Loc, Rot, FVector(1.f), nullptr) :
+//			SpawnDecoMesh(Mesh, Loc, Rot, FVector(Stream.FRandRange(0.8f, 1.2f)));
+//
+//		if (Actor)
+//		{
+//			Chunk.SpawnedActors.Add(Actor);
+//		}
+//	}
+//}
+
+
+
+// 중심 청크는 보스 스폰 때문에 피하자.
+//bool AInfiniteMapGenerator::PickPlagueLocation(FRandomStream& Stream, const FVector& Center, bool bIsCenter, FVector& OutLoc) const
+//{
+//	const float Half = ChunkSize * 0.5f - ChunkEdgeMargin;
+//
+//	// 최대 5번 시도
+//	for (int32 Try = 0; Try < 5; Try++)
+//	{
+//		const FVector Offset(Stream.FRandRange(-Half, Half), Stream.FRandRange(-Half, Half), 0.f);
+//
+//		// center인데 반지름안이면 무시
+//		if (bIsCenter && Offset.Size2D() < PlagueVillageClearRadius)
+//		{
+//			continue;
+//		}
+//		// center 청크지만 보스 스폰 범위 바깥이면 노상관
+//
+//		OutLoc = Center + Offset; //아웃풋 주기
+//		return true;
+//	}
+//	return false;
+//}
+
+
+//AStaticMeshActor* AInfiniteMapGenerator::SpawnDecoMesh(UStaticMesh * Mesh, const FVector & Location, const FRotator & Rotation, const FVector& Scale)
+//{
+//	if (!Mesh || !GetWorld())
+//	{
+//		return nullptr;
+//	}
+//
+//	FActorSpawnParameters Params;
+//	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+//	Params.Owner = this;
+//
+//	AStaticMeshActor* Actor = GetWorld()->SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), Location, Rotation, Params);
+//	if (!Actor)
+//	{
+//		return Actor;
+//	}
+//
+//#if WITH_EDITOR
+//	Actor->SetFolderPath(TEXT("Spawned/Deco"));
+//#endif
+//	if (UStaticMeshComponent* Comp = Actor->GetStaticMeshComponent())
+//	{
+//		Comp->SetMobility(EComponentMobility::Movable);
+//		Actor->SetActorScale3D(Scale);
+//		Comp->SetStaticMesh(Mesh);
+//		Comp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+//		Comp->SetCanEverAffectNavigation(false);
+//	}
+//
+//	return Actor;
+//}
+
+//오브젝트 배치라고 생각하면 됨
+AStaticMeshActor* AInfiniteMapGenerator::SpawnObstacleMesh(UStaticMesh* Mesh, const FVector& Location,
+	const FRotator& Rotation, const FVector& Scale, UMaterialInterface* OverrideMat)
+{
+	if (!Mesh || !GetWorld())
+	{
+		return nullptr;
+	}
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Params.Owner = this;
+
+	AStaticMeshActor* Actor = GetWorld()->SpawnActor<AStaticMeshActor>(
+		AStaticMeshActor::StaticClass(), Location, Rotation, Params);
+	if (!Actor)
+	{
+		return nullptr;
+	}
+
+#if WITH_EDITOR
+	// 아웃라이너 정리용 폴더 (에디터/PIE 전용 — 패키징 빌드에선 컴파일 제외)
+	Actor->SetFolderPath(TEXT("Spawned/Map"));
+#endif
+
+	if (UStaticMeshComponent* Comp = Actor->GetStaticMeshComponent())
+	{
+		// 런타임에 변형/메시 설정을 하려면 Movable 이어야 함 (기본은 Static)
+		Comp->SetMobility(EComponentMobility::Movable);
+		Actor->SetActorScale3D(Scale);
+		Comp->SetStaticMesh(Mesh);
+		if (OverrideMat)
+		{
+			Comp->SetMaterial(0, OverrideMat);
+		}
+		Comp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		Comp->SetCollisionProfileName(TEXT("BlockAll"));
+
+		// NavMesh 반영 — 런타임 스폰 시 컴포넌트는 "메시 없는 상태"로 내비에 등록되므로,
+		// 메시/충돌을 다 세팅한 뒤 내비 관련성을 켜고 옥트리를 갱신해 줘야 이 바닥 위에 NavMesh가 깔린다.
+		// (이게 없으면 동적 NavMesh가 런타임 바닥을 못 잡아서 적/동료가 길찾기를 못 함)
+		Comp->SetCanEverAffectNavigation(true);
+		if (UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld()))
+		{
+			NavSys->UpdateComponentInNavOctree(*Comp);
+		}
+	}
+
+	return Actor;
+}
+
+// BP 생성
+AActor* AInfiniteMapGenerator::SpawnDecoActor(TSubclassOf<AActor> ActorClass, const FVector& Location, const FRotator & Rotation)
+{
+	if (!ActorClass || !GetWorld())
+	{
+		return nullptr;
+	}
+	FActorSpawnParameters Params;
+
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Params.Owner = this;
+
+	AActor* Actor = GetWorld()->SpawnActor<AActor>(ActorClass, Location, Rotation, Params);
+
+#if WITH_EDITOR
+	if (Actor)
+	{
+		Actor->SetFolderPath(TEXT("Spawned/Deco"));
+	}
+#endif
+
+	return Actor;
+}
+
+
+// cos sin을 이용한 촛불 배치
+void AInfiniteMapGenerator::SpawnPlagueCandle(const FVector& Center, FMapChunk& Chunk)
+{
+	// 촛불이 없다면
+	if (PlagueVillageCandleClass == nullptr || PlagueVillageCandleCount <= 0)
+	{
+		return;
+	}
+
+	const float Step = 360.f / PlagueVillageCandleCount;
+
+	for (int32 i = 0; i < PlagueVillageCandleCount; i++)
+	{
+		//라디안으로 바꿔야 한다.
+		float AngleDeg = Step * i; 
+		float AngleRad = FMath::DegreesToRadians(AngleDeg);
+
+		const FVector Offset(
+			FMath::Cos(AngleRad) * PlagueVillageCandleRadius,
+			FMath::Sin(AngleRad) * PlagueVillageCandleRadius,
+			0.f
+		);
+
+		const FVector Loc = Center + Offset;
+
+		const FRotator Rot(0.f, AngleDeg + 180.f, 0.f);
+
+		if (AActor* Candle = SpawnDecoActor(PlagueVillageCandleClass, Loc, Rot))
+		{
+			Chunk.SpawnedActors.Add(Candle);
+		}
+
 	}
 }
