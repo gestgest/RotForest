@@ -4,10 +4,9 @@
 #include "Characters/GuardCharacter.h"
 #include "AIController.h"
 
-void AGuardCharacter::UpdateIdle()
+void AGuardCharacter::MoveToAnchor()
 {
 	// 자기 자리(HomeLocation)로 복귀 — 교전으로 자리를 벗어나도 다시 돌아온다.
-	State = EState::Following;
 
 	if (!AICon)
 	{
@@ -23,4 +22,11 @@ void AGuardCharacter::UpdateIdle()
 	{
 		AICon->StopMovement(); // 자리에 도착 — 대기
 	}
+}
+
+// 돌아갈 위치 출력
+bool AGuardCharacter::GetAnchorLocation(FVector& OutLocation) const 
+{
+	OutLocation = HomeLocation;
+	return true;
 }

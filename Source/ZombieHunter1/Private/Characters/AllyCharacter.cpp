@@ -81,19 +81,19 @@ void AAllyCharacter::Tick(float DeltaTime)
 	// 반응성이 필요한 것만 매 프레임: 사거리 안 대상 조준 + 공격 타이밍.
 	// "사거리 안에 살아있는 타겟이 있는가"만 판단하고, 타이머/간격/직업 호출은 베이스가 처리한다.
 	const bool bTargetInRange =
-		IsValid(CurrentTarget) && !CurrentTarget->GetIsDead() &&
-		FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation()) <= GetEngageRange();
+		IsValid(CurrentTargetEnemy) && !CurrentTargetEnemy->GetIsDead() &&
+		FVector::Dist(GetActorLocation(), CurrentTargetEnemy->GetActorLocation()) <= GetEngageRange();
 
 	if (bTargetInRange)
 	{
-		FaceActor(CurrentTarget);
+		FaceActor(CurrentTargetEnemy);
 	}
 
 	if (TickAttack(DeltaTime, bTargetInRange) && bDebugCombat)
 	{
 		// 공격을 실제로 호출하는 순간 표시(노란 선 + 메시지)
 		DrawDebugLine(GetWorld(), GetActorLocation(),
-			CurrentTarget->GetActorLocation(), FColor::Yellow, false, 0.4f, 0, 3.0f);
+			CurrentTargetEnemy->GetActorLocation(), FColor::Yellow, false, 0.4f, 0, 3.0f);
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 0.4f, FColor::Yellow,
@@ -134,11 +134,59 @@ void AAllyCharacter::OnDeath()
 // — 타겟 재탐색 + 이동 명령(추격/정지).
 void AAllyCharacter::UpdateDecision()
 {
-	CurrentTarget = FindNearestEnemy();
-	
-	if (!CurrentTarget)
+	const FVector MyLoc = GetActorLocation();
+	FVector AnchorLoc;
+
+	// 
+	if (GetAnchorLocation(AnchorLoc))
 	{
-		UpdateIdle();
+		// 목표 거리
+		const float AnchorDist = FVector::Dist2D(MyLoc, AnchorLoc);
+
+		// 순간이동 
+		if (TryReturnTeleport(AnchorDist))
+		{
+			CurrentTargetEnemy = nullptr;
+			State = EState::Following;
+			return;
+		}
+
+		// 복귀 => 복귀해야하는 거리보다 길다면
+		if (AnchorDist > HardTrackingDistance)
+		{
+			State = EState::Returning;
+		}
+		if(State == EState::Returning)
+		{
+			// 복귀를 아직 못했다면
+			if(AnchorDist > ResumeTrackingDistance)
+			{
+				// 적 무시
+				CurrentTargetEnemy = nullptr;
+				MoveToAnchor();
+				return;
+			}
+			State = EState::Following;
+		}
+		// soft 밖이면 적 유지, 새 타겟은 기준점 주변
+		const bool bOutsideSoft = AnchorDist > SoftTrackingDistance;
+		const bool bKeepTarget = bOutsideSoft && IsValid(CurrentTargetEnemy) && !CurrentTargetEnemy->GetIsDead() && !CurrentTargetEnemy->IsHidden();
+		
+		// 유지할 적이 없으면 새로 찾기
+		if (!bKeepTarget)
+		{
+			CurrentTargetEnemy = FindNearestEnemy(bOutsideSoft ? AnchorLoc : MyLoc);
+		}
+	}
+	else // 리더가 없는 동료 => 거의 이 코드는 실행안된다.
+	{
+		CurrentTargetEnemy = FindNearestEnemy(MyLoc);
+	}
+	
+	if (!CurrentTargetEnemy)
+	{
+		State = EState::Following;
+		MoveToAnchor();
 		return;
 	}
 
@@ -147,7 +195,7 @@ void AAllyCharacter::UpdateDecision()
 
 	// Tick의 공격 판정과 반드시 같은 값을 써야 한다(GetEngageRange 하나로 통일).
 	const float Engage = GetEngageRange();
-	const float Dist = FVector::Dist(GetActorLocation(), CurrentTarget->GetActorLocation());
+	const float Dist = FVector::Dist(GetActorLocation(), CurrentTargetEnemy->GetActorLocation());
 
 	if (bDebugCombat && GEngine)
 	{
@@ -162,7 +210,7 @@ void AAllyCharacter::UpdateDecision()
 	if (Dist > Engage)
 	{
 		// 사거리 밖 → 적에게 접근 (조금 더 가깝게 멈추도록 수용 반경을 줄임)
-		AICon->MoveToActor(CurrentTarget, Engage * 0.8f, false);
+		AICon->MoveToActor(CurrentTargetEnemy, Engage * 0.8f, false);
 	}
 	else
 	{
@@ -173,9 +221,8 @@ void AAllyCharacter::UpdateDecision()
 }
 
 // 
-void AAllyCharacter::UpdateIdle()
+void AAllyCharacter::MoveToAnchor()
 {
-	State = EState::Following;
 	if (AICon)
 	{
 		AICon->StopMovement();
@@ -183,16 +230,21 @@ void AAllyCharacter::UpdateIdle()
 }
 
 
-AEnemy* AAllyCharacter::FindNearestEnemy() const
+AEnemy* AAllyCharacter::FindNearestEnemy(const FVector& Origin) const
 {
 	// v1: 단순히 모든 적을 훑어 가장 가까운 살아있는 적을 고른다.
 	// (적이 많아지면 오버랩 쿼리로 최적화 가능)
 	TArray<AActor*> Enemies;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemy::StaticClass(), Enemies);
 
+	FVector AnchorLoc;
+	const bool bHasAnchor = GetAnchorLocation(AnchorLoc);
+	const float MaxFromAnchorSq = SoftTrackingDistance * SoftTrackingDistance;  // 소프트 거리
+
+
 	AEnemy* Best = nullptr;
 	float BestDistSq = DetectRadius * DetectRadius;
-	const FVector Loc = GetActorLocation();
+
 
 	for (AActor* A : Enemies)
 	{
@@ -201,7 +253,14 @@ AEnemy* AAllyCharacter::FindNearestEnemy() const
 		{
 			continue; // 풀 대기 중이거나 죽은 적은 무시
 		}
-		const float DSq = FVector::DistSquared(Loc, E->GetActorLocation());
+
+		// 기준점에서 soft 밖 적은 제외 => 어짜피 강제로 적이 아닌목표위치로 따라가야함
+		if (bHasAnchor && FVector::DistSquared2D(AnchorLoc, E->GetActorLocation()) > MaxFromAnchorSq)
+		{
+			continue;
+		}
+
+		const float DSq = FVector::DistSquared(Origin, E->GetActorLocation());
 		if (DSq < BestDistSq)
 		{
 			BestDistSq = DSq;
@@ -231,3 +290,4 @@ float AAllyCharacter::GetEngageRange() const
 {
 	return (CurrentJob && CurrentJob->GetEngageRange() > 0.0f) ? CurrentJob->GetEngageRange() : AttackRange;
 }
+

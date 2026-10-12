@@ -13,7 +13,8 @@ class ZOMBIEHUNTER1_API ACompanion : public AAllyCharacter
 	GENERATED_BODY()
 
 protected:
-	virtual void UpdateIdle() override;
+	virtual void MoveToAnchor() override;
+	virtual bool TryReturnTeleport(float AnchorDist) override;
 
 	// [변수]
 	// 따라다닐 대상(보통 플레이어). 섭외 시 RecruitCompanion에서 설정.
@@ -24,16 +25,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Companion")
 	float FollowDistance = 250.0f;
 
-	// [동료 복귀 변수]
-	UPROPERTY(EditAnywhere, Category="Companion|Return")
-	float SoftTrackingDistance = 1200.0f;
-
-	UPROPERTY(EditAnywhere, Category = "Companion|Return")
-	float HardTrackingDistance = 1800.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Companion|Return")
 	float TeleportDistance = 3000.0f;
 
+	UPROPERTY(EditAnywhere, Category = "Companion|Return")
+	float TeleportRadius = 400.0f;
+	virtual bool GetAnchorLocation(FVector& OutLocation) const override;
 public:
 	void SetLeader(AActor* NewLeader) { Leader = NewLeader; }
 };
