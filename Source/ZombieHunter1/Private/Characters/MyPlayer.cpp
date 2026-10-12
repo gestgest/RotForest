@@ -532,7 +532,7 @@ void AMyPlayer::OnBackPressed()
 //////////////////////////////////      Property        //////////////////////////
 void AMyPlayer::AddMoney()
 {
-    SetMoney(Money + 15);
+    SetMoney(Money + 1);
 }
 
 void AMyPlayer::GainMoney(int32 Amount)
