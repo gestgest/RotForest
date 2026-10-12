@@ -12,8 +12,9 @@ class UMaterialInterface;
 class AStaticMeshActor;
 class APawn;
 class ANavMeshBoundsVolume;
-class ACompanion;
+
 class AVillager;
+class AGuardCharacter;
 
 USTRUCT()
 struct FMapChunk // 한 청크가 스폰한 액터 묶음 
@@ -165,7 +166,7 @@ protected:
 
 	//마을 경비병 클래스
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI")
-	TSubclassOf<ACompanion> VillageGuardClass;
+	TSubclassOf<AGuardCharacter> VillageGuardClass;
 
 	// 마을 중심 청크에 배치할 경비병 수.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI", meta = (ClampMin = "0", ClampMax = "4"))

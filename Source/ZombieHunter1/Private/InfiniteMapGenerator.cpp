@@ -1,18 +1,28 @@
 ﻿#include "InfiniteMapGenerator.h"
-#include "Engine/StaticMeshActor.h"
-#include "Components/StaticMeshComponent.h"
-#include "Kismet/GameplayStatics.h"
+
 #include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
+
+#include "Kismet/GameplayStatics.h"
+
 #include "Materials/MaterialInterface.h"
+
 #include "UObject/ConstructorHelpers.h"
+
 #include "NavigationSystem.h" // 런타임 스폰한 바닥을 NavMesh에 반영
+
 #include "NavMesh/NavMeshBoundsVolume.h" // 플레이어 따라 옮길 나비 경계 볼륨
+
 #include "DrawDebugHelpers.h" // POI 청크 디버그 박스
+
 #include "Zones/MoneyPadZone.h" // 마을 발판 상태 저장/복원
-#include "Characters/Companion.h" // 마을 경비병 (경비 모드로 스폰)
+
+#include "Characters/GuardCharacter.h" // 마을 경비병
 #include "Characters/Villager.h" // 마을 주민 (비전투 배회 NPC)
 #include "Characters/Boss.h" 
+
 #include "Components/CapsuleComponent.h"
+#include "Components/StaticMeshComponent.h"
 
 
 //초기
@@ -464,20 +474,20 @@ void AInfiniteMapGenerator::SpawnVillageGuards(const FVector& Center, FMapChunk&
 	GuardParams.Owner = this;
 
 	const int32 Count = FMath::Min(VillageGuardCount, 4);
-	for (int32 i = 0; i < Count; ++i)
+
+	for (int32 i = 0; i < Count; i++)
 	{
 		// 캡슐 반높이(~90)만큼 띄워 바닥 위에 스폰
 		const FVector GuardLoc = Center + FVector(GuardPosts[i].X, GuardPosts[i].Y, 92.f);
-		ACompanion* Guard = GetWorld()->SpawnActor<ACompanion>(
-			VillageGuardClass, GuardLoc, FRotator::ZeroRotator, GuardParams);
+		AGuardCharacter* Guard = GetWorld()->
+			SpawnActor<AGuardCharacter>(VillageGuardClass, GuardLoc, FRotator::ZeroRotator, GuardParams);
+
 		if (!Guard)
 		{
 			continue;
 		}
 
-		Guard->Leader = nullptr;        // 아무도 안 따라간다
-		Guard->bGuardHome = true;       // 대신 자기 자리를 지킨다
-		Guard->HomeLocation = GuardLoc;
+		Guard->SetHomeLocation(GuardLoc);
 #if WITH_EDITOR
 		Guard->SetFolderPath(TEXT("Spawned/Map"));
 #endif

@@ -42,14 +42,10 @@ void UPartyComponent::RecruitCompanion(TSubclassOf<UJobComponent> JobComponent)
 		return;
 	}
 
-	Companion->Leader = GetOwner();
-
+	Companion->SetLeader(GetOwner());
 	Companion->DefaultJobClass = JobComponent; //직업 셋팅
-
 	UGameplayStatics::FinishSpawningActor(Companion, SpawnTM);
-
 	Companions.Add(Companion);
-
 	EquipWeaponFromBag(Companion);
 }
 
