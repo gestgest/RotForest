@@ -28,7 +28,11 @@ public:
 	virtual void OnDeath() override;
 
 protected:
+	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	virtual ACombatCharacter* FindTrackTarget() override;
+
 
 public:
 
@@ -69,22 +73,24 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
 	float ChargeChance = 0.3f;
 
-	// 돌진 최소 길이
+	// 돌진 탐지 최소 범위
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
-	float ChargeMinDistance = 300.0f; // 거리가 가깝다면
+	float ChargeTriggerMinDistance = 300.0f; // 거리가 가깝다면
 
-	// 돌진 최대 길이
+	// 돌진 탐지 최대 범위
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
-	float ChargeMaxDistance = 2000.0f;
+	float ChargeTriggerMaxDistance = 2000.0f;
 
+	// 돌진 전 대기 시간
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
 	float WindupTime = 0.5f;
-
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
 	float ChargeSpeed = 5000.0f;
 
+	// 돌진시간 => 20000 가속도면 31m
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
-	float ChargeTime = 5.0f;
+	float ChargeTime = 1.3f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
 	float RecoverTime = 1.0f;
@@ -93,10 +99,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
 	float ChargeDamageMultiplier = 2.0f;
 
-	// 충돌 범위
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
 	float ChargeHitRadius = 120.0f;
-	// 충돌 범위
+
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
 	float ChargeDamagedHeight = 600.0f;
 
@@ -104,6 +109,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
 	float ChargePower = 1400.0f;
 
+	// 대기 함수
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
 	UAnimMontage* WindupMontage = nullptr;
 
@@ -113,6 +119,10 @@ protected:
 	// 공격 적중 시 재생할 사운드
 	UPROPERTY(EditDefaultsOnly, Category = "Pattern|Charge")
 	USoundBase* ChargeSound = nullptr;
+	
+	UPROPERTY(EditAnywhere, Category = "Pattern|Return")
+	float ReturnRange = 5500.0f;
+
 
 private:
 	// [Tick 함수]
@@ -127,11 +137,14 @@ private:
 	TWeakObjectPtr<AInfiniteMapGenerator> HomeGenerator;
 	FIntPoint HomeChunk = FIntPoint::ZeroValue;
 	
+	FVector HomeLocation = FVector::ZeroVector;
+
 
 	// (0,0)도 유효한 청크 좌표라 좌표값만으로는 "설정됨"을 구분할 수 없다 — 별도 플래그가 필요.
 	bool bHomeSet = false;
 	bool bInCombat = false;  // 전투중. 보스바 관련 기능을 조율
 	bool bChargeHit = false; // 한번이라도 돌진할때 맞은 경우
+	bool bReturningHome = false;
 	 
 	// 패턴
 	float PatternTime = 0.0f;
@@ -148,5 +161,10 @@ private:
 
 	void SetPattern(EBossPattern NewPattern);
 	void TickCharge();
+
+	void UpdateReturn();
+	void StartReturnHome();
+	bool IsInsideReturn(const FVector& Location) const;
+
 	void TryStartCharge();
 };
