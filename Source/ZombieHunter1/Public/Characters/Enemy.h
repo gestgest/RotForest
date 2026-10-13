@@ -118,6 +118,8 @@ public:
 protected:
 	// 추격 가능한지 => 보스에서 갑자기 멈추는 기능으로 참조
 	virtual bool CanTrack() const { return true; }
+	virtual ACombatCharacter* FindTrackTarget();
+
 
 private:
 	bool hit();

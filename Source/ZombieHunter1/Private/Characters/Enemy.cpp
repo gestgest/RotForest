@@ -98,31 +98,25 @@ void AEnemy::TrackingPlayer()
 	{
 		return;
 	}
-	const FVector myLocation = GetActorLocation();
-	UCombatRegistrySubsystem* Reg = GetWorld()->GetSubsystem<UCombatRegistrySubsystem>();
-	if (!Reg)
-	{
-		return;
-	}
-	
-	ACombatCharacter * target = Reg->FindNearestOfEnemy(myLocation, ETeam::Ally, 2500);
 
+	const FVector MyLocation = GetActorLocation();
+	ACombatCharacter* Target = FindTrackTarget();
 
 	// 전원 사망 → 쫓을 대상 없음
-	if (!target)
+	if (!Target)
 	{
 		return;
 	}
 
-	const float targetDist = FVector::Dist2D(myLocation, target->GetActorLocation());
+	const float targetDist = FVector::Dist2D(MyLocation, Target->GetActorLocation());
 
 	const float Interval = (targetDist > TrackFarDistance) ? TrackFarInterval : TrackNearInterval;
 	NextTrackTime = Now + Interval * FMath::FRandRange(0.9f, 1.1f);
 
 	if (aiController)
 	{
-		aiController->SetFocus(target);
-		aiController->MoveToActor(target, AttackRange);
+		aiController->SetFocus(Target);
+		aiController->MoveToActor(Target, AttackRange);
 	}
 }
 
@@ -178,6 +172,21 @@ void AEnemy::HandleAttackNotify(FName NotifyName)
 		}
 	}
 }
+
+
+
+ACombatCharacter* AEnemy::FindTrackTarget()
+{
+	UCombatRegistrySubsystem* Reg = GetWorld()->GetSubsystem<UCombatRegistrySubsystem>();
+	if (!Reg)
+	{
+		return nullptr;
+	}
+
+	return Reg->FindNearestOfEnemy(GetActorLocation(), ETeam::Ally, 2500);
+}
+
+
 
 
 //일단 때리는 애니메이션
