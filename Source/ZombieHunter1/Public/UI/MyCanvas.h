@@ -57,7 +57,7 @@ protected:
     UVirtualJoystick* MoveJoystick;
 
     UPROPERTY(meta = (BindWidgetOptional))
-    UVirtualJoystick* AimJoystick;
+    UButton* AttackButton;
 
 
     UPROPERTY(meta = (BindWidgetOptional))
@@ -111,7 +111,7 @@ public:
     void EndBossEncounter(ACombatCharacter* Boss);
 
     UVirtualJoystick* GetMoveJoystick() const { return MoveJoystick; }
-    UVirtualJoystick* GetAimJoystick() const { return AimJoystick; }
+    UButton* GetAttackButton() const { return AttackButton; }
 
 private:
     TWeakObjectPtr<ACombatCharacter> TargetBoss; //추격하는 보스. 화살표 쓰기 위함

@@ -3,11 +3,22 @@
 
 #include "Characters/MyPlayer.h"
 #include "Characters/Enemy.h"
+#include "Characters/CombatRegistrySubsystem.h"
+
 #include "Blueprint/UserWidget.h"
+
 #include "Components/TextBlock.h"
 #include "Components/InputComponent.h" //BindAxisKey
+#include "Components/SlateWrapperTypes.h" //ESlateVisibility
+#include "Components/SkeletalMeshComponent.h" //무기 컴포넌트 메시 교체
+#include "Components/ChildActorComponent.h" //무기 ChildActor(Weapon_BP)
+#include "Component/InventoryComponent.h" //아이템 가방
+
+
 #include "InputCoreTypes.h"            //EKeys
+
 #include "Kismet/GameplayStatics.h" //getCharacter, sound
+
 #include "Animation/AnimInstance.h" //SetRootMotionMode, ERootMotionMode
 #include "Animation/AnimMontage.h" //공격 몽타주 길이
 
@@ -15,18 +26,21 @@
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/CharacterMovementComponent.h" //GetCharacterMovement
 #include "GameFramework/SpringArmComponent.h"
+
 #include "Camera/CameraComponent.h"
+
 #include "NavigationInvokerComponent.h"
+
 #include "UI/VirtualJoystick.h"
+
+#include "Engine/SkeletalMesh.h"
 #include "Engine/Engine.h" //GEngine 화면 디버그
+
 #include "Jobs/JobComponent.h"
 #include "Jobs/WarriorJob.h"
-#include "Components/SlateWrapperTypes.h" //ESlateVisibility
-#include "Components/SkeletalMeshComponent.h" //무기 컴포넌트 메시 교체
-#include "Components/ChildActorComponent.h" //무기 ChildActor(Weapon_BP)
-#include "Engine/SkeletalMesh.h"
+
 #include "Characters/PartyComponent.h" //동료 파티(섭외·장비 배분)
-#include "Component/InventoryComponent.h" //아이템 가방
+
 #include "ZombieGameInstance.h" //직업 선택 씬에서 고른 직업 읽기
 #include "ZombieSlayerGameMode.h" //사망 시 적 시간 정지(SetEnemiesFrozen)
 
@@ -131,7 +145,10 @@ void AMyPlayer::Tick(float DeltaTime)
             return (AB.SizeSquared() >= C.SizeSquared()) ? AB : C;
         };
     const FVector2D Move = Largest(TouchMove, GamepadMove, MouseMove);
-    const FVector2D Aim = Largest(TouchAim, GamepadAim, MouseAim);
+
+    UpdateAutoTarget();
+    const FVector2D ButtonAim = GetAutoAimInput(Move);
+    const FVector2D Aim = ButtonAim.IsZero() ? Largest(TouchAim, GamepadAim, MouseAim) : ButtonAim;
 
     DebugWalkSpeed(Move);
 
@@ -148,6 +165,63 @@ void AMyPlayer::Tick(float DeltaTime)
     }
 }
 
+// 살아있음 → 죽음 전환 시 베이스(SetDead)가 1회 호출.
+void AMyPlayer::OnDeath()
+{
+    // 진행 중인 공격 몽타주를 즉시 끊어 슬롯을 비움 → ABP의 죽음 상태가 바로 재생됨
+    StopAnimMontage();
+
+    GetCharacterMovement()->DisableMovement();
+
+    // 디아블로식 사망 연출 — 적들의 시간을 멈춘다(플레이어 죽음 애니메이션은 그대로 재생).
+    if (AZombieSlayerGameMode* GM = GetWorld()->GetAuthGameMode<AZombieSlayerGameMode>())
+    {
+        GM->SetEnemiesFrozen(true);
+    }
+
+    if (CanvasWidget)
+    {
+        CanvasWidget->ShowDeathPanel(true); //사망 패널 on (BP에 DeathPanel이 있을 때만)
+    }
+
+    // 죽으면 UI(사망 패널)만 조작 가능
+    if (PlayerControllerRef)
+    {
+        PlayerControllerRef->bShowMouseCursor = true;
+        PlayerControllerRef->SetInputMode(FInputModeUIOnly());
+    }
+    bAttackButtonHeld = false;
+    SetHighlightedTarget(nullptr);
+}
+
+// 죽음 → 부활(ReStart의 SetHP) 전환 시 베이스가 1회 호출. 죽을 때 껐던 것을 되돌린다.
+void AMyPlayer::OnRevive()
+{
+    GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
+    // 죽을 때 멈춘 적들의 시간을 다시 흐르게 한다.
+    if (AZombieSlayerGameMode* GM = GetWorld()->GetAuthGameMode<AZombieSlayerGameMode>())
+    {
+        GM->SetEnemiesFrozen(false);
+    }
+
+    if (CanvasWidget)
+    {
+        CanvasWidget->ShowDeathPanel(false); //사망 패널 off
+    }
+
+    if (PlayerControllerRef)
+    {
+        // 마우스 커서를 보이게 하고, 게임+UI 입력 모드로 둠
+        // → 데스크탑에서 마우스로 조이스틱을 조작할 수 있고 커서도 보임
+        PlayerControllerRef->bShowMouseCursor = true;
+
+        FInputModeGameAndUI InputMode;
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+        InputMode.SetHideCursorDuringCapture(false);
+        PlayerControllerRef->SetInputMode(InputMode);
+    }
+}
 
 
 // [생성자 함수들]
@@ -414,18 +488,7 @@ void AMyPlayer::UpdateAimAndAttack(float DeltaTime, const FVector2D& Aim, const 
     }
 }
 
-// 공격 중에는 클릭한 방향을 유지해야 해서, 그 유지 시간을 몽타주 길이로 잡는다.
-float AMyPlayer::GetAttackMontageLength()
-{
-    UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
-    UAnimMontage* Montage = AnimInstance ? AnimInstance->GetCurrentActiveMontage() : nullptr;
-    if (!Montage || Montage->GetPlayLength() <= 0.0f)
-    {
-        return AttackFacingHoldFallback;
-    }
 
-    return Montage->GetPlayLength();
-}
 
 // 다리(하체)를 실제 이동 방향으로 돌리기 위한 yaw 오프셋을 계산한다.
 // 액터(상체/조준)는 조준 방향을 보고 있으므로, 속도 방향과 액터 회전의 차이가 곧 "다리를 더 돌려야 할 각도"다.
@@ -449,10 +512,40 @@ void AMyPlayer::UpdateLegYawOffset(float DeltaTime)
     LegYawOffset = FMath::FInterpTo(LegYawOffset, TargetOffset, DeltaTime, LegYawInterpSpeed);
 }
 
+// 자동으로 해서 림라이팅
+void AMyPlayer::UpdateAutoTarget()
+{
+    UCombatRegistrySubsystem* Registry = GetWorld()->GetSubsystem<UCombatRegistrySubsystem>();
 
+    // 사거리만큼 적 탐색
+    ACombatCharacter* Nearest = Registry ? Registry->FindNearestOfEnemy(GetActorLocation(), ETeam::Enemy, GetAutoTargetRange()) : nullptr;
 
+    SetHighlightedTarget(Nearest);
+}
 
+void AMyPlayer::SetHighlightedTarget(ACombatCharacter * NewTarget)
+{
+    // 기존의 타겟과 같은 경우
+    if (AutoTarget.Get() == NewTarget)
+    {
+        return;
+    }
 
+    // 이전의 머터리얼 제거
+    if (ACombatCharacter* Old = AutoTarget.Get())
+    {
+        // 오버레이만 지움
+        Old->GetMesh()->SetOverlayMaterial(nullptr);
+    }
+
+    AutoTarget = NewTarget;
+
+    // 림라이트 적용
+    if (NewTarget && TargetHighlightMaterial)
+    {
+        NewTarget->GetMesh()->SetOverlayMaterial(TargetHighlightMaterial);
+    }
+}
 
 
 void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -485,7 +578,9 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     // 디버그/테스트: C 키로 돈 획득(AddMoney). bDebugAddMoneyKey로 토글.
     if (bDebugAddMoneyKey)
     {
-        PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::AddMoney);
+        //PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::AddMoney);
+        PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::OnAttackButtonPressed);
+        PlayerInputComponent->BindKey(EKeys::C, IE_Released, this, &AMyPlayer::OnAttackButtonReleased);
     }
 }
 
@@ -519,6 +614,10 @@ void AMyPlayer::OnLeftMousePressed() { bLeftMouseHeld = true; }
 void AMyPlayer::OnLeftMouseReleased() { bLeftMouseHeld = false; }
 void AMyPlayer::OnRightMousePressed() { bRightMouseHeld = true; }
 void AMyPlayer::OnRightMouseReleased() { bRightMouseHeld = false; }
+
+// 버튼
+void AMyPlayer::OnAttackButtonPressed() { bAttackButtonHeld = true; }
+void AMyPlayer::OnAttackButtonReleased() { bAttackButtonHeld = false; }
 
 void AMyPlayer::OnBackPressed()
 {
@@ -654,61 +753,6 @@ bool AMyPlayer::GetIsDead()
     return IsDead;
 }
 
-// 살아있음 → 죽음 전환 시 베이스(SetDead)가 1회 호출.
-void AMyPlayer::OnDeath()
-{
-    // 진행 중인 공격 몽타주를 즉시 끊어 슬롯을 비움 → ABP의 죽음 상태가 바로 재생됨
-    StopAnimMontage();
-
-    GetCharacterMovement()->DisableMovement();
-
-    // 디아블로식 사망 연출 — 적들의 시간을 멈춘다(플레이어 죽음 애니메이션은 그대로 재생).
-    if (AZombieSlayerGameMode* GM = GetWorld()->GetAuthGameMode<AZombieSlayerGameMode>())
-    {
-        GM->SetEnemiesFrozen(true);
-    }
-
-    if (CanvasWidget)
-    {
-        CanvasWidget->ShowDeathPanel(true); //사망 패널 on (BP에 DeathPanel이 있을 때만)
-    }
-
-    // 죽으면 UI(사망 패널)만 조작 가능
-    if (PlayerControllerRef)
-    {
-        PlayerControllerRef->bShowMouseCursor = true;
-        PlayerControllerRef->SetInputMode(FInputModeUIOnly());
-    }
-}
-
-// 죽음 → 부활(ReStart의 SetHP) 전환 시 베이스가 1회 호출. 죽을 때 껐던 것을 되돌린다.
-void AMyPlayer::OnRevive()
-{
-    GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-
-    // 죽을 때 멈춘 적들의 시간을 다시 흐르게 한다.
-    if (AZombieSlayerGameMode* GM = GetWorld()->GetAuthGameMode<AZombieSlayerGameMode>())
-    {
-        GM->SetEnemiesFrozen(false);
-    }
-
-    if (CanvasWidget)
-    {
-        CanvasWidget->ShowDeathPanel(false); //사망 패널 off
-    }
-
-    if (PlayerControllerRef)
-    {
-        // 마우스 커서를 보이게 하고, 게임+UI 입력 모드로 둠
-        // → 데스크탑에서 마우스로 조이스틱을 조작할 수 있고 커서도 보임
-        PlayerControllerRef->bShowMouseCursor = true;
-
-        FInputModeGameAndUI InputMode;
-        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-        InputMode.SetHideCursorDuringCapture(false);
-        PlayerControllerRef->SetInputMode(InputMode);
-    }
-}
 
 //...?
 void AMyPlayer::ReStart()
@@ -765,10 +809,11 @@ void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
             MoveStick->SetVisibility(JoystickVis);
             MoveStick->OnJoystickMoved.AddUniqueDynamic(this, &AMyPlayer::OnMoveJoystickMoved);
         }
-        if (UVirtualJoystick* AimStick = CanvasWidget->GetAimJoystick())
+        if (UButton* AttackBtn = CanvasWidget->GetAttackButton())
         {
-            AimStick->SetVisibility(JoystickVis);
-            AimStick->OnJoystickMoved.AddUniqueDynamic(this, &AMyPlayer::OnAimJoystickMoved);
+            AttackBtn->SetVisibility(JoystickVis);
+            AttackBtn->OnPressed.AddUniqueDynamic(this, &AMyPlayer::OnAttackButtonPressed);
+            AttackBtn->OnReleased.AddUniqueDynamic(this, &AMyPlayer::OnAttackButtonReleased);
         }
 
         // 위젯이 막 연결된 시점에 현재 HP 기준으로 사망 UI/HP바를 동기화한다.
@@ -779,6 +824,59 @@ void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
     }
 }
 
+// 공격 중에는 클릭한 방향을 유지해야 해서, 그 유지 시간을 몽타주 길이로 잡는다.
+float AMyPlayer::GetAttackMontageLength()
+{
+    UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+    UAnimMontage* Montage = AnimInstance ? AnimInstance->GetCurrentActiveMontage() : nullptr;
+    if (!Montage || Montage->GetPlayLength() <= 0.0f)
+    {
+        return AttackFacingHoldFallback;
+    }
+
+    return Montage->GetPlayLength();
+}
+
+
+// 공격 사거리 반환
+float AMyPlayer::GetAutoTargetRange() const
+{
+    if (!CurrentJob || CurrentJob->GetEngageRange() <= 0.0f)
+    {
+        return AttackRange;
+    }
+    return CurrentJob->GetEngageRange();
+}
+
+
+// 
+FVector2D AMyPlayer::GetAutoAimInput(const FVector2D & Move)
+{
+    // 공격 버튼을 누르지 않는다면
+    if (!bAttackButtonHeld)
+    {
+        return FVector2D::ZeroVector;
+    }
+
+    FVector AimDir = GetActorForwardVector();
+
+    // 범위안
+    if (ACombatCharacter * Target = AutoTarget.Get())
+    {
+        AimDir = Target->GetActorLocation() - GetActorLocation();
+    }
+    // 조이스틱을 밀었는가
+    else if (Move.SizeSquared() > InputDeadzone * InputDeadzone)// 적이 없는 경우 바라보는 위치
+    {
+        AimDir = FVector(Move.Y, Move.X, 0.0f);
+    }
+
+    AimDir.Z = 0.0f;
+    AimDir = AimDir.GetSafeNormal();
+
+    SetDesiredAimPoint(GetActorLocation() + AimDir * 100.0f);
+    return FVector2D(AimDir.Y, AimDir.X);
+}
 
 // [Debug]
 // 속도 체크
