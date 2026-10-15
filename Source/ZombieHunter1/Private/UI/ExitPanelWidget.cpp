@@ -2,7 +2,7 @@
 
 
 #include "UI/ExitPanelWidget.h"
-#include "Components/Button.h"
+#include "UI/MainButton.h"
 #include "Kismet/GameplayStatics.h"
 
 

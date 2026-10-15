@@ -5,7 +5,7 @@
 #include "Blueprint/UserWidget.h"
 #include "ExitPanelWidget.generated.h"
 
-class UButton;
+class UMainButton;
 
 //나가기 버튼
 UCLASS()
@@ -16,10 +16,10 @@ class ZOMBIEHUNTER1_API UExitPanelWidget : public UUserWidget
 public:
 
 	UPROPERTY(BlueprintReadOnly, meta= (BindWidget))
-	UButton *ContinueButton;
+	UMainButton* ContinueButton;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	UButton* ExitButton;
+	UMainButton* ExitButton;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Exit")
 	TSoftObjectPtr<UWorld> MainMenuLevel;

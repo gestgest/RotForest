@@ -1,8 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "UI/DeathPanelWidget.h"
-#include "Components/Button.h"
+#include "UI/MainButton.h"
 #include "Kismet/GameplayStatics.h"
 
 void UDeathPanelWidget::NativeConstruct()

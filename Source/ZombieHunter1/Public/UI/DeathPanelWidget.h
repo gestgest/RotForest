@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -6,7 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "DeathPanelWidget.generated.h"
 
-class UButton;
+class UMainButton;
 
 /**
  * 사망 패널(디아블로식 "YOU DIED" 화면)의 C++ 베이스 — WBP_DeathPanel의 부모 클래스.
@@ -26,7 +26,7 @@ class ZOMBIEHUNTER1_API UDeathPanelWidget : public UUserWidget
 public:
 	/** 누르면 메인메뉴 맵으로 돌아가는 버튼. 필수(BindWidget) — 없으면 WBP 컴파일 에러. */
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	UButton* MainMenuButton;
+	UMainButton* MainMenuButton;
 
 	/** MainMenuButton이 여는 맵 이름. WBP 디폴트에서 바꿀 수 있다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Death")
