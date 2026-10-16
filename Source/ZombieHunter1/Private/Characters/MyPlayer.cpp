@@ -550,7 +550,7 @@ void AMyPlayer::SetHighlightedTarget(ACombatCharacter * NewTarget)
     if (ACombatCharacter* Old = AutoTarget.Get())
     {
         // 오버레이만 지움
-        SetOverlayOnAllMeshes(Old, TargetHighlightMaterial);
+        SetOverlayOnAllMeshes(Old, nullptr);
     }
 
     AutoTarget = NewTarget;
