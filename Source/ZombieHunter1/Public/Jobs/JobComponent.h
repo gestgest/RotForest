@@ -152,11 +152,13 @@ public:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Job|Combat")
 	int32 BonusDamage = 0;
 
+	// [함수]
+	virtual float GetAttackYawOffset() const { return 0.0f; }
+
 	// 실제 적용 피해량 = 직업 설계값 + 강화/버프 증가분 + 장착 무기 공격력.
 	// 무기는 캐릭터가 들고 있어서 여기서 인라인으로 못 읽는다(순환 include). 정의는 .cpp에 있다.
 	UFUNCTION(BlueprintPure, Category = "Job|Stats")
 	int32 GetDamage() const;
-
 
 	// 이 직업의 기본 무기 메시. CDO에 물어볼 때 쓴다(동료 스폰존 아이콘 등) —
 	// CDO는 InitializeForOwner를 안 타므로 캐릭터 쪽 장착 무기가 비어 있다.
@@ -166,6 +168,7 @@ public:
 
 	USoundBase* GetAttackSound() { return AttackSound; }
 	void SetAttackSound(USoundBase* Value) { AttackSound = Value; }
+	
 };
 
 

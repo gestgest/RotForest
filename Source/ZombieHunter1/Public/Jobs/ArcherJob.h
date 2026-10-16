@@ -43,13 +43,17 @@ public:
 	float MuzzleHeight = 50.0f;
 
 	virtual void Attack() override;
+	
+	virtual float GetAttackYawOffset() const override { return AttackYawOffset; }
 
 protected:
 	//전방으로 화살 1발 발사
 	void FireArrow();
 	void PlayBowDraw();
 
-
+	// 활이 정면으로 가도록 몸을 돌리는 각도
+	UPROPERTY(EditAnywhere, Category = "Job|Combat")
+	float AttackYawOffset = 0.0f;
 
 	// UArcherJob — 미세조정용. 1.0보다 크면 살짝 먼저 다 당겨진다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Job|Archer")
