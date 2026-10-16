@@ -102,15 +102,6 @@ protected:
 	bool bDebugAttack = false;
 
 
-
-
-	/** 이 직업이 무기를 드는 손. 활은 왼손으로 들고 오른손으로 시위를 당기므로 궁수는 Left.
-	 *  직업 BP에서 바꿀 수 있다(왼손잡이 검사 등). */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Job|Weapon")
-	EWeaponHand WeaponHand = EWeaponHand::Right;
-
-
-
 	/** 공격 사운드를 소유자 위치에서 재생 */
 	void PlayAttackSound();
 
@@ -163,7 +154,6 @@ public:
 	// 이 직업의 기본 무기 메시. CDO에 물어볼 때 쓴다(동료 스폰존 아이콘 등) —
 	// CDO는 InitializeForOwner를 안 타므로 캐릭터 쪽 장착 무기가 비어 있다.
 	USkeletalMesh* GetDefaultWeaponMesh() const;
-	EWeaponHand GetWeaponHand() const { return WeaponHand; }
 	float GetEngageRange() { return EngageRange; }
 
 	USoundBase* GetAttackSound() { return AttackSound; }

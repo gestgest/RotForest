@@ -10,6 +10,7 @@
 class USkeletalMesh;
 
 
+
 // 아이템 한 종류의 정의. 에셋 하나를 모두가 공유하므로 런타임에 값을 바꾸면 안 된다.
 UCLASS(BlueprintType)
 class ZOMBIEHUNTER1_API UItemDataAsset : public UPrimaryDataAsset
@@ -30,6 +31,7 @@ public:
 };
 
 
+//DA
 // 무기 한 종류의 정의.
 UCLASS(BlueprintType)
 class ZOMBIEHUNTER1_API UWeaponDataAsset : public UItemDataAsset
@@ -54,4 +56,8 @@ public:
 	// 손에 쥐는 위치(cm)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Grip")
 	FVector GripLocation = FVector::ZeroVector;
+
+	// ex) socket_bow
+	UPROPERTY(EditAnywhere, Category="Weapon|Grip")
+	FName SocketName;
 };
