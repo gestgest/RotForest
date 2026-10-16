@@ -523,6 +523,21 @@ void AMyPlayer::UpdateAutoTarget()
     SetHighlightedTarget(Nearest);
 }
 
+// 모듈형 적(머리·투구·갑옷...)의 모든 스켈레탈 메시에 오버레이를 건다
+static void SetOverlayOnAllMeshes(AActor* Actor, UMaterialInterface* Material)
+{
+    TArray<USkeletalMeshComponent*> Meshes;
+
+    // 모든 스켈레톤 매시 가져와라
+    Actor->GetComponents<USkeletalMeshComponent>(Meshes);
+
+    for (USkeletalMeshComponent* Mesh : Meshes)
+    {
+        Mesh->SetOverlayMaterial(Material);
+    }
+}
+
+
 void AMyPlayer::SetHighlightedTarget(ACombatCharacter * NewTarget)
 {
     // 기존의 타겟과 같은 경우
@@ -535,7 +550,7 @@ void AMyPlayer::SetHighlightedTarget(ACombatCharacter * NewTarget)
     if (ACombatCharacter* Old = AutoTarget.Get())
     {
         // 오버레이만 지움
-        Old->GetMesh()->SetOverlayMaterial(nullptr);
+        SetOverlayOnAllMeshes(Old, TargetHighlightMaterial);
     }
 
     AutoTarget = NewTarget;
@@ -543,7 +558,7 @@ void AMyPlayer::SetHighlightedTarget(ACombatCharacter * NewTarget)
     // 림라이트 적용
     if (NewTarget && TargetHighlightMaterial)
     {
-        NewTarget->GetMesh()->SetOverlayMaterial(TargetHighlightMaterial);
+        SetOverlayOnAllMeshes(NewTarget, TargetHighlightMaterial);
     }
 }
 
@@ -864,17 +879,23 @@ FVector2D AMyPlayer::GetAutoAimInput(const FVector2D & Move)
     if (ACombatCharacter * Target = AutoTarget.Get())
     {
         AimDir = Target->GetActorLocation() - GetActorLocation();
+        SetDesiredAimPoint(Target->GetActorLocation()); // 설정
     }
-    // 조이스틱을 밀었는가
-    else if (Move.SizeSquared() > InputDeadzone * InputDeadzone)// 적이 없는 경우 바라보는 위치
+    else // 주변에 적이 없다면. 근데 만약 이동해서 적이 없는 경우라면?
     {
-        AimDir = FVector(Move.Y, Move.X, 0.0f);
+        // 이거 안하면 전의 방향으로 쏜다
+        ClearDesiredAimPoint();
+
+        // 조이스틱을 밀었는가
+        if (Move.SizeSquared() > InputDeadzone * InputDeadzone) // 적이 없는 경우 바라보는 위치
+        {
+            AimDir = FVector(Move.Y, Move.X, 0.0f);
+        }
     }
 
     AimDir.Z = 0.0f;
     AimDir = AimDir.GetSafeNormal();
 
-    SetDesiredAimPoint(GetActorLocation() + AimDir * 100.0f);
     return FVector2D(AimDir.Y, AimDir.X);
 }
 

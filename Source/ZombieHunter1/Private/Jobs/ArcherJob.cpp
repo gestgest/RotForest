@@ -20,6 +20,8 @@ UArcherJob::UArcherJob()
 	// 활은 왼손으로 들고 오른손으로 시위를 당긴다 → 왼손 슬롯을 쓴다.
 	// 캐릭터의 LeftHandSocket(기본 "weapon_socket_l")이 스켈레톤에 있어야 한다.
 	WeaponHand = EWeaponHand::Left;
+
+    EngageRange = 1000.0f;
 }
 
  

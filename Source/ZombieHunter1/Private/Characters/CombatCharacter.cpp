@@ -378,6 +378,10 @@ void ACombatCharacter::SetDesiredAimPoint(const FVector& Point)
 	bHasDesiredAimPoint = true;
 }
 
+void ACombatCharacter::ClearDesiredAimPoint()
+{
+	bHasDesiredAimPoint = false;
+}
 
 // 실제 타격 판정/사운드는 현재 직업이 담당한다 (전사: 근접 스윕, 궁수: 발사체 등).
 // 직업이 없는 캐릭터(AEnemy)는 이 함수를 재정의해 자기 방식으로 때린다.

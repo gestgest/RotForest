@@ -95,6 +95,8 @@ protected: //핵심 함수의 부품
 	//aim point 활성화.
 	void SetDesiredAimPoint(const FVector& Point);
 
+	void ClearDesiredAimPoint();
+
 private: //부품 함수
 	// 메시 애님 인스턴스의 OnPlayMontageNotifyBegin에 바인딩 → HandleAttackNotify로 전달. 
 	UFUNCTION()

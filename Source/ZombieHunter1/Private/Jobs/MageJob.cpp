@@ -13,6 +13,8 @@ UMageJob::UMageJob()
 	Stats.AttackInterval = 1.2;
 	// 기본 발사체: 순수 AProjectile(메시 없는 구체). BP_Fireball로 바꾸면 이펙트가 보인다.
 	ProjectileClass = AProjectile::StaticClass();
+
+	EngageRange = 800.0f;
 }
 
 void UMageJob::Attack()
