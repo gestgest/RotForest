@@ -57,26 +57,6 @@ public: //핵심 함수
 
 protected: //핵심 함수의 부품
 
-	// [생성자]
-	// 반드시 서브클래스 생성자에서만 호출할 것 => Companion 같은 생성자
-	// ㄴ MyPlayer는 따로 UI가 있다.
-	void CreateHPBarComponent();
-
-	// [Begin]
-	void InitWeaponSlot();
-
-
-	// [Tick]
-	// 공격 판단 쿨타임 함수. 자식 클래스의 Tick에서 호출.
-	bool TickAttack(float DeltaTime, bool bWantsToAttack);
-	
-	
-	// SetHP가 호출.
-	void UpdateHPBar();
-
-	// HP 변화에 따라 IsDead를 바꾸고 OnDeath/OnRevive 훅을 전환 시점에 1회씩 호출. 
-	void SetDead(bool bNewDead);
-
 	// Virtual : 살아있음 → 죽음 전환 시 1회. 자식클래스가 AI 정지/콜리전 해제/연출 등을 구현.
 	virtual void OnDeath() {}
 
@@ -92,8 +72,38 @@ protected: //핵심 함수의 부품
 	 *  직업이 없는 캐릭터(AEnemy)만 이걸 재정의해 자기 방식으로 타격한다. */
 	virtual void HandleAttackNotify(FName NotifyName);
 
+
+	// [생성자]
+	// 반드시 서브클래스 생성자에서만 호출할 것 => Companion 같은 생성자
+	// ㄴ MyPlayer는 따로 UI가 있다.
+	void CreateHPBarComponent();
+
+	// [Begin]
+	void InitWeaponSlot();
+
+
+	// [Tick]
+	// 공격 판단 쿨타임 함수. 자식 클래스의 Tick에서 호출.
+	bool TickAttack(float DeltaTime, bool bWantsToAttack);
+
+	// SetHP가 호출.
+	void UpdateHPBar();
+	
+
+	// 무기 슬롯을 Socket에 붙인다
+	bool AttachWeaponSlot(FName Socket);
+
+	// HP 변화에 따라 IsDead를 바꾸고 OnDeath/OnRevive 훅을 전환 시점에 1회씩 호출. 
+	void SetDead(bool bNewDead);
+	
+	
+	
 	//aim point 활성화.
 	void SetDesiredAimPoint(const FVector& Point);
+
+	void ClearDesiredAimPoint();
+
+
 
 private: //부품 함수
 	// 메시 애님 인스턴스의 OnPlayMontageNotifyBegin에 바인딩 → HandleAttackNotify로 전달. 
@@ -145,12 +155,11 @@ protected: //변수
 
 	/** 오른손 무기가 붙을 스켈레톤 소켓 이름. 캐릭터마다 스켈레톤이 다르면 BP에서 바꾼다. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
-	FName RightHandSocket = TEXT("weapon_r");
+	FName DefaultWeaponSocket = TEXT("weapon");
 
-	/** 왼손 무기가 붙을 스켈레톤 소켓 이름(활처럼 왼손으로 드는 무기용). */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
-	FName LeftHandSocket = TEXT("weapon_l");
-
+	// 무기 슬롯. 붙는 소켓은 무기 DA의 SocketName
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+	UChildActorComponent* WeaponSlot = nullptr;
 
 
 	/** JobAttackMontages에 없다면 호출되는 디폴트 공격 몽타주.  */
@@ -175,25 +184,11 @@ protected: //변수
 
 
 
-	// 오른손 무기 슬롯. 쥐는 각도는 무기 DA의 GripRotation
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-	UChildActorComponent* WeaponRight = nullptr;
-
-	// 왼손 무기 슬롯. 쥐는 각도는 무기 DA의 GripRotation
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-	UChildActorComponent* WeaponLeft = nullptr;
-
 	// 지금 장착한 무기. 장비는 캐릭터가 소유한다 — 직업이 바뀌어도 들고 있던 무기는 남는다.
 	// Transient — 한 판 동안만 유효한 값이라 애셋/세이브에 굳으면 안 된다(BonusDamage와 같은 성격).
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Weapon")
 	UWeaponDataAsset* EquippedWeapon = nullptr;
 
-	/** 각 슬롯의 Weapon_BP 안에 있는 스켈레탈 메시 컴포넌트. BeginPlay(InitWeaponSlot)에서 캐시. */
-	UPROPERTY()
-	USkeletalMeshComponent* WeaponRightMesh = nullptr;
-
-	UPROPERTY()
-	USkeletalMeshComponent* WeaponLeftMesh = nullptr;
 
 	/** 지금 장착 중인 손의 메시 컴포넌트. EquipWeaponInHand가 갱신한다.
 	 *  (궁수의 활 시위 애니처럼) 무기 메시를 직접 만져야 하는 직업이 이걸 집어간다. */
@@ -239,12 +234,6 @@ public: //Property
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	virtual void AddHP(int32 add_hp);
 
-
-	/** Hand 쪽 손에 무기 메시를 끼우고 반대 손은 숨긴다. JobComponent가 호출.
-	 *  NewMesh가 null이면 양손 다 숨긴다(무기 없는 직업). */
-	void EquipWeaponInHand(USkeletalMesh* NewMesh, EWeaponHand Hand);
-
-	// 오른손에 끼우는 단축형.
 	void EquipWeapon(USkeletalMesh* NewMesh);
 
 	// 무기를 갈아끼우고 손 슬롯 반영까지 한다.
@@ -254,7 +243,7 @@ public: //Property
 	// 이 무기를 지금 것과 바꿀 가치가 있는지. 직업이 맞고 공격력이 더 높아야 한다.
 	bool WantsWeaponItem(UWeaponDataAsset* Item) const;
 
-	// 지금 장착 무기의 메시를 직업이 지정한 손에 다시 끼운다. 데이터는 건드리지 않는다.
+	// 지금 장착 무기의 메시를 직업이 지정한 손에 다시 끼운다.
 	void RefreshWeaponMesh();
 
 	// 장착한 무기의 공격력. 무기가 없으면 0.

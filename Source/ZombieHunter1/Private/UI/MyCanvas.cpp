@@ -40,7 +40,7 @@ void UMyCanvas::NativeConstruct()
     const ESlateVisibility JoystickVis = ESlateVisibility::Collapsed;
 #endif
     if (MoveJoystick) { MoveJoystick->SetVisibility(JoystickVis); }
-    if (AimJoystick)  { AimJoystick->SetVisibility(JoystickVis); }
+    if (AttackButton) { AttackButton->SetVisibility(JoystickVis); }
 
 }
 

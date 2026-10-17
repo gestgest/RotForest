@@ -19,6 +19,7 @@ class USkeletalMesh;
 class USkeletalMeshComponent;
 class UPartyComponent;
 class UInventoryComponent;
+class UMaterialInterface;
 
 UCLASS()
 class ZOMBIEHUNTER1_API AMyPlayer : public ACombatCharacter
@@ -122,28 +123,38 @@ private: //평범한 변수 및 함수
 	UPROPERTY()
 	UVirtualJoystick* MoveJoystick;
 
-	UPROPERTY()
-	UVirtualJoystick* AimJoystick;
+	//UPROPERTY()
+	//UVirtualJoystick* AimJoystick;
 
 	// 스틱 입력 데드존 => 안 움직임
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Input", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Input", meta = (AllowPrivateAccess = "true"))
 	float InputDeadzone = 0.25f;
 
 	// 마우스 이동: 커서가 캐릭터로부터 이 거리(cm) 안이면 이동 정지 — 가까울 때 방향이 뒤집혀 제자리 진동하는 것 방지
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Input", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Input", meta = (AllowPrivateAccess = "true"))
 	float CursorStopRadius = 60.0f;
 
 	// 캐릭터가 조준/이동 방향으로 회전하는 속도
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Movement", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Movement", meta = (AllowPrivateAccess = "true"))
 	float TurnInterpSpeed = 12.0f;
 
 	// 공격 몽타주 길이를 못 구했을 때 쓸 조준 유지 시간(초)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Movement", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Movement", meta = (AllowPrivateAccess = "true"))
 	float AttackFacingHoldFallback = 0.5f;
+
+	// 타겟 메시에 덮을 림 라이트
+	UPROPERTY(EditAnywhere, Category = "Player|AutoAim")
+	UMaterialInterface* TargetHighlightMaterial = nullptr;
+
+	// 자동조준 타겟
+	TWeakObjectPtr<ACombatCharacter> AutoTarget;
 
 	// 공격 중 남은 조준 유지 시간(초). 0보다 크면 이동 방향으로 몸을 되돌리지 않는다.
 	float AttackFacingHold = 0.0f;
-	
+
+	// 공격 버튼을 누르는 동안
+	bool bAttackButtonHeld = false;
+
 
 
 	// [카메라]
@@ -259,12 +270,18 @@ private: //평범한 변수 및 함수
 
 	// [Tick]
 	void UpdateAimAndAttack(float DeltaTime, const FVector2D& Aim, const FVector2D& Move);
+
 	// 매 프레임 속도 방향과 액터 회전으로 LegYawOffset을 갱신한다
 	void UpdateLegYawOffset(float DeltaTime);
 
+	void UpdateAutoTarget();
+	void SetHighlightedTarget(ACombatCharacter* NewTarget);
 
-	// 방금 시작한 공격 몽타주가 끝날 때까지 남은 시간
-	float GetAttackMontageLength();
+
+
+
+
+
 
 	// 마우스(로스트아크식): 우클릭 누르는 동안 커서로 이동, 좌클릭 누르는 동안 커서 방향 공격
 	void OnLeftMousePressed();
@@ -283,6 +300,12 @@ private: //평범한 변수 및 함수
 
 	UFUNCTION()
 	void OnAimJoystickMoved(FVector2D Value);
+
+	UFUNCTION()
+	void OnAttackButtonPressed();
+
+	UFUNCTION()
+	void OnAttackButtonReleased();
 
 
 	// 초기 셋업 / 내부 헬퍼 (BeginPlay 등 내부에서만 호출)
@@ -304,6 +327,13 @@ private: //평범한 변수 및 함수
 	void OnMoveY(float Value);
 	void OnAimX(float Value);
 	void OnAimY(float Value);
+
+	// 방금 시작한 공격 몽타주가 끝날 때까지 남은 시간
+	float GetAttackMontageLength();
+
+	float GetAutoTargetRange() const;
+	// 공격 에임 위치 설정 => 대체로 가까운 적
+	FVector2D GetAutoAimInput(const FVector2D& Move);
 
 
 	// [UI] Property

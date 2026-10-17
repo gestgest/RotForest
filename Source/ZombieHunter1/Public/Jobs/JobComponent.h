@@ -8,12 +8,15 @@
 #include "JobComponent.generated.h"
 
 class ACombatCharacter;
+class AEnemy;
 class UAnimMontage;
 class USoundBase;
 class AProjectile;
 class USkeletalMesh;
 class UJobComponent;
 class UWeaponDataAsset;
+
+struct FOverlapResult;
 
 USTRUCT(BlueprintType)
 struct FJobStats
@@ -102,20 +105,13 @@ protected:
 	bool bDebugAttack = false;
 
 
-
-
-	/** 이 직업이 무기를 드는 손. 활은 왼손으로 들고 오른손으로 시위를 당기므로 궁수는 Left.
-	 *  직업 BP에서 바꿀 수 있다(왼손잡이 검사 등). */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Job|Weapon")
-	EWeaponHand WeaponHand = EWeaponHand::Right;
-
-
-
 	/** 공격 사운드를 소유자 위치에서 재생 */
 	void PlayAttackSound();
 
 	//원거리 투사체 생성
 	AProjectile* SpawnProjectileForward(TSubclassOf<AProjectile> ProjectileClass, float Speed, float MuzzleOffset, float MuzzleHeight);
+
+	virtual bool HitEnemy(TSet<AEnemy*>& HitEnemies, const FOverlapResult& Result, const FVector& Origin, const FVector& AimDir) { return true; }
 
 private:
 
@@ -152,20 +148,22 @@ public:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Job|Combat")
 	int32 BonusDamage = 0;
 
+	// [함수]
+	virtual float GetAttackYawOffset() const { return 0.0f; }
+
 	// 실제 적용 피해량 = 직업 설계값 + 강화/버프 증가분 + 장착 무기 공격력.
 	// 무기는 캐릭터가 들고 있어서 여기서 인라인으로 못 읽는다(순환 include). 정의는 .cpp에 있다.
 	UFUNCTION(BlueprintPure, Category = "Job|Stats")
 	int32 GetDamage() const;
 
-
 	// 이 직업의 기본 무기 메시. CDO에 물어볼 때 쓴다(동료 스폰존 아이콘 등) —
 	// CDO는 InitializeForOwner를 안 타므로 캐릭터 쪽 장착 무기가 비어 있다.
 	USkeletalMesh* GetDefaultWeaponMesh() const;
-	EWeaponHand GetWeaponHand() const { return WeaponHand; }
 	float GetEngageRange() { return EngageRange; }
 
 	USoundBase* GetAttackSound() { return AttackSound; }
 	void SetAttackSound(USoundBase* Value) { AttackSound = Value; }
+	
 };
 
 

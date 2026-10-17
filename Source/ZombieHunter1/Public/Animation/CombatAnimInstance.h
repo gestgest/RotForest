@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -49,6 +49,15 @@ protected:
 	 *  AnimBP가 pelvis(+)·spine_01(-) 회전에 쓴다. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Combat")
 	float LegYawOffset = 0.0f;
+
+	// 공격 몽타주 동안 몸 전체를 돌리는 yaw(도). AnimBP가 pelvis 회전에 더한다
+	UPROPERTY(BlueprintReadOnly, Transient, Category = "Combat")
+	float AttackYawOffset = 0.0f;
+
+	// AttackYawOffset이 따라가는 속도. 기본값: 20
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	float AttackYawInterpSpeed = 20.0f;
+
 
 	/** 소유 캐릭터(캐시). AnimBP에서 추가 정보가 필요할 때 캐스트 없이 쓸 수 있다. */
 	UPROPERTY(BlueprintReadOnly, Transient, Category = "Combat")

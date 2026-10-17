@@ -15,11 +15,3 @@ enum class EJobType : uint8
 	Healer UMETA(DisplayName = "힐러"),
 };
 
-
-// 무기를 드는 손
-UENUM(BlueprintType)
-enum class EWeaponHand : uint8
-{
-	Right UMETA(DisplayName = "오른손"),
-	Left  UMETA(DisplayName = "왼손"),
-};

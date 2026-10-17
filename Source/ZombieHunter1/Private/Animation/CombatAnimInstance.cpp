@@ -1,8 +1,12 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Animation/CombatAnimInstance.h"
+
 #include "Characters/CombatCharacter.h"
 #include "Characters/MyPlayer.h"
+
+#include "Jobs/JobComponent.h"
+
 #include "GameFramework/CharacterMovementComponent.h"
 
 void UCombatAnimInstance::NativeInitializeAnimation()
@@ -35,6 +39,18 @@ void UCombatAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	// 하체 yaw 오프셋 — 플레이어만 계산한다(Tick의 UpdateLegYawOffset). 그 외엔 0.
 	LegYawOffset = OwnerPlayer ? OwnerPlayer->GetLegYawOffset() : 0.0f;
+
+	float TargetAttackYaw = 0.0f;
+
+	// 몽타주 중이라면
+	if (IsAnyMontagePlaying())
+	{
+		if (const UJobComponent* Job = OwnerCombatCharacter->GetJobComponent())
+		{
+			TargetAttackYaw = Job->GetAttackYawOffset();
+		}
+	}
+	AttackYawOffset = FMath::FInterpTo(AttackYawOffset, TargetAttackYaw, DeltaSeconds, AttackYawInterpSpeed);
 }
 
 bool UCombatAnimInstance::CacheOwner()
