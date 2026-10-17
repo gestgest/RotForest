@@ -243,6 +243,10 @@ private:
 	UPROPERTY() 
 	TObjectPtr<ANavMeshBoundsVolume> NavBoundsVolume; // 따라다닐 NavMeshBoundsVolume (BeginPlay에서 레벨에서 찾아 캐시)
 
+	UPROPERTY()
+	TObjectPtr<AActor> FogActor;
+
+
 	FIntPoint LastPlayerChunk = FIntPoint(MAX_int32, MAX_int32);
 	float TimeSinceUpdate = 0.f;
 	bool bHasGenerated = false;
@@ -251,7 +255,10 @@ private:
 	//[Generate 함수]
 	//청크가 생성될때 실행된다.
 	void SetupFloor(const FVector& Center, FMapChunk& Chunk, FPOIInfo& POI, bool bIsPOIChunk);
-	void SpawnFog(const FVector& Center, FMapChunk& Chunk);
+
+	void SpawnFog();
+	void UpdateFogToPlayer(const FIntPoint& CenterChunk);
+
 	void SetupVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
 	void SpawnVillageGuards(const FVector& Center, FMapChunk& Chunk);
 	void SpawnVillagers(const FVector& Center, FMapChunk& Chunk);

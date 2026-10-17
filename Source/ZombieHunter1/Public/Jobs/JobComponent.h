@@ -8,12 +8,15 @@
 #include "JobComponent.generated.h"
 
 class ACombatCharacter;
+class AEnemy;
 class UAnimMontage;
 class USoundBase;
 class AProjectile;
 class USkeletalMesh;
 class UJobComponent;
 class UWeaponDataAsset;
+
+struct FOverlapResult;
 
 USTRUCT(BlueprintType)
 struct FJobStats
@@ -107,6 +110,8 @@ protected:
 
 	//원거리 투사체 생성
 	AProjectile* SpawnProjectileForward(TSubclassOf<AProjectile> ProjectileClass, float Speed, float MuzzleOffset, float MuzzleHeight);
+
+	virtual bool HitEnemy(TSet<AEnemy*>& HitEnemies, const FOverlapResult& Result, const FVector& Origin, const FVector& AimDir) { return true; }
 
 private:
 

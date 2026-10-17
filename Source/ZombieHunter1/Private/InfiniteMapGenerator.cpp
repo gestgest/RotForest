@@ -61,15 +61,18 @@ void AInfiniteMapGenerator::BeginPlay()
 	{
 		return;
 	}
+	SpawnFog();
 
 	//플레이어를 가져와라
 	TrackedPawn = UGameplayStatics::GetPlayerPawn(this, 0);
 	if (TrackedPawn)
 	{
 		const FIntPoint Center = WorldToChunk(TrackedPawn->GetActorLocation()); //벡터값 가져오기
+
 		UpdateChunks(Center);
 		LastPlayerChunk = Center;
 		bHasGenerated = true;
+		UpdateFogToPlayer(Center);
 	}
 
 	//플레이어 추격
@@ -127,6 +130,7 @@ void AInfiniteMapGenerator::Tick(float DeltaTime)
 		// 청크가 바뀐 시점에만(=플레이어가 한 청크 이동) NavMesh 경계도 플레이어로 따라 옮긴다.
 		// 매 프레임이 아니라 이 시점에만 해서 내비 리빌드 부담을 줄인다.
 		UpdateNavBoundsToPlayer();
+		UpdateFogToPlayer(Center);
 	}
 }
 
@@ -240,7 +244,6 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 	}
 	
 	SetupFloor(Center, Chunk, POI, bIsPOIChunk);
-	SpawnFog(Center, Chunk);
 	SetupVillage(bIsPOIChunk, POI, Center, Chunk, Stream);
 	SetupPlagueVillage(bIsPOIChunk, POI, Center, Chunk, Stream);
 
@@ -260,6 +263,9 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 	SpawnObstacles(Stream, Chunk, Origin, bIsPOIChunk);
 	LoadedChunks.Add(Coord, MoveTemp(Chunk));
 }
+
+
+
 
 // 장애물 생성 : 청크 안에 랜덤 배치 — POI 청크는 비워둔다 (마을 콘텐츠 자리)
 void AInfiniteMapGenerator::SpawnObstacles(FRandomStream & Stream, FMapChunk & Chunk, FVector Origin, bool bIsPOIChunk)
@@ -650,34 +656,6 @@ bool AInfiniteMapGenerator::RegisterChunkActor(const FIntPoint& ChunkCoord, AAct
 
 
 
-void AInfiniteMapGenerator::SpawnFog(const FVector & Center, FMapChunk& Chunk)
-{
-	if (bDebugOffFog)
-	{
-		return;
-	}
-
-	if (FogClass)
-	{
-		const float Base = FMath::Max(1.f, FogBaseSize);
-		FActorSpawnParameters FogParams;
-		FogParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		FogParams.Owner = this;
-
-		const FVector FogLoc = Center + FVector(0.f, 0.f, FogSizeHeight / 2);
-
-		//회전, 위치, 사이즈
-		const FTransform FogTransform(FRotator::ZeroRotator, FogLoc, FVector(ChunkSize / Base, ChunkSize / Base, FogSizeHeight / Base));
-
-		if (AActor* Fog = GetWorld()->SpawnActor<AActor>(FogClass, FogTransform, FogParams))
-		{
-#if WITH_EDITOR
-			Fog->SetFolderPath(TEXT("Spawned/Map"));
-#endif
-			Chunk.SpawnedActors.Add(Fog);
-		}
-	}
-}
 
 void AInfiniteMapGenerator::SetupFloor(const FVector & Center, FMapChunk & Chunk, FPOIInfo & POI, bool bIsPOIChunk)
 {
@@ -706,6 +684,49 @@ void AInfiniteMapGenerator::SetupFloor(const FVector & Center, FMapChunk & Chunk
 		}
 
 	}
+}
+
+void AInfiniteMapGenerator::SpawnFog()
+{
+	if (bDebugOffFog || !FogClass)
+	{
+		return;
+	}
+
+	FActorSpawnParameters FogParams;
+	FogParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	FogParams.Owner = this;
+
+	FogActor = GetWorld()->SpawnActor<AActor>(FogClass, FTransform::Identity, FogParams);
+	if (!FogActor)
+	{
+		return;
+	}
+
+#if WITH_EDITOR
+	FogActor->SetFolderPath(TEXT("Spawned/Map"));
+#endif
+	if (USceneComponent* FogRoot = FogActor->GetRootComponent())
+	{
+		FogRoot->SetMobility(EComponentMobility::Movable);
+	}
+
+	const float Base = FMath::Max(1.f, FogBaseSize);
+	const float CoverSize = ChunkSize * (2 * ViewRadiusInChunks + 1); // 7 x 7
+	FogActor->SetActorScale3D(FVector(CoverSize / Base, CoverSize / Base, FogSizeHeight / Base));
+}
+void AInfiniteMapGenerator::UpdateFogToPlayer(const FIntPoint& CenterChunk)
+{
+	if (!FogActor)
+	{
+		return;
+	}
+
+	const FVector FogLoc(
+		(CenterChunk.X + 0.5f) * ChunkSize,
+		(CenterChunk.Y + 0.5f) * ChunkSize,
+		FogSizeHeight / 2);
+	FogActor->SetActorLocation(FogLoc);
 }
 
 //보스 나오는 구역(역병마을) 생성
