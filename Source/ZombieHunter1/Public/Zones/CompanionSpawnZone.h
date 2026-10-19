@@ -43,9 +43,13 @@ protected:
 	//JobType을 보고 JopComponent를 반환
 	TSubclassOf<UJobComponent> GetJobComponent();
 
+	virtual FText GetZoneTitle() const override;
+
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Job")
 	EJobType JobType;
 
+	// JobType을 바꾸고 아이콘과 게이지 이름을 갱신한다
+	void SetJobType(EJobType NewJobType);
 };

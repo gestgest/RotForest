@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "Jobs/JobComponent.h"
 #include "ZombieGameInstance.generated.h"
 
 class UJobComponent;
@@ -32,4 +33,11 @@ public:
 	/** 직업 선택 씬에서 고른 직업 클래스. None이면 선택 안 한 것(플레이어 기본 직업 사용). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job")
 	TSubclassOf<UJobComponent> SelectedJobClass;
+
+	// 직업 목록. 직업 선택 화면과 동료 모집존이 같이 쓴다.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Job")
+	TArray<FJobDefinition> Jobs;
+
+	// JobType에 맞는 표시 이름 (=>Archer : 궁수)
+	FText GetJobDisplayName(EJobType JobType) const;
 };

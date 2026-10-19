@@ -5,7 +5,10 @@
 #include "Characters/MyPlayer.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "DrawDebugHelpers.h"
+#include "Components/WidgetComponent.h"
+
+#include "UI/ZoneGaugeWidget.h"
+
 #include "Engine/Engine.h"
 
 // Sets default values
@@ -25,6 +28,13 @@ AGaugeZone::AGaugeZone()
 	PadMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PadMesh"));
 	PadMesh->SetupAttachment(RootComponent);
 	PadMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	GaugeWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("GaugeWidget"));
+	GaugeWidgetComp->SetupAttachment(RootComponent);
+	GaugeWidgetComp->SetRelativeLocation(FVector(0.0f, 0.0f, 220.0f));
+	GaugeWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
+	GaugeWidgetComp->SetDrawSize(FVector2D(260.0f, 70.0f));
+	GaugeWidgetComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 // Called when the game starts or when spawned
@@ -38,6 +48,8 @@ void AGaugeZone::BeginPlay()
 		TriggerBox->OnComponentBeginOverlap.AddDynamic(this, &AGaugeZone::OnTriggerBeginOverlap);
 		TriggerBox->OnComponentEndOverlap.AddDynamic(this, &AGaugeZone::OnTriggerEndOverlap);
 	}
+
+	UpdateGaugeWidget();
 }
 
 // Called every frame
@@ -78,6 +90,8 @@ void AGaugeZone::Tick(float DeltaTime)
 				{
 					CompleteZone();
 				}
+
+				UpdateGaugeWidget();
 			}
 			//else 는 TryFillOnce에
 		}
@@ -86,11 +100,6 @@ void AGaugeZone::Tick(float DeltaTime)
 	{
 		// 발판에서 벗어나면 결제 타이머만 초기화한다. 이미 채운 게이지는 유지(낸 돈이 아까우니까).
 		Fill_Timer = 0.0f;
-	}
-
-	if (bShowDebugGauge)
-	{
-		DrawDebugGauge();
 	}
 }
 
@@ -166,24 +175,20 @@ void AGaugeZone::CompleteZone()
 	}
 }
 
-// debug : 그리는 함수
-void AGaugeZone::DrawDebugGauge()
+void AGaugeZone::UpdateGaugeWidget()
 {
-	UWorld* World = GetWorld();
-	if (!World)
+
+	if (!GaugeWidgetComp)
 	{
 		return;
 	}
 
-	// 발판 위에 떠 있는 가로 게이지 바: 회색 배경 + 진행도만큼 초록 채움.
-	const FVector Base = GetActorLocation() + FVector(0, 0, 220.0f);
-	const float HalfWidth = 120.0f;
-	const FVector Left = Base + FVector(-HalfWidth, 0, 0);
-	const FVector Right = Base + FVector(HalfWidth, 0, 0);
-	const FVector FillRight = Left + (Right - Left) * FMath::Clamp(Progress, 0.0f, 1.0f);
-
-	DrawDebugLine(World, Left, Right, FColor(60, 60, 60), false, -1.0f, 0, 8.0f);
-	DrawDebugLine(World, Left, FillRight, FColor::Green, false, -1.0f, 0, 8.0f);
+	if (UZoneGaugeWidget* Gauge = Cast<UZoneGaugeWidget>(GaugeWidgetComp->GetWidget()))
+	{
+		Gauge->SetPercent(Progress);
+		Gauge->SetTitle(GetZoneTitle());
+		Gauge->SetCost(RequiredAmount);
+	}
 }
 
 
@@ -196,5 +201,6 @@ void AGaugeZone::RestorePadState(int32 InFilledAmount, int32 InRequiredAmount, b
 	bConsumed = bInConsumed;
 
 	Progress = (float)FilledAmount / (float)RequiredAmount;
-}
 
+	UpdateGaugeWidget();
+}

@@ -2,5 +2,19 @@
 
 
 #include "ZombieGameInstance.h"
+#include "Jobs/JobUILibrary.h"
 
-// 데이터만 담는 클래스라 구현이 없다 — 선택값 보관은 헤더의 UPROPERTY가 전부.
+FText UZombieGameInstance::GetJobDisplayName(EJobType JobType) const
+{
+	for (const FJobDefinition& Job : Jobs)
+	{
+		if (Job.JobType == JobType)
+		{
+			return UJobUILibrary::GetJobDisplayName(Job);
+		}
+	}
+
+	FJobDefinition Fallback;
+	Fallback.JobType = JobType;
+	return UJobUILibrary::GetJobDisplayName(Fallback);
+}

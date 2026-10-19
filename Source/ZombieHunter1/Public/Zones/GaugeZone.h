@@ -7,6 +7,7 @@
 
 class UBoxComponent;
 class UStaticMeshComponent;
+class UWidgetComponent;
 class AMyPlayer;
 
 UCLASS(Abstract) //부모
@@ -44,6 +45,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GaugeZone")
 	UStaticMeshComponent* PadMesh;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="GaugeZone")
+	UWidgetComponent* GaugeWidgetComp;
+
+	UPROPERTY(EditAnywhere, Category="GaugeZone")
+	FText ZoneTitle;
+
 
 	// [Variable]
 	// 결제(돈 소비) 간격(초). 발판 위에 서 있는 동안 이 간격마다 MoneyPerPayment씩 빠진다. 작을수록 빨리 참.
@@ -75,11 +82,8 @@ protected:
 	bool bPlayerInside = false;
 
 
-	// [Debug]
-	// 켜면 발판 위에 기본 디버그 게이지 바를 그려 BP 위젯 없이도 진행도를 확인할 수 있다.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-	bool bShowDebugGauge = true;
-
+	// Tick
+	void UpdateGaugeWidget();
 
 	// 한 번 채우기를 시도한다. 실패하면 내부 실패함수를 발동
 	virtual bool TryFillOnce(AMyPlayer* Player, int32& OutAmount) PURE_VIRTUAL(AGaugeZone::TryFillOnce, return false;);
@@ -93,11 +97,11 @@ protected:
 	// 추적하던 플레이어가 발판을 떠났을 때.
 	virtual void OnPlayerExited(AMyPlayer* Player) {}
 
+	virtual FText GetZoneTitle() const { return ZoneTitle; }
+
 	// 게이지가 가득 찼을 때 호출 — 게이지 리셋 → HandleZoneFilled → BP 이벤트 → 쿨다운/소비 처리.
 	void CompleteZone(); 
 
-	// bShowDebugGauge가 켜져 있을 때 발판 위에 진행도 바를 그린다.
-	void DrawDebugGauge(); 
 
 
 

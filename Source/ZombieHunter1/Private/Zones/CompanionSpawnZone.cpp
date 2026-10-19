@@ -3,6 +3,7 @@
 #include "Zones/CompanionSpawnZone.h"
 #include "Characters/MyPlayer.h"
 #include "Characters/PartyComponent.h"
+#include "ZombieGameInstance.h"
 #include "Engine/Engine.h"
 
 
@@ -43,6 +44,8 @@ void ACompanionSpawnZone::ChangeIconMesh()
 		// CDO에 묻는 것이므로 "지금 장착한 무기"가 아니라 "이 직업의 기본 무기"를 물어야 한다.
 		IconMeshComp->SetSkeletalMeshAsset(JobClass.GetDefaultObject()->GetDefaultWeaponMesh());
 	}
+
+	UpdateGaugeWidget();
 }
 
 //나의 잡 컴포넌트 : 여기서 주를 이룬다.
@@ -50,4 +53,20 @@ TSubclassOf<UJobComponent> ACompanionSpawnZone::GetJobComponent()
 {
 	TSubclassOf<UJobComponent>* Found = JobComponents.Find(JobType);
 	return Found ? *Found : nullptr; //value값을 줘라
+}
+
+FText ACompanionSpawnZone::GetZoneTitle() const
+{
+	if (const UZombieGameInstance* GI = GetGameInstance<UZombieGameInstance>())
+	{
+		return GI->GetJobDisplayName(JobType);
+	}
+
+	return Super::GetZoneTitle();
+}
+
+void ACompanionSpawnZone::SetJobType(EJobType NewJobType)
+{
+	JobType = NewJobType;
+	ChangeIconMesh();
 }

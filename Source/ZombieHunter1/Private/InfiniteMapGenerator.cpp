@@ -15,6 +15,7 @@
 
 #include "DrawDebugHelpers.h" // POI 청크 디버그 박스
 
+#include "Zones/CompanionSpawnZone.h"
 #include "Zones/MoneyPadZone.h" // 마을 발판 상태 저장/복원
 
 #include "Characters/GuardCharacter.h" // 마을 경비병
@@ -23,7 +24,6 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
-
 
 //초기
 AInfiniteMapGenerator::AInfiniteMapGenerator()
@@ -439,6 +439,12 @@ void AInfiniteMapGenerator::SetupVillage(bool bIsPOIChunk, FPOIInfo & POI, const
 			Pad->SetFolderPath(TEXT("Spawned/Map"));
 #endif
 			Chunk.SpawnedActors.Add(Pad);
+
+			if (ACompanionSpawnZone* CompanionZone = Cast<ACompanionSpawnZone>(Pad))
+			{
+				const int32 JobIndex = Stream.RandRange(0, static_cast<int32>(EJobType::Healer));
+				CompanionZone->SetJobType(static_cast<EJobType>(JobIndex));
+			}
 
 			// 상태 복원: 이 마을에 저장된 상태(언로드 때 대피시킨 게이지/비용)가 있으면 새 발판에 주입.
 			// 없으면 그대로 둠 — 처음 발견한 마을과 동일한 기본값.
