@@ -62,6 +62,12 @@ Build/*/**
 # Don't ignore icon files in Build
 !Build/**/*.ico
 
+# Android: res, manifest override are tracked; keystore is never tracked
+!Build/Android/res/
+!Build/Android/res/**
+!Build/Android/ManifestRequirementsOverride.txt
+*.keystore
+
 # Built data for maps
 *_BuiltData.uasset
 
