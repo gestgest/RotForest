@@ -15,6 +15,7 @@ _구 Zombie Hunter, 리마스터 후 RotForest_
 | 개발 기간 | 2025.12.15 ~ 2026.02.14 / 2026.06.15 ~ 진행 중 |
 | 인원 | 1인 개발 |
 | 영상 | [플레이 영상 (YouTube)](https://youtu.be/-Pn9irHos40) |
+| 개인정보 동의서 | [개인정보 동의서](PRIVACY.md) |
 
 ---
 # 문서
