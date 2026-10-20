@@ -165,6 +165,53 @@ void AMyPlayer::Tick(float DeltaTime)
     }
 }
 
+
+void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+    Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+    // 게임패드: 별도 에셋 없이 아날로그 스틱 키에 직접 바인딩
+    // (왼쪽 스틱 = 이동, 오른쪽 스틱 = 조준+공격)
+    PlayerInputComponent->BindAxisKey(EKeys::Gamepad_LeftX, this, &AMyPlayer::OnMoveX);
+    PlayerInputComponent->BindAxisKey(EKeys::Gamepad_LeftY, this, &AMyPlayer::OnMoveY);
+    PlayerInputComponent->BindAxisKey(EKeys::Gamepad_RightX, this, &AMyPlayer::OnAimX);
+    PlayerInputComponent->BindAxisKey(EKeys::Gamepad_RightY, this, &AMyPlayer::OnAimY);
+
+    // 마우스(로스트아크식): 좌클릭 = 공격, 우클릭 = 이동. 누르는 동안 Tick에서 처리.
+    PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &AMyPlayer::OnLeftMousePressed);
+    PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Released, this, &AMyPlayer::OnLeftMouseReleased);
+    PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &AMyPlayer::OnRightMousePressed);
+    PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Released, this, &AMyPlayer::OnRightMouseReleased);
+
+    // 뒤로가기 키
+    FInputKeyBinding& BackBinding = PlayerInputComponent->BindKey(
+        EKeys::Android_Back,
+        IE_Pressed,
+        this,
+        &AMyPlayer::OnBackPressed
+    );
+
+    BackBinding.bExecuteWhenPaused = true;
+
+    // 디버그/테스트: C 키로 돈 획득(AddMoney). bDebugAddMoneyKey로 토글.
+    if (bDebugAddMoneyKey)
+    {
+        //PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::AddMoney);
+        PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::OnAttackButtonPressed);
+        PlayerInputComponent->BindKey(EKeys::C, IE_Released, this, &AMyPlayer::OnAttackButtonReleased);
+    }
+}
+
+void AMyPlayer::ShowOnItemText(FText& Text, EItemNotifyType Type)
+{
+    if (!CanvasWidget)
+    {
+        return;
+    }
+    CanvasWidget->AddItemNotification(Text, Type);
+}
+
+
 // 살아있음 → 죽음 전환 시 베이스(SetDead)가 1회 호출.
 void AMyPlayer::OnDeath()
 {
@@ -562,51 +609,6 @@ void AMyPlayer::SetHighlightedTarget(ACombatCharacter * NewTarget)
     }
 }
 
-
-void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-    Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-    // 게임패드: 별도 에셋 없이 아날로그 스틱 키에 직접 바인딩
-    // (왼쪽 스틱 = 이동, 오른쪽 스틱 = 조준+공격)
-    PlayerInputComponent->BindAxisKey(EKeys::Gamepad_LeftX, this, &AMyPlayer::OnMoveX);
-    PlayerInputComponent->BindAxisKey(EKeys::Gamepad_LeftY, this, &AMyPlayer::OnMoveY);
-    PlayerInputComponent->BindAxisKey(EKeys::Gamepad_RightX, this, &AMyPlayer::OnAimX);
-    PlayerInputComponent->BindAxisKey(EKeys::Gamepad_RightY, this, &AMyPlayer::OnAimY);
-
-    // 마우스(로스트아크식): 좌클릭 = 공격, 우클릭 = 이동. 누르는 동안 Tick에서 처리.
-    PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &AMyPlayer::OnLeftMousePressed);
-    PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Released, this, &AMyPlayer::OnLeftMouseReleased);
-    PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &AMyPlayer::OnRightMousePressed);
-    PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Released, this, &AMyPlayer::OnRightMouseReleased);
-
-    // 뒤로가기 키
-    FInputKeyBinding& BackBinding = PlayerInputComponent->BindKey(
-        EKeys::Android_Back,
-        IE_Pressed,
-        this,
-        &AMyPlayer::OnBackPressed
-    );
-
-    BackBinding.bExecuteWhenPaused = true;
-
-    // 디버그/테스트: C 키로 돈 획득(AddMoney). bDebugAddMoneyKey로 토글.
-    if (bDebugAddMoneyKey)
-    {
-        //PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::AddMoney);
-        PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::OnAttackButtonPressed);
-        PlayerInputComponent->BindKey(EKeys::C, IE_Released, this, &AMyPlayer::OnAttackButtonReleased);
-    }
-}
-
-void AMyPlayer::ShowOnItemText(FText & Text, EItemNotifyType Type)
-{
-    if (!CanvasWidget)
-    {
-        return;
-    }
-    CanvasWidget->AddItemNotification(Text, Type);
-}
 
 
 

@@ -57,11 +57,7 @@ void UMyCanvas::UpdateCoinText(int32 Money)
 {
     if (CoinText)
     {
-        FText MoneyText = FText::Format(
-            FText::FromString(TEXT("{0} 원")),
-            FText::AsNumber(Money)
-        );
-        CoinText->SetText(MoneyText);
+        CoinText->SetText(FText::AsNumber(Money));
     }
 }
 

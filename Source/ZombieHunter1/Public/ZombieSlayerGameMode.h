@@ -59,10 +59,25 @@ private:
 	void RecycleFarEnemies();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta=(AllowPrivateAccess = "True"), Category = "Pool")
-	int Max_Enemy_Size = 20;
+	int Max_Enemy_Size = 30;
+
+	// 레벨1 => StartEnemyCount, 레벨당 +EnemyPerLevel, 최대 Max_Enemy_Size
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	int32 StartEnemyCount = 5;
+
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	int32 EnemyPerLevel = 10;
+
+	// 레벨1 => StartCoinCount, 레벨당 +CoinPerLevel, 최대 Max_Coin_Size
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	int32 StartCoinCount = 5;
+
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	int32 CoinPerLevel = 5;
+
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = "True"), Category = "Pool")
-	int Max_Coin_Size = 10;
+	int Max_Coin_Size = 20;
 
 
 

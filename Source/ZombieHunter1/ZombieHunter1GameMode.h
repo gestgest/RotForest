@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #pragma once
 
@@ -12,7 +12,6 @@ class AZombieHunter1GameMode : public AGameModeBase
 	GENERATED_BODY()
 
 public:
-	AZombieHunter1GameMode();
 };
 
 

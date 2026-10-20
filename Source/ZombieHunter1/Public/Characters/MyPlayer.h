@@ -369,6 +369,9 @@ public: //Property Function
 	UFUNCTION(BlueprintCallable, Category = "Player|Stats")
 	int32 GetExpToNextLevel() const;
 
+	int32 GetLevel() const { return Level; }
+
+
 	//BP에서 이펙트/사운드/스탯 상승 등을 구현할 예정.
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Stats")
 	void OnLevelUp(int32 NewLevel);

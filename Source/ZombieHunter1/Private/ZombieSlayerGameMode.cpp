@@ -123,8 +123,7 @@ void AZombieSlayerGameMode::Spawn()
     spawnCoin();
 }
 
-// 풀에서 대기 중(숨김) 상태인 적을 전부 한 번에 깨워 시야 밖 링에 배치한다.
-// 게임 시작 직후엔 풀 전체(MAX_ENEMY_SIZE)가 한꺼번에 깨어나고, 이후엔 죽어서 빈 슬롯만 채워진다.
+// 풀에서 대기 중(숨김)인 적을 레벨 상한까지만 깨워 시야 밖 링에 배치한다.
 void AZombieSlayerGameMode::SpawnEnemy()
 {
     AMyPlayer* myPlayer =
@@ -137,9 +136,18 @@ void AZombieSlayerGameMode::SpawnEnemy()
     const FVector playerLocation = myPlayer->GetActorLocation();
     const FVector upVector(0, 0, 90.0f);
 
-    //전부 깨운다.
+    // 레벨1 => 5, 레벨3 => 9 (기본값 기준)
+    const int32 maxActive = FMath::Min(
+        Max_Enemy_Size,
+        StartEnemyCount + (myPlayer->GetLevel() - 1) * EnemyPerLevel);
+
     for (AEnemy* enemy : enemyPool)
     {
+        if (enemy_size >= maxActive)
+        {
+            break;
+        }
+
         // 파괴됐거나 무효한 풀 엔트리, 이미 활성 상태인 적은 건너뛴다.
         if (!IsValid(enemy) || !enemy->IsHidden())
         {
@@ -148,17 +156,16 @@ void AZombieSlayerGameMode::SpawnEnemy()
 
         FNavLocation resultLocation;
 
-        // 시야 밖 스폰 링(Min~Max)에서 위치 찾기 — 눈앞 팝인 대신 탐험하다 발견하는 느낌
         if (!FindReachablePointInRing(playerLocation, resultLocation))
         {
-            continue;  // 이번엔 실패, 다음 spawn() 주기에 재시도
+            continue;
         }
 
         enemy->OnAIController();
 
-        //왜인지 모르지만 정 가운데가 pivot이라 +90을 해야한다.
-        enemy->SetActorLocation(resultLocation.Location + upVector); 
-        enemy->WakeFromPool();  // 숨김 해제 + 콜리전/이동/틱 복구
+        // pivot이 정 가운데라 +90
+        enemy->SetActorLocation(resultLocation.Location + upVector);
+        enemy->WakeFromPool();
         enemy->ResetForSpawn();
 
         enemy_size++;
@@ -241,28 +248,6 @@ bool AZombieSlayerGameMode::FindReachablePointInRing(const FVector& Center, FNav
 
 void AZombieSlayerGameMode::spawnCoin()
 {
-    int i = 0;
-
-    for (; i < coinPool.Num(); i++)
-    {
-        if (!IsValid(coinPool[i]))
-        {
-            continue;
-        }
-        if (coinPool[i]->IsHidden())
-        {
-            break;
-        }
-    }
-
-    //Max (또는 쓸 수 있는 코인이 없음)
-    if (i >= coinPool.Num())
-    {
-        return;
-    }
-
-    ACoin* coin = coinPool[i];
-
     AMyPlayer* myPlayer =
         Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
     if (!myPlayer)
@@ -270,24 +255,45 @@ void AZombieSlayerGameMode::spawnCoin()
         return;
     }
 
-    FNavLocation resultLocation;
+    // 레벨1 => 5, 레벨2 => 10, 레벨4 이상 => 20 (기본값 기준)
+    const int32 maxActive = FMath::Min(
+        Max_Coin_Size,
+        StartCoinCount + (myPlayer->GetLevel() - 1) * CoinPerLevel);
 
-    // 코인도 시야 밖 링에 생성 — 돌아다니다 "발견"하는 보상
-    bool bSuccess = FindReachablePointInRing(myPlayer->GetActorLocation(), resultLocation);
-
-    FVector upVector(0, 0, 90.0f);
-
-    if (bSuccess)
-    {
-        coin->SetActorLocation(resultLocation.Location + upVector);
-        coin->SetActorEnableCollision(true);
-        coin->SetActorHiddenInGame(false);
-        coin->SetCanGet(true);
-    }
-    else
+    if (coin_size >= maxActive)
     {
         return;
     }
+
+    ACoin* coin = nullptr;
+    for (ACoin* candidate : coinPool)
+    {
+        if (IsValid(candidate) && candidate->IsHidden())
+        {
+            coin = candidate;
+            break;
+        }
+    }
+
+    // 쓸 수 있는 코인이 없음
+    if (!coin)
+    {
+        return;
+    }
+
+    FNavLocation resultLocation;
+
+    // 시야 밖 링에 생성
+    if (!FindReachablePointInRing(myPlayer->GetActorLocation(), resultLocation))
+    {
+        return;
+    }
+
+    const FVector upVector(0, 0, 90.0f);
+    coin->SetActorLocation(resultLocation.Location + upVector);
+    coin->SetActorEnableCollision(true);
+    coin->SetActorHiddenInGame(false);
+    coin->SetCanGet(true);
 
     coin_size++;
 }
