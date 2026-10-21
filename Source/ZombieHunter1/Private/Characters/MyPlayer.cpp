@@ -196,9 +196,9 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     // 디버그/테스트: C 키로 돈 획득(AddMoney). bDebugAddMoneyKey로 토글.
     if (bDebugAddMoneyKey)
     {
-        //PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::AddMoney);
-        PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::OnAttackButtonPressed);
-        PlayerInputComponent->BindKey(EKeys::C, IE_Released, this, &AMyPlayer::OnAttackButtonReleased);
+        PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::AddMoney);
+        //PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::OnAttackButtonPressed);
+        //PlayerInputComponent->BindKey(EKeys::C, IE_Released, this, &AMyPlayer::OnAttackButtonReleased);
     }
 }
 
