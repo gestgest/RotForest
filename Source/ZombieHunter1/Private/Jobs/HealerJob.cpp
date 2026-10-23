@@ -27,24 +27,6 @@ void UHealerJob::Attack()
 	//Heal();
 }
 
-void UHealerJob::HealCharacter(ACombatCharacter* Target)
-{
-	if (!Target)
-	{
-		return;
-	}
-
-	// 상한은 "대상 자신의" 최대 체력이다. 힐러의 체력을 기준으로 삼으면
-	// 체력이 더 많은 아군은 힐이 안 먹고, 더 적은 아군은 오버힐이 난다.
-	// 최대 체력 미만일 때만 회복. SetHP가 HUD 체력바도 갱신한다.
-	if (Target->GetHP() < Target->GetMaxHP())
-	{
-		const int32 NewHP = FMath::Min(Target->GetHP() + HealAmount, Target->GetMaxHP());
-		Target->SetHP(NewHP);
-	}
-}
-
-
 // 힐은 10초에 한 번이라 Attack()에서만 그리면 거의 안 보인다. 매 프레임 현재 힐 범위를 그린다. 
 //= > 미안하다 이거 이제 범위 표시가 필요없다.
 void UHealerJob::TickJob(float DeltaTime)
@@ -77,6 +59,7 @@ void UHealerJob::OnAttackNotify(FName NotifyName)
 		Heal();
 }
 
+
 void UHealerJob::Heal()
 {
 	if (!OwnerCharacter)
@@ -108,7 +91,9 @@ void UHealerJob::Heal()
 	{
 		// 아군(플레이어/동료)만 회복한다 — 적(AEnemy)은 제외.
 		ACombatCharacter* Ally = Cast<ACombatCharacter>(Overlap.GetActor());
-		if (Ally && !Ally->IsA(AEnemy::StaticClass()))
+
+		// 같은 팀은 힐
+		if (Ally && Ally->TeamType == OwnerCharacter->TeamType)
 		{
 			HealCharacter(Ally);
 			bDidHeal = true;
@@ -122,4 +107,22 @@ void UHealerJob::Heal()
 		DrawDebugCircle(World, Center, HealRadius, 32, Color, false, 2.0f, 0, 1.0f,
 			FVector(1, 0, 0), FVector(0, 1, 0), false);
 	}
+}
+
+
+
+void UHealerJob::HealCharacter(ACombatCharacter* Target)
+{
+	if (!Target)
+	{
+		return;
+	}
+
+	// 피를 채워야 하는 경우 + 살아있는 경우
+	if (Target->GetHP() < Target->GetMaxHP() && !Target->GetIsDead())
+	{
+		const int32 NewHP = FMath::Min(Target->GetHP() + HealAmount, Target->GetMaxHP());
+		Target->SetHP(NewHP);
+	}
+	// else 풀피임
 }
