@@ -1,7 +1,6 @@
 ﻿#include "Zones/MoneyPadZone.h"
 #include "Characters/MyPlayer.h"
 #include "Kismet/GameplayStatics.h"
-#include "Engine/Engine.h"
 
 bool AMoneyPadZone::TryFillOnce(AMyPlayer* Player, int32& OutAmount)
 {
@@ -19,13 +18,17 @@ bool AMoneyPadZone::TryFillOnce(AMyPlayer* Player, int32& OutAmount)
 	{
 		// 실패
 		// 실패 사운드
-		UGameplayStatics::PlaySoundAtLocation(this, InsufficientFundsSound, GetActorLocation());
 
-		if (GEngine)
+		const FText Msg = FText::FromString(FString::Printf
+			(TEXT("돈이 부족합니다. (%d 금화 필요)"), MoneyPerPayment)
+		);
+
+		// 실패 메세지가 나온다면
+		if (NotifyFailOnce(Player, Msg))
 		{
-			GEngine->AddOnScreenDebugMessage(7001, 1.0f, FColor::Red,
-				FString::Printf(TEXT("[Zone] 돈 부족! (%d원 필요)"), MoneyPerPayment));
+			UGameplayStatics::PlaySoundAtLocation(this, InsufficientFundsSound, GetActorLocation());
 		}
+		
 		return false;
 	}
 

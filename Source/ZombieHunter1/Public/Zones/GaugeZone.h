@@ -82,7 +82,7 @@ protected:
 	bool bPlayerInside = false;
 
 
-	// Tick
+	// [Tick]
 	void UpdateGaugeWidget();
 
 	// 한 번 채우기를 시도한다. 실패하면 내부 실패함수를 발동
@@ -102,6 +102,9 @@ protected:
 	// 게이지가 가득 찼을 때 호출 — 게이지 리셋 → HandleZoneFilled → BP 이벤트 → 쿨다운/소비 처리.
 	void CompleteZone(); 
 
+	// 실패 문구를 발판에 올라올 때마다 1번만 띄운다. 이번에 띄웠으면 true
+	bool NotifyFailOnce(AMyPlayer* Player, const FText& Msg);
+	
 
 
 
@@ -117,6 +120,9 @@ protected:
 
 	// bOneShot 발판이 이미 한 번 작동했는지. 
 	bool bConsumed = false; 
+	
+	// 한번 실패한 경우 tick 단위가 아닌 올라갈 때 한번.
+	bool bFailNotified = false;
 
 public:
 	FORCEINLINE int32 GetFilledAmount() const { return FilledAmount; }

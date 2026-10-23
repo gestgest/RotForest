@@ -11,11 +11,16 @@ bool ACompanionSpawnZone::TryFillOnce(AMyPlayer * Player, int32 & OutAmount)
 {
 
 	UPartyComponent* Party = Player ? Player->GetParty() : nullptr;
-	if (!Party || !Party->CanRecruit(GetWorld()))
+	if (!Party)
 	{
 		return false;
 	}
 
+	if (!Party->CanRecruit(GetWorld()))
+	{
+		NotifyFailOnce(Player, FText::FromString(TEXT("동료 인원이 가득 찼습니다.")));
+		return false;
+	}
 	return Super::TryFillOnce(Player, OutAmount);
 }
 
@@ -26,6 +31,7 @@ void ACompanionSpawnZone::HandleZoneFilled(AMyPlayer* Player)
 	{
 		return;
 	}
+
 
 	Party->RecruitCompanion(GetJobComponent());
 }

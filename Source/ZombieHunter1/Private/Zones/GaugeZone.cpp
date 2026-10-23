@@ -116,6 +116,7 @@ void AGaugeZone::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*/, 
 
 	CurrentPlayer = Player;
 	bPlayerInside = true;
+	bFailNotified = false;
 
 	OnPlayerEntered(Player);
 }
@@ -203,4 +204,18 @@ void AGaugeZone::RestorePadState(int32 InFilledAmount, int32 InRequiredAmount, b
 	Progress = (float)FilledAmount / (float)RequiredAmount;
 
 	UpdateGaugeWidget();
+}
+
+// 한번 채우는데 실패했다면 메세지 전송 => 대체로 꽉 찬 경우
+bool AGaugeZone::NotifyFailOnce(AMyPlayer * Player, const FText& Msg)
+{
+	if (bFailNotified || !Player)
+	{
+		return false;
+	}
+
+	bFailNotified = true;
+	FText Text = Msg;
+	Player->ShowOnItemText(Text, EItemNotifyType::Blocked);
+	return true;
 }
