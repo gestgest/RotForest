@@ -119,12 +119,15 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Combat")
 	USoundBase* AttackSound = nullptr;
 
-
 	// 직업 기본 무기 — 직업 BP(BP_ArcherJob 등)에서 지정한다. 시작 시 캐릭터에 장착되고 그 뒤로 안 변한다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"), Category = "Job|Weapon")
 	UWeaponDataAsset* DefaultWeapon = nullptr;
 
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"), Category = "Job|Stats")
+	float HPGrowth = 0.08f;
 
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"), Category = "Job|Stats")
+	float DamageGrowth = 0.06f;
 
 public:
 
@@ -133,6 +136,8 @@ public:
 
 	// 공격 몽타주가 끝까지 재생됐을 때. 기본 구현 없음.
 	virtual void OnAttackMontageEnded() {}
+
+	void ApplyLevel(int32 Level);
 
 	////////////////////////////////////////////////////////////////////////
 	//Variables
@@ -146,7 +151,10 @@ public:
 
 	// 추가 데미지 => 게임이 끝나면 사라져야 하는 값
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Job|Combat")
-	int32 BonusDamage = 0;
+	int32 BonusWeaponDamage = 0;
+	
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Job|Combat")
+	int32 BonusLevelDamage = 0;
 
 	// [함수]
 	virtual float GetAttackYawOffset() const { return 0.0f; }
@@ -163,7 +171,6 @@ public:
 
 	USoundBase* GetAttackSound() { return AttackSound; }
 	void SetAttackSound(USoundBase* Value) { AttackSound = Value; }
-	
 };
 
 

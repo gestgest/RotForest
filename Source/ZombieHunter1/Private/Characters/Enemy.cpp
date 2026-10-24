@@ -301,7 +301,7 @@ void AEnemy::OnDeath()
 	AMyPlayer* myPlayer = Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
 	if (myPlayer && !myPlayer->GetIsDead())
 	{
-		myPlayer->AddExp(ExpReward);
+		myPlayer->GiveKillExp(ExpReward, LastAttacker.Get());
 	}
 
 	DeadEnemySignal(enemy_id); // BP: 사망 애님 재생 / 일정 시간 후 Destroy
@@ -362,8 +362,16 @@ void AEnemy::WakeFromPool()
 
 void AEnemy::ResetForSpawn()
 {
+	LastAttacker = nullptr;
 	SetHP(GetMaxHP()); // 죽었던 적이면 OnRevive까지 발동
 }
+
+void AEnemy::TakeHit(int32 Amount, ACombatCharacter* Attacker)
+{
+	LastAttacker = Attacker;
+	AddHP(-Amount);
+}
+
 
 void AEnemy::TeleportForLeash(const FVector& NewLocation)
 {

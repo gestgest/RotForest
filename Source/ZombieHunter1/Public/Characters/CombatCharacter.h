@@ -72,46 +72,21 @@ protected: //핵심 함수의 부품
 	 *  직업이 없는 캐릭터(AEnemy)만 이걸 재정의해 자기 방식으로 타격한다. */
 	virtual void HandleAttackNotify(FName NotifyName);
 
-
-	// [생성자]
-	// 반드시 서브클래스 생성자에서만 호출할 것 => Companion 같은 생성자
-	// ㄴ MyPlayer는 따로 UI가 있다.
-	void CreateHPBarComponent();
-
-	// [Begin]
-	void InitWeaponSlot();
-
-
-	// [Tick]
-	// 공격 판단 쿨타임 함수. 자식 클래스의 Tick에서 호출.
-	bool TickAttack(float DeltaTime, bool bWantsToAttack);
-
-	// SetHP가 호출.
-	void UpdateHPBar();
 	
+	// [변수]
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	int32 Level = 1;
 
-	// 무기 슬롯을 Socket에 붙인다
-	bool AttachWeaponSlot(FName Socket);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	int32 Exp = 0;
 
-	// HP 변화에 따라 IsDead를 바꾸고 OnDeath/OnRevive 훅을 전환 시점에 1회씩 호출. 
-	void SetDead(bool bNewDead);
-	
-	
-	
-	//aim point 활성화.
-	void SetDesiredAimPoint(const FVector& Point);
+	// 1레벨 → 2레벨에 필요한 경험치
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	int32 ExpBase = 20;
 
-	void ClearDesiredAimPoint();
-
-
-
-private: //부품 함수
-	// 메시 애님 인스턴스의 OnPlayMontageNotifyBegin에 바인딩 → HandleAttackNotify로 전달. 
-	UFUNCTION()
-	void OnMontageNotifyBegin(FName NotifyName, const FBranchingPointNotifyPayload& Payload);
-
-
-protected: //변수
+	// 레벨당 필요 경험치 증가량 (필요량 = ExpBase + (Level-1) × ExpGrowth)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	int32 ExpGrowth = 10;
 
 	// SetHP로만 소통하자
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
@@ -119,7 +94,7 @@ protected: //변수
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	int32 Damage = 1;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	int32 MaxHP = 5;
 
@@ -171,11 +146,8 @@ protected: //변수
 	TMap<EJobType, UAnimMontage*> JobAttackMontages;
 
 	// 자동 공격 간격(초) => 직업이 없는 Enemy은 이거를 참조한다.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float AttackInterval = 0.4f;
-
-
-
 
 
 	// 현재 부착된 직업 컴포넌트(런타임 생성). 직업 없는 캐릭터는 null.
@@ -195,29 +167,74 @@ protected: //변수
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	USkeletalMeshComponent* WeaponMeshComponent = nullptr;
 
-
-
-
 	// 머리 위 HP 바(스크린 스페이스). 서브클래스 "생성자"가 CreateHPBarComponent()를 불러야 생긴다.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
 	UWidgetComponent* HPBarComponent = nullptr;
-
-
-
-	/////////////////////////////////////////////////////////////////////////////////////////
-	//디버깅 
-	/////////////////////////////////////////////////////////////////////////////////////////
 
 	// 전투 캐릭터의 상태/공격 디버그를 화면에 그린다
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Debug")
 	bool bDebugCombat = false;
 
 
+
+	// [함수]
+	// [생성자]
+	// 반드시 서브클래스 생성자에서만 호출할 것 => Companion 같은 생성자
+	// ㄴ MyPlayer는 따로 UI가 있다.
+	void CreateHPBarComponent();
+
+	// [Begin]
+	void InitWeaponSlot();
+
+
+	// [Tick]
+	// 공격 판단 쿨타임 함수. 자식 클래스의 Tick에서 호출.
+	bool TickAttack(float DeltaTime, bool bWantsToAttack);
+
+	// SetHP가 호출.
+	void UpdateHPBar();
+
+	// 무기 슬롯을 Socket에 붙인다
+	bool AttachWeaponSlot(FName Socket);
+
+	// HP 변화에 따라 IsDead를 바꾸고 OnDeath/OnRevive 훅을 전환 시점에 1회씩 호출. 
+	void SetDead(bool bNewDead);
+	
+	//aim point 활성화.
+	void SetDesiredAimPoint(const FVector& Point);
+
+	void ClearDesiredAimPoint();
+
+
+private: //부품 함수
+	// 메시 애님 인스턴스의 OnPlayMontageNotifyBegin에 바인딩 → HandleAttackNotify로 전달. 
+	UFUNCTION()
+	void OnMontageNotifyBegin(FName NotifyName, const FBranchingPointNotifyPayload& Payload);
+
+
+
 public: //Property
+	// 시작 시 부착할 직업 클래스. 비우면 직업 없이 동작한다(적 등). 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job")
+	TSubclassOf<UJobComponent> DefaultJobClass;
+
+	// 무장 상태 
+	// UCombatAnimInstance가 매 프레임 이 값을 bArmed 변수로 미러링해 AnimBP에 공급한다.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	bool bArmed = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	ETeam TeamType;
+
+
+
 	//여기서 호출하면 인라인화된다.
 	int32 GetMaxHP() { return MaxHP; }
 	int32 GetHP() { return HP; }
 	int32 GetDamage() { return Damage; }
+	int32 GetExpToNextLevel() const;
+	int32 GetLevel() const { return Level; }
+
 	bool GetIsDead() { return IsDead; }
 
 	UJobComponent* GetJobComponent() const { return CurrentJob; }
@@ -226,13 +243,22 @@ public: //Property
 	FOnHPChanged OnHPChanged;
 
 
-
 	// 죽음 상태, HP바 갱신 
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	virtual void SetHP(int32 new_hp);
 
+	void SetMaxHP(int32 NewMaxHP);
+
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	virtual void AddHP(int32 add_hp);
+
+	virtual void AddExp(int32 Amount);
+	
+	virtual void ApplyLevelUp();
+
+
+	
+
 
 	void EquipWeapon(USkeletalMesh* NewMesh);
 
@@ -264,20 +290,5 @@ public: //Property
 	// 타격 프레임(Notify)엔 몸이 이미 다른 데를 보고 있을 수 있어 이 값으로 때린다.
 	FVector GetAttackAimDir() const;
 
-
-
-	// 시작 시 부착할 직업 클래스. 비우면 직업 없이 동작한다(적 등). 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job")
-	TSubclassOf<UJobComponent> DefaultJobClass;
-
-
-	// 무장 상태 
-	// UCombatAnimInstance가 매 프레임 이 값을 bArmed 변수로 미러링해 AnimBP에 공급한다.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	bool bArmed = true;
-
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
-	ETeam TeamType;
 
 };

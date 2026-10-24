@@ -254,7 +254,8 @@ void AProjectile::ApplyHit(AEnemy* Enemy)
 		return;
 	}
 
-	Enemy->AddHP(-Damage);
+	// 이건 뭐시
+	Enemy->TakeHit(Damage, Cast<ACombatCharacter>(GetInstigator()));
 
 	// 발사체(폭발 중심)에서 적을 향하는 수평 방향으로 넉백. 같은 위치면 진행 방향으로.
 	FVector Dir = Enemy->GetActorLocation() - GetActorLocation();

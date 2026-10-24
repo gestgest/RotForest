@@ -68,6 +68,104 @@ void ACombatCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
+
+
+void ACombatCharacter::OnMontageNotifyBegin(FName NotifyName, const FBranchingPointNotifyPayload& Payload)
+{
+	HandleAttackNotify(NotifyName);
+}
+
+//DesiredAimPoint 설정
+void ACombatCharacter::SetDesiredAimPoint(const FVector& Point)
+{
+	DesiredAimPoint = Point;
+	bHasDesiredAimPoint = true;
+}
+
+void ACombatCharacter::ClearDesiredAimPoint()
+{
+	bHasDesiredAimPoint = false;
+}
+
+// 실제 타격 판정/사운드는 현재 직업이 담당한다 (전사: 근접 스윕, 궁수: 발사체 등).
+// 직업이 없는 캐릭터(AEnemy)는 이 함수를 재정의해 자기 방식으로 때린다.
+void ACombatCharacter::HandleAttackNotify(FName NotifyName)
+{
+	if (CurrentJob)
+	{
+		CurrentJob->OnAttackNotify(NotifyName);
+	}
+}
+
+// 직업 컴포넌트 생성 — 플레이어/동료가 똑같이 쓰던 코드를 여기로 모았다.
+// 스탯 적용(MaxHP/이동속도)은 InitializeForOwner 안에서 처리한다.
+void ACombatCharacter::CreateJobComponent()
+{
+	if (!DefaultJobClass)
+	{
+		return; // 직업 없는 캐릭터(적 등)
+	}
+
+	// 이미 직업이 있으면 떼어낸다 → 직업 교체에도 이 함수를 그대로 쓸 수 있다.
+	if (CurrentJob)
+	{
+		CurrentJob->DestroyComponent();
+		CurrentJob = nullptr;
+	}
+
+	CurrentJob = NewObject<UJobComponent>(this, DefaultJobClass);
+	if (CurrentJob)
+	{
+		CurrentJob->RegisterComponent();
+		CurrentJob->InitializeForOwner(this);
+	}
+}
+
+//공격
+bool ACombatCharacter::TickAttack(float DeltaTime, bool bWantsToAttack)
+{
+	TimeSinceLastAttack += DeltaTime;
+
+	if (!bWantsToAttack || !CurrentJob || IsDead)
+	{
+		return false;
+	}
+	if (TimeSinceLastAttack < GetAttackInterval())
+	{
+		return false;
+	}
+
+	TimeSinceLastAttack = 0.0f;
+
+	// 공격 방향은 지금 고정한다 — 타격은 몽타주 Notify라 0.2~0.4초 뒤에 일어난다.
+	AttackAimDir = GetActorForwardVector();
+
+	//최종적으로 point는 이때
+	AttackAimPoint = DesiredAimPoint;
+	bHasAttackAimPoint = bHasDesiredAimPoint;
+
+	CurrentJob->Attack(); // 직업이 공격 방식을 결정(몽타주 재생 → Notify → OnAttackNotify)
+	return true;
+}
+
+
+
+
+// 공격 몽타주가 끝나는 순간 = 활시위를 놓는 순간(애니 마지막 프레임)인 직업용.
+// 전사처럼 중간에 타격하는 직업은 Notify를 쓰므로 여기 반응하지 않는다.
+void ACombatCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (bInterrupted)
+	{
+		return; // 취소된 공격은 발사하지 않는다
+	}
+	if (CurrentJob)
+	{
+		CurrentJob->OnAttackMontageEnded();
+	}
+}
+
+
 void ACombatCharacter::ApplyJobStats(FJobStats Stats)
 {
 	MaxHP = Stats.MaxHP;
@@ -147,7 +245,6 @@ bool ACombatCharacter::AttachWeaponSlot(FName Socket)
 	return true;
 	
 }
-
 
 
 // 무기 획득처(픽업/상점/보상)는 전부 이 함수 하나로 들어온다.
@@ -235,10 +332,90 @@ void ACombatCharacter::RefreshWeaponMesh()
 	}
 }
 
+void ACombatCharacter::ApplyLevelUp()
+{
+	if (CurrentJob)
+	{
+		CurrentJob->ApplyLevel(Level);
+	}
+}
+
+
+
+
+float ACombatCharacter::GetAttackInterval() const
+{
+	// 직업이 간격을 정한다. 직업이 없거나 값이 안 잡혀 있으면 캐릭터의 폴백을 쓴다.
+	// (폴백이 없으면 간격 0 → 매 프레임 공격이 되므로 반드시 0보다 큰 값을 보장한다)
+	if (CurrentJob && CurrentJob->Stats.AttackInterval > 0.0f)
+	{
+		return CurrentJob->Stats.AttackInterval;
+	}
+	return AttackInterval > 0.0f ? AttackInterval : 0.4f;
+}
+
+
+int32 ACombatCharacter::GetExpToNextLevel() const
+{
+	return ExpBase + (Level - 1) * ExpGrowth;
+}
+
+// 공식 공격 방향 반환
+FVector ACombatCharacter::GetAttackAimDir() const
+{
+	// 데스크탑 코드
+	if (bHasAttackAimPoint)
+	{
+		//Attack 방향
+		FVector AttackVector = AttackAimPoint - GetActorLocation();
+		AttackVector.Z = 0;
+
+		//normal
+		AttackVector = AttackVector.GetSafeNormal();
+		if (!AttackVector.IsNearlyZero())
+		{
+			return AttackVector;
+		}
+	}
+
+	// 마우스는 여기에 추가될 예정
+	// 대체로 모바일은 AttackAimDir를 반환한다.
+	return AttackAimDir.IsNearlyZero() ? GetActorForwardVector() : AttackAimDir;
+}
+
+UAnimMontage* ACombatCharacter::GetAttackMontageForJob(EJobType JobType) const
+{
+	// 이 캐릭터의 스켈레톤에 맞는 직업별 몽타주가 있으면 그걸, 없으면 단일 AttackMontage로 폴백.
+	if (UAnimMontage* const* Found = JobAttackMontages.Find(JobType))
+	{
+		if (*Found)
+		{
+			return *Found;
+		}
+	}
+	return DefaultAttackMontage;
+}
 
 void ACombatCharacter::AddHP(int32 add_hp)
 {
 	SetHP(HP + add_hp);
+}
+
+void ACombatCharacter::AddExp(int32 Amount)
+{
+	if (IsDead)
+	{
+		return;
+	}
+	Exp += Amount;
+
+	// 2레벨 이상 가능한지 while 탐색
+	while (Exp >= GetExpToNextLevel())
+	{
+		Exp -= GetExpToNextLevel();
+		Level++;
+		ApplyLevelUp();
+	}
 }
 
 void ACombatCharacter::SetHP(int32 new_hp)
@@ -254,6 +431,17 @@ void ACombatCharacter::SetHP(int32 new_hp)
 	{
 		OnHPChanged.Broadcast(HP, Delta);
 	}
+}
+
+void ACombatCharacter::SetMaxHP(int32 NewMaxHP)
+{
+	if (IsDead)
+	{
+		return;
+	}
+	const int Gain = FMath::Max(0, NewMaxHP - MaxHP);
+	MaxHP = FMath::Max(1, NewMaxHP);
+	SetHP(FMath::Min(HP + Gain, MaxHP));
 }
 
 // 머리 위 HP 바 생성 — 반드시 서브클래스 생성자에서 호출(CreateDefaultSubobject 제약).
@@ -301,147 +489,5 @@ void ACombatCharacter::SetDead(bool bNewDead)
 	else if (!bNewDead && bWasDead)
 	{
 		OnRevive();
-	}
-}
-
-UAnimMontage* ACombatCharacter::GetAttackMontageForJob(EJobType JobType) const
-{
-	// 이 캐릭터의 스켈레톤에 맞는 직업별 몽타주가 있으면 그걸, 없으면 단일 AttackMontage로 폴백.
-	if (UAnimMontage* const* Found = JobAttackMontages.Find(JobType))
-	{
-		if (*Found)
-		{
-			return *Found;
-		}
-	}
-	return DefaultAttackMontage;
-}
-
-void ACombatCharacter::OnMontageNotifyBegin(FName NotifyName, const FBranchingPointNotifyPayload& Payload)
-{
-	HandleAttackNotify(NotifyName);
-}
-
-//DesiredAimPoint 설정
-void ACombatCharacter::SetDesiredAimPoint(const FVector& Point)
-{
-	DesiredAimPoint = Point;
-	bHasDesiredAimPoint = true;
-}
-
-void ACombatCharacter::ClearDesiredAimPoint()
-{
-	bHasDesiredAimPoint = false;
-}
-
-// 실제 타격 판정/사운드는 현재 직업이 담당한다 (전사: 근접 스윕, 궁수: 발사체 등).
-// 직업이 없는 캐릭터(AEnemy)는 이 함수를 재정의해 자기 방식으로 때린다.
-void ACombatCharacter::HandleAttackNotify(FName NotifyName)
-{
-	if (CurrentJob)
-	{
-		CurrentJob->OnAttackNotify(NotifyName);
-	}
-}
-
-// 직업 컴포넌트 생성 — 플레이어/동료가 똑같이 쓰던 코드를 여기로 모았다.
-// 스탯 적용(MaxHP/이동속도)은 InitializeForOwner 안에서 처리한다.
-void ACombatCharacter::CreateJobComponent()
-{
-	if (!DefaultJobClass)
-	{
-		return; // 직업 없는 캐릭터(적 등)
-	}
-
-	// 이미 직업이 있으면 떼어낸다 → 직업 교체에도 이 함수를 그대로 쓸 수 있다.
-	if (CurrentJob)
-	{
-		CurrentJob->DestroyComponent();
-		CurrentJob = nullptr;
-	}
-
-	CurrentJob = NewObject<UJobComponent>(this, DefaultJobClass);
-	if (CurrentJob)
-	{
-		CurrentJob->RegisterComponent();
-		CurrentJob->InitializeForOwner(this);
-	}
-}
-
-float ACombatCharacter::GetAttackInterval() const
-{
-	// 직업이 간격을 정한다. 직업이 없거나 값이 안 잡혀 있으면 캐릭터의 폴백을 쓴다.
-	// (폴백이 없으면 간격 0 → 매 프레임 공격이 되므로 반드시 0보다 큰 값을 보장한다)
-	if (CurrentJob && CurrentJob->Stats.AttackInterval > 0.0f)
-	{
-		return CurrentJob->Stats.AttackInterval;
-	}
-	return AttackInterval > 0.0f ? AttackInterval : 0.4f;
-}
-
-//공격
-bool ACombatCharacter::TickAttack(float DeltaTime, bool bWantsToAttack)
-{
-	TimeSinceLastAttack += DeltaTime;
-
-	if (!bWantsToAttack || !CurrentJob || IsDead)
-	{
-		return false;
-	}
-	if (TimeSinceLastAttack < GetAttackInterval())
-	{
-		return false;
-	}
-
-	TimeSinceLastAttack = 0.0f;
-
-	// 공격 방향은 지금 고정한다 — 타격은 몽타주 Notify라 0.2~0.4초 뒤에 일어난다.
-	AttackAimDir = GetActorForwardVector();
-
-	//최종적으로 point는 이때
-	AttackAimPoint = DesiredAimPoint;
-	bHasAttackAimPoint = bHasDesiredAimPoint;
-
-	CurrentJob->Attack(); // 직업이 공격 방식을 결정(몽타주 재생 → Notify → OnAttackNotify)
-	return true;
-}
-
-
-// 공식 공격 방향 반환
-FVector ACombatCharacter::GetAttackAimDir() const
-{
-    // 데스크탑 코드
-	if (bHasAttackAimPoint)
-	{
-		//Attack 방향
-		FVector AttackVector = AttackAimPoint - GetActorLocation();
-		AttackVector.Z = 0;
-
-		//normal
-		AttackVector = AttackVector.GetSafeNormal();
-		if (!AttackVector.IsNearlyZero())
-		{
-			return AttackVector;
-		}
-	}
-
-    // 마우스는 여기에 추가될 예정
-    // 대체로 모바일은 AttackAimDir를 반환한다.
-	return AttackAimDir.IsNearlyZero() ? GetActorForwardVector() : AttackAimDir;
-}
-
-
-
-// 공격 몽타주가 끝나는 순간 = 활시위를 놓는 순간(애니 마지막 프레임)인 직업용.
-// 전사처럼 중간에 타격하는 직업은 Notify를 쓰므로 여기 반응하지 않는다.
-void ACombatCharacter::OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-	if (bInterrupted)
-	{
-		return; // 취소된 공격은 발사하지 않는다
-	}
-	if (CurrentJob)
-	{
-		CurrentJob->OnAttackMontageEnded();
 	}
 }

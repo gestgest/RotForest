@@ -3,6 +3,7 @@
 
 #include "Characters/MyPlayer.h"
 #include "Characters/Enemy.h"
+#include "Characters/Companion.h"
 #include "Characters/CombatRegistrySubsystem.h"
 
 #include "Blueprint/UserWidget.h"
@@ -687,21 +688,7 @@ bool AMyPlayer::TrySpendMoney(int32 Amount)
 
 void AMyPlayer::AddExp(int32 Amount)
 {
-    if (Amount <= 0)
-    {
-        return;
-    }
-
-    Exp += Amount;
-
-    // 한 번에 여러 레벨을 오를 수도 있다(큰 보상). 필요량을 빼고 남는 경험치는 이월.
-    while (Exp >= GetExpToNextLevel())
-    {
-        Exp -= GetExpToNextLevel();
-        Level++;
-        OnLevelUp(Level); // BP: 이펙트/사운드/스탯 상승
-    }
-
+    Super::AddExp(Amount);
     UpdateExpUI();
 }
 
@@ -717,7 +704,7 @@ void AMyPlayer::UpgradeWeapon()
     // 데미지는 직업 컴포넌트가 소유한다(검사 근접/궁수·마법사 발사체 모두 CurrentJob->Damage 사용).
     if (CurrentJob)
     {
-        CurrentJob->BonusDamage += WeaponDamagePerLevel;
+        CurrentJob->BonusWeaponDamage += WeaponDamagePerLevel;
     }
 
     OnWeaponUpgraded(WeaponLevel); // BP: 이펙트/사운드/무기 외형 교체
@@ -773,19 +760,25 @@ bool AMyPlayer::GetIsDead()
 //...?
 void AMyPlayer::ReStart()
 {
-    SetHP(MaxHP);
-    SetMoney(0);
-
     // 경험치/레벨도 초기화 (돈과 동일한 재시작 규칙). 죽어도 유지하고 싶으면 이 두 줄만 지우면 된다.
     Level = 1;
     Exp = 0;
+    if (CurrentJob)
+    {
+        CurrentJob->ApplyLevel(Level);
+    }
+
     UpdateExpUI();
+
+    SetHP(MaxHP);
+    SetMoney(0);
 
     // 무기 강화도 초기화 — 강화로 올린 만큼만 되돌린다(직업 기본 Damage는 보존). 유지하고 싶으면 삭제.
     if (CurrentJob && WeaponLevel > 0)
     {
-        CurrentJob->BonusDamage -= WeaponLevel * WeaponDamagePerLevel;
+        CurrentJob->BonusWeaponDamage -= WeaponLevel * WeaponDamagePerLevel;
     }
+
     WeaponLevel = 0;
     //리스폰
     if (playerStart)
@@ -839,6 +832,20 @@ void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
         UpdateExpUI(); // 위젯 연결 시점에 경험치 표시도 현재 값으로 맞춘다
     }
 }
+
+// 레벨업 하면 풀피되는 기능
+void AMyPlayer::ApplyLevelUp()
+{
+    Super::ApplyLevelUp();
+
+    if (!IsDead)
+    {
+        SetHP(MaxHP); // 풀피 회복 : 마치 
+    }
+    OnLevelUp(Level);
+}
+
+
 
 // 공격 중에는 클릭한 방향을 유지해야 해서, 그 유지 시간을 몽타주 길이로 잡는다.
 float AMyPlayer::GetAttackMontageLength()
@@ -912,4 +919,43 @@ void AMyPlayer::DebugWalkSpeed(const FVector2D& Move)
             FString::Printf(TEXT("Move=%.2f  Vel=%.0f  MaxWalkSpeed=%.0f"),
                 Move.Size(), GetVelocity().Size(), MaxSpd));
     }
+}
+
+
+void AMyPlayer::GiveKillExp(int32 Amount, ACombatCharacter * Killer)
+{
+    if (!Killer)
+    {
+        Killer = this;
+    }
+    const int32 AssistAmount = FMath::RoundToInt(Amount * KillAssistExpRatio);
+
+    if (Killer == this)
+    {
+        AddExp(Amount);
+    }
+    else
+    {
+        AddExp(AssistAmount);
+    }
+
+    if (Party)
+    {
+        for (ACompanion * Companion : Party->GetCompanions())
+        {
+            if (Companion)
+            {
+                if (Killer == Companion)
+                {
+                    Companion->AddExp(Amount);
+                }
+                else
+                {
+                    Companion->AddExp(AssistAmount);
+                }
+            }
+        }
+    }
+    
+
 }

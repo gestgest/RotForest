@@ -128,7 +128,9 @@ bool UWarriorJob::HitEnemy(TSet<AEnemy*> & HitEnemies, const FOverlapResult& Res
 	HitEnemies.Add(NewHitEnemy);
 	// 맞은 경우
 	UE_LOG(LogTemp, Log, TEXT("Hit Enemy!"));
-	NewHitEnemy->AddHP(-GetDamage());
+
+	NewHitEnemy->TakeHit(GetDamage(), OwnerCharacter);
+	
 	const FVector force = AimDir * KnockbackForce + FVector(0, 0, 100);
 	NewHitEnemy->LaunchCharacter(force, false, false);
 	return true;

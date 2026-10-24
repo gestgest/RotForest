@@ -77,22 +77,6 @@ private: //평범한 변수 및 함수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Stats", meta = (AllowPrivateAccess = "true"))
 	int32 Money;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Stats", meta = (AllowPrivateAccess = "true"))
-	int32 Level = 1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Stats", meta = (AllowPrivateAccess = "true"))
-	int32 Exp = 0;
-
-	// 1레벨 → 2레벨에 필요한 경험치
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Stats", meta = (AllowPrivateAccess = "true"))
-	int32 ExpBase = 10;
-
-	// 레벨당 필요 경험치 증가량 (필요량 = ExpBase + (Level-1) × ExpGrowth)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Stats", meta = (AllowPrivateAccess = "true"))
-	int32 ExpGrowth = 5;
-
-
-
 	// [Weapon]
 	// 강화 레벨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapon", meta = (AllowPrivateAccess = "true"))
@@ -102,6 +86,8 @@ private: //평범한 변수 및 함수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Weapon", meta = (AllowPrivateAccess = "true"))
 	int32 WeaponDamagePerLevel = 1;
 
+	UPROPERTY(EditAnywhere, Category = "Player|Stats", meta = (AllowPrivateAccess = "true", ClampMin="0.0", ClampMax="1.0"))
+	float KillAssistExpRatio = 0.5f;
 
 
 	// [사운드]
@@ -340,6 +326,8 @@ private: //평범한 변수 및 함수
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void SetCanvasWidget(UMyCanvas* CW);
 
+	void ApplyLevelUp();
+
 	// [Debug]
 	// 속도 체크
 	void DebugWalkSpeed(const FVector2D& Move);
@@ -352,12 +340,13 @@ public: //Property Function
 	// HUD 체력바 갱신.
 	virtual void SetHP(int32 new_hp) override; //  죽음/부활 "전환" 처리는 베이스가 OnDeath/OnRevive로 호출해준다.
 
+	// 레벨업 처리와 HUD 갱신까지 담당.
+	virtual void AddExp(int32 Amount) override;
+
 	//차감 성공하면 true
 	bool TrySpendMoney(int32 Amount);
 
-
-	// 레벨업 처리와 HUD 갱신까지 담당.
-	void AddExp(int32 Amount);
+	void GiveKillExp(int32 Amount, ACombatCharacter* Killer);
 
 
 	// 죽었는지

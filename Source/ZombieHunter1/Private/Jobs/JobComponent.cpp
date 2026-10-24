@@ -55,7 +55,8 @@ void UJobComponent::Attack()
 int32 UJobComponent::GetDamage() const
 {
 	const int32 WeaponPower = OwnerCharacter ? OwnerCharacter->GetEquippedWeaponPower() : 0;
-	return Stats.Damage + BonusDamage + WeaponPower;
+
+	return Stats.Damage + BonusWeaponDamage + WeaponPower + BonusLevelDamage;
 }
 
 USkeletalMesh* UJobComponent::GetDefaultWeaponMesh() const
@@ -133,3 +134,14 @@ AProjectile* UJobComponent::SpawnProjectileForward(TSubclassOf<AProjectile> Proj
 	return Projectile;
 }
 
+// 주로 
+void UJobComponent::ApplyLevel(int32 Level)
+{
+	BonusLevelDamage = FMath::RoundToInt(Stats.Damage * DamageGrowth * (Level - 1));
+	// hp
+	if (OwnerCharacter)
+	{
+		OwnerCharacter->SetMaxHP(Stats.MaxHP * (1.0f + HPGrowth * (Level - 1)));
+	}
+
+}
