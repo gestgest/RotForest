@@ -20,6 +20,8 @@ class USkeletalMeshComponent;
 class UPartyComponent;
 class UInventoryComponent;
 class UMaterialInterface;
+class UNiagaraSystem;
+class USoundBase;
 
 UCLASS()
 class ZOMBIEHUNTER1_API AMyPlayer : public ACombatCharacter
@@ -68,9 +70,14 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Weapon")
 	void OnWeaponUpgraded(int32 NewWeaponLevel);
 
+	UPROPERTY(EditAnywhere, Category = "Player|Levelup")
+	UNiagaraSystem* LevelUpEffect = nullptr;
+
+	UPROPERTY(EditAnywhere, Category = "Player|Levelup")
+	USoundBase* LevelUpSound = nullptr;
+
 
 private: //평범한 변수 및 함수
-
 	// [Stat]
 	// HP / Damage 는 베이스(ACombatCharacter)로 이동.
 	// 블루프린트에서 읽고 쓸 수 있는 Money 변수

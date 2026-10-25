@@ -20,6 +20,8 @@
 
 #include "Kismet/GameplayStatics.h" //getCharacter, sound
 
+#include "NiagaraFunctionLibrary.h" //레벨업 이펙트
+
 #include "Animation/AnimInstance.h" //SetRootMotionMode, ERootMotionMode
 #include "Animation/AnimMontage.h" //공격 몽타주 길이
 
@@ -842,6 +844,19 @@ void AMyPlayer::ApplyLevelUp()
     {
         SetHP(MaxHP); // 풀피 회복 : 마치 
     }
+
+    if (LevelUpEffect)
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAttached(
+            LevelUpEffect, GetMesh(), NAME_None,
+            FVector::ZeroVector, FRotator::ZeroRotator,
+            EAttachLocation::SnapToTarget, true);
+    }
+    if (LevelUpSound)
+    {
+        UGameplayStatics::PlaySound2D(this, LevelUpSound);
+    }
+
     OnLevelUp(Level);
 }
 
