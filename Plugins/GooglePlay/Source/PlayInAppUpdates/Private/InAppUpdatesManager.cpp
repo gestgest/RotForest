@@ -1,4 +1,4 @@
-/* Copyright 2024 Google LLC
+﻿/* Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@
 #include "Android/AndroidJNI.h"
 
 extern JavaVM* GJavaVM;
-extern jobject GGameActivityThis;
 #endif  // SUPPORTED_PLATFORM
 
 // Namespace used for handling internal update status listeners.
@@ -52,7 +51,7 @@ void UInAppUpdatesManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 #if SUPPORTED_PLATFORM
 	AppUpdateErrorCode ErrorCode =
-		AppUpdateManager_init(GJavaVM, GGameActivityThis);
+		AppUpdateManager_init(GJavaVM, FAndroidApplication::GetGameActivityThis());
 	if (ErrorCode != APP_UPDATE_NO_ERROR)
 	{
 		UE_LOG(LogPlayInAppUpdates, Error,
@@ -169,7 +168,7 @@ void UInAppUpdatesManager::StartUpdate(UAppUpdateInfo* InUpdateInfo,
 #if SUPPORTED_PLATFORM
 	AppUpdateErrorCode ErrorCode = AppUpdateManager_requestStartUpdate(
 		UpdateInfo->GetNativeAppUpdateInfo(),
-		UpdateOptions->GetNativeUpdateOptions(), GGameActivityThis);
+		UpdateOptions->GetNativeUpdateOptions(), FAndroidApplication::GetGameActivityThis());
 
 	if (ErrorCode != APP_UPDATE_NO_ERROR)
 	{
