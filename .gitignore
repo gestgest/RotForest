@@ -134,3 +134,7 @@ Content/VFX_Magic/*
 # Claude
 .claude/
 Content/Mixed_Magic_VFX_Pack/Skeletal_Mesh/SK_Sword.uasset
+
+# Google Play 플러그인: Android 링크에 쓰는 정적 라이브러리 2개만 추적
+!Plugins/GooglePlay/Source/ThirdParty/play-core-native-sdk/libs/arm64-v8a/ndk23.0.7599858/c++_static/libplaycore_static.a
+!Plugins/GooglePlay/Source/ThirdParty/play-core-native-sdk/libs/x86_64/ndk23.0.7599858/c++_static/libplaycore_static.a
