@@ -216,8 +216,12 @@ private:
 	UPROPERTY()
 	TObjectPtr<AActor> FogActor;
 
-	UPROPERTY(EditAnywhere, Category="Map|PlaugeVillage")
+	UPROPERTY(EditAnywhere, Category = "Map|PlaugeVillage")
 	TSubclassOf<AActor> PlagueVillageAudioClass;
+
+
+	UPROPERTY(EditAnywhere, Category = "Map|POI")
+	TSubclassOf<AActor> VillageAudioClass;
 
 	FIntPoint LastPlayerChunk = FIntPoint(MAX_int32, MAX_int32);
 	float TimeSinceUpdate = 0.f;

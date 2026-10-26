@@ -463,6 +463,12 @@ void AInfiniteMapGenerator::SetupVillage(bool bIsPOIChunk, FPOIInfo & POI, const
 		SpawnVillageGuards(Center, Chunk);
 		SpawnVillagers(Center, Chunk);
 		SpawnVillageStructures(Center, Chunk, Stream);
+
+		// 사운드
+		if (AActor* Audio = SpawnDecoActor(VillageAudioClass, Center, FRotator::ZeroRotator))
+		{
+			Chunk.SpawnedActors.Add(Audio);
+		}
 	}
 }
 
