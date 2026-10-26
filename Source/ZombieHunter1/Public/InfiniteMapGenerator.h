@@ -191,36 +191,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|POI")
 	TSubclassOf<AActor> BossClass;
 
-	// [역병마을 소품]
-	// 충돌 없는 작은 장식 (뼈, 해골)
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Map|PlagueVillege")
-	//TArray<TObjectPtr<UStaticMesh>> PlagueVillageDecoMeshes;
-
-	//// 충돌 기능 있는 큰 장식 ex) 교수대
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
-	//TArray<TObjectPtr<UStaticMesh>> PlagueVillagePropMeshes;
-
-	//// BP 소품 (조명, 해골, 데칼)
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
-	//TArray<TSubclassOf<AActor>> PlagueVillageActorClasses;
-
-	//// 갯수들
-	//// 청크 하나당 데코 갯수
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
-	//int32 PlagueVillageDecoPerChunk = 12;
-
-	//// 청크당 큰 부품 갯수
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
-	//int32 PlagueVillagePropPerChunk = 2;
-
-	//// 청크당 큰 BP부품 갯수
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
-	//int32 PlagueVillageActorPerChunk = 3;
-
-	//// 중심 반지름. 보스 스폰자리에 부품 스폰되지말라고
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
-	//float PlagueVillageClearRadius = 600.0f;
-
 	// 촛불 BP
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege")
 	TSubclassOf<AActor> PlagueVillageCandleClass;
@@ -246,6 +216,8 @@ private:
 	UPROPERTY()
 	TObjectPtr<AActor> FogActor;
 
+	UPROPERTY(EditAnywhere, Category="Map|PlaugeVillage")
+	TSubclassOf<AActor> PlagueVillageAudioClass;
 
 	FIntPoint LastPlayerChunk = FIntPoint(MAX_int32, MAX_int32);
 	float TimeSinceUpdate = 0.f;

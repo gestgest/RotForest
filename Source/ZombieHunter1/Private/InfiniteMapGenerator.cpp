@@ -745,9 +745,16 @@ void AInfiniteMapGenerator::SetupPlagueVillage(bool bIsPOIChunk, FPOIInfo& POI, 
 	}
 
 	SpawnPlagueVillageObjects(Center, Chunk, Stream, POI.bIsCenter);
+
+	// 가운데
 	if (POI.bIsCenter)
 	{
 		SpawnPlagueCandle(Center, Chunk);
+
+		if (AActor* Audio = SpawnDecoActor(PlagueVillageAudioClass, Center, FRotator::ZeroRotator))
+		{
+			Chunk.SpawnedActors.Add(Audio);
+		}
 	}
 	if (!POI.bIsCenter || !BossClass)
 	{
