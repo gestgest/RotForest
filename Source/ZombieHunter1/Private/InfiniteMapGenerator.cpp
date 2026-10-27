@@ -24,6 +24,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/SplineMeshComponent.h"
 
 //초기
 AInfiniteMapGenerator::AInfiniteMapGenerator()
@@ -133,6 +134,9 @@ void AInfiniteMapGenerator::Tick(float DeltaTime)
 		UpdateFogToPlayer(Center);
 	}
 }
+
+
+
 
 //플레이어를 추격하는 nav mesh
 void AInfiniteMapGenerator::UpdateNavBoundsToPlayer()
@@ -268,7 +272,7 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 
 
 // 장애물 생성 : 청크 안에 랜덤 배치 — POI 청크는 비워둔다 (마을 콘텐츠 자리)
-void AInfiniteMapGenerator::SpawnObstacles(FRandomStream & Stream, FMapChunk & Chunk, FVector Origin, bool bIsPOIChunk)
+void AInfiniteMapGenerator::SpawnObstacles(FRandomStream & Stream, FMapChunk & Chunk, FVector Origin, bool bIsPOIChunk, TArray<FRoadSegment> & RoadSegments)
 {
 	if (!bIsPOIChunk && ObstacleMeshes.Num() > 0)
 	{
@@ -1046,5 +1050,129 @@ void AInfiniteMapGenerator::SpawnPlagueCandle(const FVector& Center, FMapChunk& 
 			Chunk.SpawnedActors.Add(Candle);
 		}
 
+	}
+}
+
+// 도로가 모이는 지점(교차로)을 반환
+FVector AInfiniteMapGenerator::GetRoadNode(const FIntPoint& RegionCoord) const
+{
+	const int32 Size = FMath::Max(2, RegionSizeInChunks);
+	const FPOIInfo Info = GetPOIForRegion(RegionCoord);
+
+	// 중심 POI를 기준으로. 만약 아니면 그냥 리전 중간?
+	const FIntPoint(NodeChunk) = Info.bHasPOI ?
+		Info.CenterChunk : FIntPoint(RegionCoord.X * Size + Size / 2, RegionCoord.Y * Size + Size / 2);
+
+	// 청크 사이즈로 변환
+	return FVector((NodeChunk.X + 0.5) * ChunkSize, (NodeChunk.Y + 0.5) * ChunkSize, 0.0);
+}
+
+// 점 계산 반환 (거의 마을과 마을 사이 느낌)
+void AInfiniteMapGenerator::BuildRoadEdge(const FIntPoint& RegionA, const FIntPoint& RegionB, TArray<FVector>& OutPoints) const
+{
+	OutPoints.Reset();
+
+	// 청크 사이즈 기준
+	
+	const FVector A = GetRoadNode(RegionA); // 도로의 첫 부분
+	const FVector B = GetRoadNode(RegionB); // 도로의 마지막 부분
+
+	// 생존자 편향
+	// 예를 들어 r값을 청크에도 똑같은 공식으로 하면 r이 0.7이상인 경우 값은 높은 확률로 r값에 비례해 높을 수 밖에 없다.
+	// 그래서 다르게 한다
+	const uint32 Hash = HashCombine(
+		HashCombine(GetTypeHash(RegionA), GetTypeHash(RegionB)),
+		HashCombine(static_cast<uint32>(GlobalSeed), 0x52A4D11u));
+	FRandomStream Stream(static_cast<int32>(Hash));
+
+	const FVector Dir = (B - A).GetSafeNormal2D(); // A -> B
+	const FVector Side(-Dir.Y, Dir.X, 0.0);
+
+	// 제어점 A - 여러가지 점 -> B
+	TArray<FVector> Ctrl;
+	Ctrl.Add(A);
+	const int32 N = FMath::Max(0, RoadWigglePoints);
+	for (int32 i = 1; i <= N; i++)
+	{
+		const double T = static_cast<double>(i) / (N + 1); // A와 B의 구간
+		const double Offset = Stream.FRandRange(-RoadWiggleAmplitude, RoadWiggleAmplitude);
+		Ctrl.Add(FMath::Lerp(A, B, T) + Side * Offset);
+	}
+	Ctrl.Add(B);
+
+	// 촘촘한 곡선 => 마을과 마을 사이 16개의 마디
+	const int32 Steps = 16;
+	TArray<FVector> Dense;
+	for (int32 s = 0; s < Ctrl.Num() - 1; s++)
+	{
+		const FVector& P0 = Ctrl[FMath::Max(s - 1, 0)];
+		const FVector& P1 = Ctrl[s];
+		const FVector& P2 = Ctrl[s + 1];
+		const FVector& P3 = Ctrl[FMath::Min(s + 2, Ctrl.Num() - 1)];
+
+		// 단계 나누기
+		for (int32 k = 0; k < Steps; k++)
+		{
+			Dense.Add(CatmullRom(P0, P1, P2, P3, static_cast<double>(k)) / Steps);
+		}
+	}
+	Dense.Add(B); //마지막 점
+
+	// 세심한 말뚝박이? => 이거는 한번 다시 분석. 이해가 살짝 힘드네
+	const double SegLen = FMath::Max(50.0, static_cast<double>(RoadSegmentLength));
+	OutPoints.Add(A);
+	double Remain = SegLen; // 현재 값
+	for (int32 i = 1; i < Dense.Num(); i++)
+	{
+		FVector From = Dense[i - 1];
+		const FVector To = Dense[i];
+		double Len = FVector::Dist(From, To);
+
+		while (Len >= Remain)
+		{
+			From += (To - From).GetSafeNormal() * Remain;
+			OutPoints.Add(From);
+			Len -= Remain;
+			Remain = SegLen;
+		}
+		Remain -= Len;
+	}
+	// 마지막은 정확히 B
+	if (FVector::Dist(OutPoints.Last(), B) > SegLen * 0.3)
+	{
+		OutPoints.Add(B);
+	}
+	else
+	{
+		OutPoints.Last() = B;
+	}
+
+	// 살짝 띄움 => 땅과 도로 똑같이 0이면 겹쳐서 디자인적으로 깨짐
+	const double LiftZ = 2.0 + Stream.RandRange(0, 7) * 0.4;
+	for (FVector& P : OutPoints)
+	{
+		P.Z = LiftZ;
+	}
+
+}
+
+
+// 맴버변수 없으면 그냥 이렇게
+namespace
+{
+	// P는 지나가야 할 점(앞 현재 뒤) => 마을, 역병마을
+	// T는 그 P1 P2의 비율
+
+	// P(T) = a + b·T + c·T² + d·T³
+	// 부드러운 곡선 방정식 
+	// ㄴ 점을 무조건 지나가야한다면 이거. 만약 곡선 조절에 신경쓰고싶다면 베지어 곡선
+	FVector CatmullRom(const FVector& P0, const FVector& P1, const FVector& P2, const FVector& P3, double T)
+	{
+		const double T2 = T * T;
+		const double T3 = T2 * T;
+		return 0.5 * ((2.0 * P1)
+			+ (P2 - P0) * T
+			+ (2.0 * P0 - 5.0 * P1 + 4.0 * P2 - P3) * T2
+			+ (3.0 * P1 - P0 - 3.0 * P2 + P3) * T3);
 	}
 }

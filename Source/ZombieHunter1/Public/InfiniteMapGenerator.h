@@ -32,6 +32,8 @@ enum class EPOIType : uint8
 	PlagueVillage,	// 역병마을
 };
 
+
+
 // 리전 하나의 POI 정보
 struct FPOIInfo
 {
@@ -39,6 +41,15 @@ struct FPOIInfo
 	FIntPoint CenterChunk = FIntPoint::ZeroValue;	// POI 중심 청크 좌표 (리전 로컬 아님, 전역 청크 좌표)
 	EPOIType Type = EPOIType::Village;
 	bool bIsCenter = false;	  //질의한 청크가 POI 중심 청크인지
+};
+
+struct FRoadSegment 
+{
+	FVector Start = FVector::ZeroVector;
+	FVector StartTangent = FVector::ZeroVector;
+	FVector End = FVector::ZeroVector;
+	FVector EndTangent = FVector::ZeroVector;
+	bool bOwned = false; // 중점이 이 청크 안 => 이 청크가 스폰
 };
 
 // 플레이어를 따라다니며 주변 청크를 동적으로 생성/제거하는 무한 맵 생성기.
@@ -60,6 +71,10 @@ private:
 protected:
 	virtual void BeginPlay() override;
 
+private:
+	//[Generate 함수]
+	//청크가 생성될때 실행된다.
+	void SetupFloor(const FVector& Center, FMapChunk& Chunk, FPOIInfo& POI, bool bIsPOIChunk);
 
 
 	// 마을 외곽 구조물 배치 
@@ -67,6 +82,21 @@ protected:
 	AStaticMeshActor* SpawnObstacleMesh(UStaticMesh* Mesh, const FVector& Location,
 		const FRotator& Rotation, const FVector& Scale, UMaterialInterface* OverrideMat);
 
+	// 장애물 배치
+	void SpawnObstacles(FRandomStream& Stream, FMapChunk& Chunk, FVector Origin, bool bIsPOIChunk, TArray<FRoadSegment> & RoadSegments);
+
+	void SpawnFog();
+	void UpdateFogToPlayer(const FIntPoint& CenterChunk);
+
+	void SetupVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
+	void SpawnVillageGuards(const FVector& Center, FMapChunk& Chunk);
+	void SpawnVillagers(const FVector& Center, FMapChunk& Chunk);
+
+	// [역병마을]
+	void SetupPlagueVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
+	void SpawnPlagueVillageObjects(const FVector& Center, FMapChunk& Chunk, FRandomStream& Stream, bool bIsCenter);
+
+protected:
 	// [청크]
 	// 청크 한 변의 길이(cm) 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map")
@@ -135,6 +165,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|Fog")
 	float FogBaseSize = 100.f;
 
+
+
 	// [POI] 특수지역
 	// 리전 한 변의 청크 수. 리전마다 최대 1개의 POI가 배치된다.  => 자세한 내용은 노션 개발문서 참고
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map|POI", meta = (ClampMin = "2"))
@@ -202,15 +234,53 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Map|PlagueVillege", meta = (ClampMin = "0"))
 	float PlagueVillageCandleRadius = 1300.0f;
 
-private:
-	
+
+	// [도로]
+	UPROPERTY(EditAnywhere, Category="Map|Road")
+	TObjectPtr<UStaticMesh> RoadMesh;
+
+	//MI
+	UPROPERTY(EditAnywhere, Category = "Map|Road")
+	TObjectPtr<UMaterialInterface> RoadMaterial;
+
+	UPROPERTY(EditAnywhere, Category = "Map|Road")
+	float RoadMeshBaseSize = 100.f;
+
+	// 도로 폭 (cm)
+	UPROPERTY(EditAnywhere, Category = "Map|Road", meta = (ClampMin = "50"))
+	float RoadWidth = 450.f;
+
+	// 조각 하나 길이 (cm)
+	UPROPERTY(EditAnywhere, Category = "Map|Road", meta = (ClampMin = "50"))
+	float RoadSegmentLength = 400.f;
+
+	// 좌우로 휘는 점 개수, 많을수록 구불구불
+	UPROPERTY(EditAnywhere, Category = "Map|Road", meta = (ClampMin = "0", ClampMax ="8"))
+	int32 RoadWigglePoints = 3;
+
+	// 좌우로 휘는 최대 거리
+	UPROPERTY(EditAnywhere, Category = "Map|Road", meta = (ClampMin = "0"))
+	float RoadWiggleAmplitude = 3000.f;
+
+
+public:
+	// 월드 좌표가 "마을" 발자국 안인지 (적 스폰 제외 등 외부 질의용. 좀비마을은 해당 안 됨)
+	bool IsLocationInVillage(const FVector& WorldLocation) const;
+
+	// 좀비마을 보스가 죽었음을 기록한다  => ABoss::OnDeath가 호출
+	void MarkBossKilled(const FIntPoint& CenterChunk);
+
+	// 런타임에 생긴 액터(보스 전리품 등)를 청크 소유물로 등록한다.
+	bool RegisterChunkActor(const FIntPoint& ChunkCoord, AActor* Actor);
+
+private: // 잔잔바리 함수들 변수들
 	UPROPERTY()
 	TMap<FIntPoint, FMapChunk> LoadedChunks; // 현재 로드된 청크들 (좌표 → 스폰 액터들)
 
 	UPROPERTY()
 	TObjectPtr<APawn> TrackedPawn;
 
-	UPROPERTY() 
+	UPROPERTY()
 	TObjectPtr<ANavMeshBoundsVolume> NavBoundsVolume; // 따라다닐 NavMeshBoundsVolume (BeginPlay에서 레벨에서 찾아 캐시)
 
 	UPROPERTY()
@@ -228,20 +298,21 @@ private:
 	bool bHasGenerated = false;
 
 
-	//[Generate 함수]
-	//청크가 생성될때 실행된다.
-	void SetupFloor(const FVector& Center, FMapChunk& Chunk, FPOIInfo& POI, bool bIsPOIChunk);
+	void SpawnPlagueCandle(const FVector& Center, FMapChunk& Chunk);
+	AActor* SpawnDecoActor(TSubclassOf<AActor> ActorClass, const FVector& Location, const FRotator& Rotation);
 
-	void SpawnFog();
-	void UpdateFogToPlayer(const FIntPoint& CenterChunk);
+	
+	// [도로 함수]
+	// 도로 노드의 위치
+	FVector GetRoadNode(const FIntPoint& RegionCoord) const;
 
-	void SetupVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
-	void SpawnVillageGuards(const FVector& Center, FMapChunk& Chunk);
-	void SpawnVillagers(const FVector& Center, FMapChunk& Chunk);
-	// [역병마을]
-	void SetupPlagueVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
-	void SpawnPlagueVillageObjects(const FVector& Center, FMapChunk& Chunk, FRandomStream& Stream, bool bIsCenter);
+	// A -> B를 점으로 계산
+	void BuildRoadEdge(const FIntPoint& RegionA, const FIntPoint& RegionB, TArray<FVector>& OutPoints) const;
 
+	// 도로 조각들
+	void GetRoadSegmentsInChunk(const FIntPoint& Coord, TArray<FRoadSegment>& OutSegments) const;
+
+	void SpawnRoad(const TArray<FRoadSegment>& Segments, FMapChunk& Chunk);
 
 	// NavMeshBoundsVolume를 플레이어 위치로 옮기고 내비 시스템에 갱신을 통지
 	void UpdateNavBoundsToPlayer();
@@ -272,7 +343,7 @@ private:
 	//[Debug]
 	// 안개 끄는 디버깅 변수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Debug")
-	bool bDebugOffFog = false; 
+	bool bDebugOffFog = false;
 
 
 	// 켜면 POI 청크 생성 시 경계 박스(마을=초록, 좀비마을=빨강)와 로그를 남긴다. 
@@ -284,20 +355,6 @@ private:
 	bool debugDisableGeneration = false;
 
 
-public:
-	// 월드 좌표가 "마을" 발자국 안인지 (적 스폰 제외 등 외부 질의용. 좀비마을은 해당 안 됨)
-	bool IsLocationInVillage(const FVector& WorldLocation) const;
-
-	// 좀비마을 보스가 죽었음을 기록한다  => ABoss::OnDeath가 호출
-	void MarkBossKilled(const FIntPoint& CenterChunk);
-
-	// 런타임에 생긴 액터(보스 전리품 등)를 청크 소유물로 등록한다.
-	bool RegisterChunkActor(const FIntPoint& ChunkCoord, AActor* Actor);
-
-private:
-	void SpawnPlagueCandle(const FVector& Center, FMapChunk& Chunk);
-	AActor* SpawnDecoActor(TSubclassOf<AActor> ActorClass, const FVector& Location, const FRotator & Rotation);
-
 
 	// bool PickPlagueLocation(FRandomStream& Stream, const FVector& Center, bool bIsCenter, FVector& OutLoc) const;
 	// void SpawnPlagueMeshes(bool bBlocking, FRandomStream& Stream, const FVector& Center, bool bIsCenter, FMapChunk& Chunk);
@@ -305,6 +362,4 @@ private:
 	
 	
 	
-	// 장애물 배치
-	void SpawnObstacles(FRandomStream& Stream, FMapChunk& Chunk, FVector Origin, bool bIsPOIChunk);
 };
