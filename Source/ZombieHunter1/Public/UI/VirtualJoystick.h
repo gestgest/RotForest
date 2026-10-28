@@ -44,7 +44,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Joystick")
 	float DeadZone = 0.1f;
 
+
 protected:
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 	virtual void NativeConstruct() override;
 
@@ -61,6 +64,19 @@ protected:
 	// (Up 이벤트가 위젯에 안 들어와도 마지막 입력이 남아 계속 움직이는 것 방지)
 	virtual void NativeOnMouseCaptureLost(const FCaptureLostEvent& CaptureLostEvent) override;
 
+	// 누른 자리 배경옮김
+	UPROPERTY(EditAnywhere, Category = "Joystick")
+	bool bFloating = true;
+
+	// 반경 밖으로 나가면 배경이 끌러옴
+	UPROPERTY(EditAnywhere, Category = "Joystick")
+	bool bFollowFinger = true;
+
+	// 조이스틱 아무 것도 안하면 def
+	UPROPERTY(EditAnywhere, Category = "Joystick")
+	FVector2D RestPosition = FVector2D(0.3f, 0.6f);
+
+
 private:
 	/** 위젯 BP에서 같은 이름의 Image를 두면 자동 바인딩됨. 없으면 C++가 직접 생성 */
 	UPROPERTY(meta = (BindWidgetOptional))
@@ -72,6 +88,10 @@ private:
 	/** 현재 이 조이스틱을 잡고 있는 포인터(손가락) 번호. -1이면 비활성 */
 	int32 ActivePointerIndex = -1;
 
+	// 위젯 default 가운데 기준 배경이 옮긴 거리(px)
+	FVector2D BaseOffset = FVector2D::ZeroVector;
+
+
 	/** 실제 사용할 손잡이 반경 */
 	float GetEffectiveRange() const;
 
@@ -81,4 +101,9 @@ private:
 
 	void UpdateFromScreenPosition(const FGeometry& InGeometry, const FVector2D& ScreenPos);
 	void ResetHandle();
+
+	// 터치 영역 바깥으로 나가지 말도록
+	FVector2D ClampBase(const FGeometry& InGeometry, const FVector2D& InOffset) const;
+	FVector2D GetRestOffset(const FGeometry& InGeometry) const;
+	void ApplyVisuals(const FVector2D& HandleOffset);
 };
