@@ -65,7 +65,10 @@ void UWarriorJob::OnAttackNotify(FName NotifyName)
 	TSet<AEnemy*> HitEnemies;
 	for (const FOverlapResult& Result : OverlapResults)
 	{
-		bDidHit = bDidHit || HitEnemy(HitEnemies, Result, Origin, AimDir);
+		if (HitEnemy(HitEnemies, Result, Origin, AimDir))
+		{
+			bDidHit = true;
+		}
 	}
 
 	// 디버그: 근접 스윕 범위(시작/끝 구체 + 경로)를 그린다. 적중=초록, 빗나감=빨강. 스윙마다 1초간.
@@ -76,7 +79,7 @@ void UWarriorJob::OnAttackNotify(FName NotifyName)
 		const int32 Segments = 16;
 
 		FVector Prev = Origin;
-		for (int32 i = 0; i < Segments; i++)
+		for (int32 i = 0; i <= Segments; i++)
 		{
 			const float Angle = -SwingAngle * 0.5f + SwingAngle * i / Segments;
 			const FVector Point = Origin + AimDir.RotateAngleAxis(Angle, FVector::UpVector) * AttackRange;

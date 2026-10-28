@@ -113,7 +113,7 @@ void AZombieSlayerGameMode::initCoin(int index)
 #if WITH_EDITOR
         newCoin->SetFolderPath(TEXT("Spawned/Coins")); // 아웃라이너 정리용 (에디터 전용)
 #endif
-        coinPool.Add(newCoin);
+        CoinPool.Add(newCoin);
         newCoin->SetActorHiddenInGame(true);  // 비활성화
     }
 }
@@ -172,6 +172,28 @@ void AZombieSlayerGameMode::SpawnEnemy()
     }
 }
 
+// spawnCoin에 넣음
+void AZombieSlayerGameMode::RecycleFarCoins(const FVector& PlayerLocation)
+{
+    for (int32 i = 0; i < CoinPool.Num(); i++)
+    {
+        ACoin * Coin = CoinPool[i];
+        // null인지, 숨겼는지
+        if (!IsValid(Coin) || Coin->IsHidden())
+        {
+            continue;
+        }
+
+        // 거리 비교
+        const FVector CoinLocation = Coin->GetActorLocation();
+        const bool bTooFar = FVector::Dist2D(CoinLocation, PlayerLocation) > LeashDistance;
+        if (bTooFar)
+        {
+            DestroyCoin(i);
+        }
+    }
+}
+
 // 무한맵 리쉬: 플레이어에서 너무 멀어졌거나(청크 언로드로 지형 상실 직전) 이미 낙하한 적을
 // 플레이어 근처 NavMesh 위로 재배치한다. 적이 사라지는 대신 진행 방향에서 다시 나타나 압박 유지.
 void AZombieSlayerGameMode::RecycleFarEnemies()
@@ -222,10 +244,11 @@ bool AZombieSlayerGameMode::FindReachablePointInRing(const FVector& Center, FNav
         return false;
     }
 
-    for (int32 Attempt = 0; Attempt < 10; ++Attempt)
+    for (int32 Attempt = 0; Attempt < 20; Attempt++)
     {
         const float Angle = FMath::FRandRange(0.0f, 2.0f * PI);
         const float Dist = FMath::FRandRange(SpawnMinDistance, SpawnMaxDistance);
+
         const FVector Candidate = Center + FVector(FMath::Cos(Angle) * Dist, FMath::Sin(Angle) * Dist, 0.0f);
 
         if (NavSys->ProjectPointToNavigation(Candidate, OutLocation, FVector(400.0f, 400.0f, 1000.0f)))
@@ -248,17 +271,20 @@ bool AZombieSlayerGameMode::FindReachablePointInRing(const FVector& Center, FNav
 
 void AZombieSlayerGameMode::spawnCoin()
 {
-    AMyPlayer* myPlayer =
+    AMyPlayer* MyPlayer =
         Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-    if (!myPlayer)
+    if (!MyPlayer)
     {
         return;
     }
 
+    // 여기서 검사
+    RecycleFarCoins(MyPlayer->GetActorLocation());
+
     // 레벨1 => 5, 레벨2 => 10, 레벨4 이상 => 20 (기본값 기준)
     const int32 maxActive = FMath::Min(
         Max_Coin_Size,
-        StartCoinCount + (myPlayer->GetLevel() - 1) * CoinPerLevel);
+        StartCoinCount + (MyPlayer->GetLevel() - 1) * CoinPerLevel);
 
     if (coin_size >= maxActive)
     {
@@ -266,7 +292,7 @@ void AZombieSlayerGameMode::spawnCoin()
     }
 
     ACoin* coin = nullptr;
-    for (ACoin* candidate : coinPool)
+    for (ACoin* candidate : CoinPool)
     {
         if (IsValid(candidate) && candidate->IsHidden())
         {
@@ -284,7 +310,7 @@ void AZombieSlayerGameMode::spawnCoin()
     FNavLocation resultLocation;
 
     // 시야 밖 링에 생성
-    if (!FindReachablePointInRing(myPlayer->GetActorLocation(), resultLocation))
+    if (!FindReachablePointInRing(MyPlayer->GetActorLocation(), resultLocation))
     {
         return;
     }
@@ -316,12 +342,17 @@ void AZombieSlayerGameMode::DieEnemy(int index)
 //signal을 받아야지 될듯
 void AZombieSlayerGameMode::DestroyCoin(int index)
 {
-    coin_size--;
-    if (coinPool.IsValidIndex(index) && IsValid(coinPool[index]))
+    // 코인이 없거나 숨겨졌다면
+    if (!CoinPool.IsValidIndex(index) || !IsValid(CoinPool[index]) || CoinPool[index]->IsHidden())
     {
-        coinPool[index]->SetCanGet(false);
-        coinPool[index]->SetActorHiddenInGame(true);  // 비활성화
+        return;
     }
+
+    coin_size--;
+    // null이 아니면, 근데 숨겨져있다면
+    CoinPool[index]->SetCanGet(false);
+    CoinPool[index]->SetActorEnableCollision(false); // 물리 비활성화
+    CoinPool[index]->SetActorHiddenInGame(true);  // 비활성화
 }
 
 // 디아블로식 사망 연출 — 플레이어가 죽으면(OnDeath) 적들의 시간을 멈추고,

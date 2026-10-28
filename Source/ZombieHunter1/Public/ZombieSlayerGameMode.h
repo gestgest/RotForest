@@ -51,6 +51,8 @@ private:
 
 	void Spawn();
 	void spawnCoin();
+	void RecycleFarCoins(const FVector& PlayerLocation);
+
 
 
 
@@ -79,14 +81,13 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = "True"), Category = "Pool")
 	int Max_Coin_Size = 20;
 
-
-
+	
 	// UPROPERTY 필수 — 안 붙이면 적/코인이 Destroy될 때 이 raw 포인터가 댕글링이 되어
 	// SpawnEnemy 등에서 역참조 시 크래시(액세스 위반)가 난다. UPROPERTY면 파괴 시 자동으로 null이 됨.
 	UPROPERTY()
 	TArray<AEnemy*> enemyPool;
 	UPROPERTY()
-	TArray<ACoin*> coinPool;
+	TArray<ACoin*> CoinPool;
 
 	/** 무한맵 생성기 (StartPlay에서 레벨에서 찾아 캐시). 스폰 링이 마을(안전지대)을 피하도록 질의한다. */
 	UPROPERTY()
@@ -137,4 +138,5 @@ private:
 	/** 스폰 최대 거리(cm). 리쉬(LeashDistance)와 청크 언로드 경계(~6000)보다 안쪽이어야 한다. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "True"), Category = "Spawning")
 	float SpawnMaxDistance = 3500.0f;
+
 };
