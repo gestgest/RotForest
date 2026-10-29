@@ -264,7 +264,8 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 			bVillage ? TEXT("Village") : TEXT("ZombieVillage"), Coord.X, Coord.Y, FootprintSize, FootprintSize);
 	}
 
-	SpawnObstacles(Stream, Chunk, Origin, bIsPOIChunk);
+	TArray<FRoadSegment> RoadSegments;
+	SpawnObstacles(Stream, Chunk, Origin, bIsPOIChunk, RoadSegments);
 	LoadedChunks.Add(Coord, MoveTemp(Chunk));
 }
 
@@ -1053,6 +1054,26 @@ void AInfiniteMapGenerator::SpawnPlagueCandle(const FVector& Center, FMapChunk& 
 	}
 }
 
+// 맴버변수 없으면 그냥 이렇게
+namespace
+{
+	// P는 지나가야 할 점(앞 현재 뒤) => 마을, 역병마을
+	// T는 그 P1 P2의 비율
+
+	// P(T) = a + b·T + c·T² + d·T³
+	// 부드러운 곡선 방정식 
+	// ㄴ 점을 무조건 지나가야한다면 이거. 만약 곡선 조절에 신경쓰고싶다면 베지어 곡선
+	FVector CatmullRom(const FVector& P0, const FVector& P1, const FVector& P2, const FVector& P3, double T)
+	{
+		const double T2 = T * T;
+		const double T3 = T2 * T;
+		return 0.5 * ((2.0 * P1)
+			+ (P2 - P0) * T
+			+ (2.0 * P0 - 5.0 * P1 + 4.0 * P2 - P3) * T2
+			+ (3.0 * P1 - P0 - 3.0 * P2 + P3) * T3);
+	}
+}
+
 // 도로가 모이는 지점(교차로)을 반환
 FVector AInfiniteMapGenerator::GetRoadNode(const FIntPoint& RegionCoord) const
 {
@@ -1113,7 +1134,7 @@ void AInfiniteMapGenerator::BuildRoadEdge(const FIntPoint& RegionA, const FIntPo
 		// 단계 나누기
 		for (int32 k = 0; k < Steps; k++)
 		{
-			Dense.Add(CatmullRom(P0, P1, P2, P3, static_cast<double>(k)) / Steps);
+			Dense.Add(CatmullRom(P0, P1, P2, P3, static_cast<double>(k) / Steps));
 		}
 	}
 	Dense.Add(B); //마지막 점
@@ -1154,25 +1175,4 @@ void AInfiniteMapGenerator::BuildRoadEdge(const FIntPoint& RegionA, const FIntPo
 		P.Z = LiftZ;
 	}
 
-}
-
-
-// 맴버변수 없으면 그냥 이렇게
-namespace
-{
-	// P는 지나가야 할 점(앞 현재 뒤) => 마을, 역병마을
-	// T는 그 P1 P2의 비율
-
-	// P(T) = a + b·T + c·T² + d·T³
-	// 부드러운 곡선 방정식 
-	// ㄴ 점을 무조건 지나가야한다면 이거. 만약 곡선 조절에 신경쓰고싶다면 베지어 곡선
-	FVector CatmullRom(const FVector& P0, const FVector& P1, const FVector& P2, const FVector& P3, double T)
-	{
-		const double T2 = T * T;
-		const double T3 = T2 * T;
-		return 0.5 * ((2.0 * P1)
-			+ (P2 - P0) * T
-			+ (2.0 * P0 - 5.0 * P1 + 4.0 * P2 - P3) * T2
-			+ (3.0 * P1 - P0 - 3.0 * P2 + P3) * T3);
-	}
 }

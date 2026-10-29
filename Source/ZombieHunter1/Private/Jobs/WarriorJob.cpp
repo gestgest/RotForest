@@ -32,11 +32,6 @@ UWarriorJob::UWarriorJob()
 	// 무기(WeaponMesh)는 BP 서브클래스(예: BP_WarriorJob)에서 직접 지정한다.
 }
 
-void UWarriorJob::Attack()
-{
-	Super::Attack();
-
-}
 
 // 최종 공격 함수
 void UWarriorJob::OnAttackNotify(FName NotifyName)
