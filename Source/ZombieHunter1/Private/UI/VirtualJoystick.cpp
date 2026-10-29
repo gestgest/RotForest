@@ -6,6 +6,22 @@
 #include "Components/OverlaySlot.h"
 #include "Blueprint/WidgetTree.h"
 
+void UVirtualJoystick::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	// 안 잡는 경우 휴식을 준다.
+	if (bFloating && ActivePointerIndex == -1)
+	{
+		const FVector2D Rest = GetRestOffset(MyGeometry);
+		if (!BaseOffset.Equals(Rest, 0.5f))
+		{
+			BaseOffset = Rest;
+			ApplyVisuals(FVector2d::ZeroVector); // 원래 자리
+		}
+	}
+}
+
 TSharedRef<SWidget> UVirtualJoystick::RebuildWidget()
 {
 	// 위젯 블루프린트 없이 C++에서 트리를 직접 구성 (RootWidget이 비어있을 때만)
@@ -122,6 +138,15 @@ FReply UVirtualJoystick::HandlePressed(const FGeometry& InGeometry, const FPoint
 	}
 
 	ActivePointerIndex = InEvent.GetPointerIndex();
+
+	// 조이싙ㄱ 건드리고 있다면
+	if (bFloating)
+	{
+		// px기준 어디 눌렀는지
+		const FVector2D LocalPos = InGeometry.AbsoluteToLocal(InEvent.GetScreenSpacePosition());
+		BaseOffset = ClampBase(InGeometry, LocalPos - InGeometry.GetLocalSize() * 0.5f);
+	}
+
 	UpdateFromScreenPosition(InGeometry, InEvent.GetScreenSpacePosition());
 
 	// 이 포인터의 이후 Move/Up 이벤트를 이 위젯이 받도록 캡처
@@ -149,21 +174,26 @@ void UVirtualJoystick::UpdateFromScreenPosition(const FGeometry& InGeometry, con
 {
 	// 위젯 로컬 좌표로 변환 후 중심 기준 오프셋 계산
 	const FVector2D LocalPos = InGeometry.AbsoluteToLocal(ScreenPos);
-	const FVector2D Center = InGeometry.GetLocalSize() * 0.5f;
-	FVector2D Offset = LocalPos - Center;
+	const FVector2D WidgetCenter = InGeometry.GetLocalSize() * 0.5f;
+	FVector2D Offset = LocalPos - (WidgetCenter + BaseOffset);
 
 	// 손잡이가 벗어나지 않도록 반경 제한
 	const float Range = GetEffectiveRange();
 	if (Offset.Size() > Range)
 	{
-		Offset = Offset.GetSafeNormal() * Range;
-	}
+		// 넘친 만큼 배경을 끌고 옴
+		if (bFloating && bFollowFinger)
+		{
+			BaseOffset = ClampBase(InGeometry, BaseOffset + Offset - Offset.GetSafeNormal() * Range);
+			Offset = LocalPos - (WidgetCenter + BaseOffset);
+		}
 
-	// 손잡이 위치 갱신 (시각 피드백)
-	if (Handle)
-	{
-		Handle->SetRenderTranslation(Offset);
+		if (Offset.Size() > Range)
+		{
+			Offset = Offset.GetSafeNormal() * Range;
+		}
 	}
+	ApplyVisuals(Offset);
 
 	// 정규화: 화면 Y는 아래가 +이므로 Y를 뒤집어 "위 = +" 로 맞춤 (게임패드 스틱과 동일)
 	FVector2D Value(Offset.X / Range, -Offset.Y / Range);
@@ -179,9 +209,40 @@ void UVirtualJoystick::UpdateFromScreenPosition(const FGeometry& InGeometry, con
 
 void UVirtualJoystick::ResetHandle()
 {
+	ApplyVisuals(FVector2D::ZeroVector);
+	OnJoystickMoved.Broadcast(FVector2D::ZeroVector);
+}
+
+FVector2D UVirtualJoystick::ClampBase(const FGeometry& InGeometry, const FVector2D& InOffset) const
+{
+	const FVector2D Half = InGeometry.GetLocalSize() * 0.5f - BackgroundSize * 0.5f;
+
+	// 영역 전개
+	const float MaxX = FMath::Max(0.f, Half.X);
+	const float MaxY = FMath::Max(0.f, Half.Y);
+
+	return FVector2D(
+		FMath::Clamp(InOffset.X, -MaxX, MaxX),
+		FMath::Clamp(InOffset.Y, -MaxY, MaxY)
+	);
+}
+
+FVector2D UVirtualJoystick::GetRestOffset(const FGeometry& InGeometry) const
+{
+	const FVector2D Rest = (RestPosition - FVector2D(0.5f, 0.5f)) * InGeometry.GetLocalSize();
+	return ClampBase(InGeometry, Rest);
+}
+
+
+// 위치로 이동
+void UVirtualJoystick::ApplyVisuals(const FVector2D& HandleOffset) 
+{
+	if (Background)
+	{
+		Background->SetRenderTranslation(BaseOffset);
+	}
 	if (Handle)
 	{
-		Handle->SetRenderTranslation(FVector2D::ZeroVector);
+		Handle->SetRenderTranslation(BaseOffset + HandleOffset);
 	}
-	OnJoystickMoved.Broadcast(FVector2D::ZeroVector);
 }

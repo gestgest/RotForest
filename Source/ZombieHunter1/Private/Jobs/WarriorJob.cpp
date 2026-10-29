@@ -8,8 +8,10 @@
 #include "Engine/OverlapResult.h"
 
 #include "Components/CapsuleComponent.h"
+
 #include "CollisionShape.h"
 
+#include "Kismet/GameplayStatics.h"
 
 #include "DrawDebugHelpers.h" //근접 스윕 범위 디버그
 
@@ -30,6 +32,11 @@ UWarriorJob::UWarriorJob()
 	// 무기(WeaponMesh)는 BP 서브클래스(예: BP_WarriorJob)에서 직접 지정한다.
 }
 
+void UWarriorJob::Attack()
+{
+	Super::Attack();
+
+}
 
 // 최종 공격 함수
 void UWarriorJob::OnAttackNotify(FName NotifyName)
@@ -37,6 +44,12 @@ void UWarriorJob::OnAttackNotify(FName NotifyName)
 	if (!OwnerCharacter)
 	{
 		return;
+	}
+
+	// 사운드
+	if (OwnerCharacter && SwingSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(OwnerCharacter, SwingSound, OwnerCharacter->GetActorLocation());
 	}
 
 	// 전방으로 부채꼴 범위의 적들을 타격
@@ -65,7 +78,10 @@ void UWarriorJob::OnAttackNotify(FName NotifyName)
 	TSet<AEnemy*> HitEnemies;
 	for (const FOverlapResult& Result : OverlapResults)
 	{
-		bDidHit = bDidHit || HitEnemy(HitEnemies, Result, Origin, AimDir);
+		if (HitEnemy(HitEnemies, Result, Origin, AimDir))
+		{
+			bDidHit = true;
+		}
 	}
 
 	// 디버그: 근접 스윕 범위(시작/끝 구체 + 경로)를 그린다. 적중=초록, 빗나감=빨강. 스윙마다 1초간.
@@ -76,7 +92,7 @@ void UWarriorJob::OnAttackNotify(FName NotifyName)
 		const int32 Segments = 16;
 
 		FVector Prev = Origin;
-		for (int32 i = 0; i < Segments; i++)
+		for (int32 i = 0; i <= Segments; i++)
 		{
 			const float Angle = -SwingAngle * 0.5f + SwingAngle * i / Segments;
 			const FVector Point = Origin + AimDir.RotateAngleAxis(Angle, FVector::UpVector) * AttackRange;
