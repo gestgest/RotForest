@@ -46,9 +46,9 @@ struct FPOIInfo
 struct FRoadSegment 
 {
 	FVector Start = FVector::ZeroVector;
-	FVector StartTangent = FVector::ZeroVector;
+	FVector StartTangent = FVector::ZeroVector; // 휘어지는 정도
 	FVector End = FVector::ZeroVector;
-	FVector EndTangent = FVector::ZeroVector;
+	FVector EndTangent = FVector::ZeroVector; // 휘어지는 정도
 	bool bOwned = false; // 중점이 이 청크 안 => 이 청크가 스폰
 };
 
@@ -83,7 +83,7 @@ private:
 		const FRotator& Rotation, const FVector& Scale, UMaterialInterface* OverrideMat);
 
 	// 장애물 배치
-	void SpawnObstacles(FRandomStream& Stream, FMapChunk& Chunk, FVector Origin, bool bIsPOIChunk, TArray<FRoadSegment> & RoadSegments);
+	void SpawnObstacles(FRandomStream& Stream, FMapChunk& Chunk, FVector Origin, bool bIsPOIChunk, const TArray<FRoadSegment> & RoadSegments);
 
 	void SpawnFog();
 	void UpdateFogToPlayer(const FIntPoint& CenterChunk);

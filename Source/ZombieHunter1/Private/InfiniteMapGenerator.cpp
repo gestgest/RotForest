@@ -265,6 +265,9 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 	}
 
 	TArray<FRoadSegment> RoadSegments;
+	GetRoadSegmentsInChunk(Coord, RoadSegments);
+	SpawnRoad(RoadSegments, Chunk);
+
 	SpawnObstacles(Stream, Chunk, Origin, bIsPOIChunk, RoadSegments);
 	LoadedChunks.Add(Coord, MoveTemp(Chunk));
 }
@@ -273,7 +276,7 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 
 
 // 장애물 생성 : 청크 안에 랜덤 배치 — POI 청크는 비워둔다 (마을 콘텐츠 자리)
-void AInfiniteMapGenerator::SpawnObstacles(FRandomStream & Stream, FMapChunk & Chunk, FVector Origin, bool bIsPOIChunk, TArray<FRoadSegment> & RoadSegments)
+void AInfiniteMapGenerator::SpawnObstacles(FRandomStream & Stream, FMapChunk & Chunk, FVector Origin, bool bIsPOIChunk, const TArray<FRoadSegment> & RoadSegments)
 {
 	if (!bIsPOIChunk && ObstacleMeshes.Num() > 0)
 	{
@@ -294,6 +297,23 @@ void AInfiniteMapGenerator::SpawnObstacles(FRandomStream & Stream, FMapChunk & C
 			// 중심 피벗 메시를 바닥 위에 앉히기 위한 Z 오프셋
 			//const float HalfHeight = (ObstacleMeshBaseSize * Scale) * 0.5f;
 			const FVector Loc = Origin + FVector(LocalX, LocalY, 0);
+
+			const float RoadClear = RoadWidth * 0.5f + ObstacleMeshBaseSize * Scale * 0.5f;
+			bool bOnRoad = false;
+
+			for (const FRoadSegment& RoadSegment : RoadSegments)
+			{
+				if (FMath::PointDistToSegment(Loc, RoadSegment.Start, RoadSegment.End) < RoadClear)
+				{
+					bOnRoad = true;
+					break;
+				}
+			}
+
+			if (bOnRoad)
+			{
+				continue;
+			}
 
 			if (AStaticMeshActor* Obstacle = SpawnObstacleMesh(Mesh, Loc, FRotator(0.f, Yaw, 0.f), FVector(Scale), nullptr))
 			{
@@ -332,7 +352,7 @@ namespace
 	}
 }
 
-//POI 발자국 반경(청크). 한 변이 region 크기보다 압도적으로 큰 경우를 막음
+//POI 영역 반경(청크). 한 변이 region 크기보다 압도적으로 큰 경우를 막음
 //= > 혹시모르는 try문이라고 생각하면 됨
 int32 AInfiniteMapGenerator::GetPOIRadiusInChunks() const
 {
@@ -341,10 +361,10 @@ int32 AInfiniteMapGenerator::GetPOIRadiusInChunks() const
 	return FMath::Min(Radius, (RegionSize - 1) / 2); //만약 크기를 무식
 }
 
-//이 청크가 POI 발자국 안에 있는지
+//이 청크가 POI 영역 안에 있는지
 bool AInfiniteMapGenerator::GetPOIAtChunk(const FIntPoint& ChunkCoord, FPOIInfo& OutInfo) const
 {
-	// 중심을 리전 안쪽으로 클램프해 발자국이 리전을 못 벗어나므로, 자기 리전만 검사하면 된다
+	// 중심을 리전 안쪽으로 클램프해 영역이 리전을 못 벗어나므로, 자기 리전만 검사하면 된다
 	const FPOIInfo Info = GetPOIForRegion(ChunkToRegion(ChunkCoord));
 	
 	//POIChance로 안 나올경우
@@ -365,7 +385,7 @@ bool AInfiniteMapGenerator::GetPOIAtChunk(const FIntPoint& ChunkCoord, FPOIInfo&
 	return false;
 }
 
-//월드 좌표가 "마을" 발자국 안인지 — 적 스폰 링 등 외부에서 질의 (좀비마을은 적 지역이라 해당 없음)
+//월드 좌표가 "마을" 영역 안인지 — 적 스폰 링 등 외부에서 질의 (좀비마을은 적 지역이라 해당 없음)
 bool AInfiniteMapGenerator::IsLocationInVillage(const FVector& WorldLocation) const
 {
 	FPOIInfo Info;
@@ -405,14 +425,14 @@ FPOIInfo AInfiniteMapGenerator::GetPOIForRegion(const FIntPoint& RegionCoord) co
 	Info.bHasPOI = true;
 
 
-	// 리전 내 POI 중심 위치. 발자국(2R+1)²이 리전 밖으로 삐져나가지 않게 중심을 [R, Size-1-R]에서만 뽑는다.
+	// 리전 내 POI 중심 위치. 영역(2R+1)²이 리전 밖으로 삐져나가지 않게 중심을 [R, Size-1-R]에서만 뽑는다.
 	// (삐져나가면 옆 리전 청크가 자기 리전만 검사하는 GetPOIAtChunk에서 잘려버림)
 	const int32 Radius = GetPOIRadiusInChunks();
 	const int32 MaxCell = Size - 1 - Radius;
 
 	//리전 위치 뽑는 코드
-	// 시작 리전은 발자국 가장자리(중심-R)가 플레이어 시작 청크(0,0)에서 최소 2청크 떨어지게.
-	// 발자국이 커서 불가능하면 리전에 들어가는 한 최대한 밀어낸다.
+	// 시작 리전은 영역 가장자리(중심-R)가 플레이어 시작 청크(0,0)에서 최소 2청크 떨어지게.
+	// 영역이 커서 불가능하면 리전에 들어가는 한 최대한 밀어낸다.
 	const int32 MinCell = FMath::Min(bStartRegion ? (Radius + 2) : Radius, MaxCell);
 	const int32 LocalX = Stream.RandRange(MinCell, MaxCell); 
 	const int32 LocalY = Stream.RandRange(MinCell, MaxCell);
@@ -556,7 +576,7 @@ void AInfiniteMapGenerator::SpawnVillagers(const FVector& Center, FMapChunk& Chu
 	}
 }
 
-// 마을 외곽 링(반경 2400 — 발자국 절반 3000 안쪽)에 구조물 6개.
+// 마을 외곽 링(반경 2400 — 영역 절반 3000 안쪽)에 구조물 6개.
 // 스폰존이 있는 북쪽(0°)과 그 반대쪽 남쪽(180°)은 비워서 마을 안팎으로 길이 뚫린 것처럼 보이게 한다.
 // 좌표는 경비병/주민처럼 고정 슬롯 — 슬롯당 메시 선택/스케일만 청크 시드로 살짝 흔든다(재생성해도 같은 그림).
 void AInfiniteMapGenerator::SpawnVillageStructures(const FVector& Center, FMapChunk& Chunk, FRandomStream& Stream)
@@ -1175,4 +1195,149 @@ void AInfiniteMapGenerator::BuildRoadEdge(const FIntPoint& RegionA, const FIntPo
 		P.Z = LiftZ;
 	}
 
+}
+
+
+void AInfiniteMapGenerator::GetRoadSegmentsInChunk(const FIntPoint & Coord, TArray<FRoadSegment> & OutSegments) const
+{
+	OutSegments.Reset();
+
+	const FIntPoint Region = ChunkToRegion(Coord);
+	// Coord위치의 (1,1) 청크 박스 => 그릴 박스
+	const FBox2D ChunkBox(
+		FVector2D(Coord.X * ChunkSize, Coord.Y * ChunkSize),
+		FVector2D((Coord.X + 1) * ChunkSize, (Coord.Y + 1) * ChunkSize));
+
+	// 지울 박스
+	const FBox2D NearBox = ChunkBox.ExpandBy(RoadWidth + RoadSegmentLength);
+	
+	TArray<FVector> Points;
+
+	// 3x3
+	for (int32 dy = -1; dy <= 1; dy++)
+	{
+		for (int32 dx = -1; dx <= 1; dx++)
+		{
+			const FIntPoint From = Region + FIntPoint(dx, dy);
+			const FIntPoint Targets[2] = { From + FIntPoint(1,0), From + FIntPoint(0,1) };
+
+			for (const FIntPoint& To : Targets)
+			{
+				BuildRoadEdge(From, To, Points);
+
+				for (int32 i = 0; i < Points.Num() - 1; i++)
+				{
+					const FVector& P0 = Points[i];
+					const FVector& P1 = Points[i + 1];
+					const FVector Mid = (P0 + P1) / 2;
+
+					// Near 밖이면 버린다.
+					if (!NearBox.IsInside(FVector2D(Mid)))
+					{
+						continue;
+					}
+					
+					// 오브젝트걸리면 도로 X
+					const FIntPoint MidChunk = WorldToChunk(Mid);
+					FPOIInfo Unused;
+					if (GetPOIAtChunk(MidChunk, Unused))
+					{
+						continue;
+					}
+
+					const FVector& Prev = Points[FMath::Max(i - 1, 0)];
+					const FVector& Next = Points[FMath::Min(i + 2, Points.Num() - 1)];
+
+					FRoadSegment Seg;
+					Seg.Start = P0;
+					Seg.End = P1;
+					Seg.StartTangent = (P1 - Prev) * (i > 0 ? 0.5 : 1.0);
+					Seg.EndTangent = (Next - P0) * (i + 2 < Points.Num() ? 0.5 : 1.0);
+					Seg.bOwned = (MidChunk == Coord);
+					OutSegments.Add(Seg);
+				}
+			}
+		}
+	}
+}
+
+
+void AInfiniteMapGenerator::SpawnRoad(const TArray<FRoadSegment> & Segments, FMapChunk& Chunk)
+{
+
+	// null 체크
+	if (!RoadMesh || !GetWorld())
+	{
+		return;
+	}
+
+	// 도로지역 아니면 안그림
+	bool bHasOwned = false;
+	for (const FRoadSegment & Seg : Segments)
+	{
+		if (Seg.bOwned)
+		{
+			bHasOwned = true;
+			break;
+		}
+	}
+	if (!bHasOwned)
+	{
+		return;
+	}
+
+	// 소환
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Params.Owner = this;
+
+	AActor* RoadActor = GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, Params);
+	if (!RoadActor)
+	{
+		return;
+	}
+
+	USceneComponent* Root = NewObject<USceneComponent>(RoadActor, TEXT("Root"));
+	RoadActor->SetRootComponent(Root);
+	Root->RegisterComponent();
+
+#if WITH_EDITOR
+	RoadActor->SetFolderPath(TEXT("Spawned/Road"));
+#endif
+
+	const float WidthScale = RoadWidth / FMath::Max(1.f, RoadMeshBaseSize);
+
+	for (const FRoadSegment& Seg : Segments)
+	{
+		if (!Seg.bOwned)
+		{
+			continue;
+		}
+
+		// 설정
+		USplineMeshComponent* Piece = NewObject<USplineMeshComponent>(RoadActor);
+		Piece->SetMobility(EComponentMobility::Movable);
+		Piece->SetStaticMesh(RoadMesh);
+		if (RoadMaterial)
+		{
+			Piece->SetMaterial(0, RoadMaterial);
+		}
+
+		// 구부리기
+		Piece->SetForwardAxis(ESplineMeshAxis::X, false);
+		Piece->SetStartAndEnd(Seg.Start, Seg.StartTangent, Seg.End, Seg.EndTangent, false);
+		Piece->SetStartScale(FVector2D(WidthScale, 1.f), false); // 폭 설정
+		Piece->SetEndScale(FVector2D(WidthScale, 1.f), false); // 폭 설정
+
+		Piece->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Piece->SetCanEverAffectNavigation(false);
+		Piece->SetCastShadow(false);
+
+		//
+		Piece->SetupAttachment(Root); // 부모 설정
+		Piece->RegisterComponent(); // 월드에 등록(랜더링)
+		Piece->UpdateMesh();
+	}
+
+	Chunk.SpawnedActors.Add(RoadActor);
 }
