@@ -18,11 +18,15 @@ class ZOMBIEHUNTER1_API UWarriorJob : public UJobComponent
 
 public:
 	UWarriorJob();
-
-
+	
+	virtual void Attack() override;
 	virtual void OnAttackNotify(FName NotifyName) override;
 
-protected:
+private:
+	// WarriorJob.h
+	UPROPERTY(EditAnywhere, Category = "Job|Combat")
+	USoundBase* SwingSound = nullptr;
+
 	// 부채꼴 반지름 (cm)
 	UPROPERTY(EditAnywhere, Category = "Job|Combat")
 	float AttackRange = 200.0f;
@@ -32,7 +36,7 @@ protected:
 	float SwingAngle = 120.0f;
 
 	/** 적중 시 적을 밀어내는 힘 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Combat")
+	UPROPERTY(EditAnywhere, Category = "Job|Combat")
 	float KnockbackForce = 500.0f;
 
 	virtual bool HitEnemy(TSet<AEnemy*>& HitEnemies, const FOverlapResult& Result, const FVector & Origin, const FVector& AimDir) override;

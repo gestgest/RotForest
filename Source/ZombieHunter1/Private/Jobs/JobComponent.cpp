@@ -83,7 +83,7 @@ void UJobComponent::PlayAttackSound()
 			AttackSound,
 			OwnerCharacter->GetActorLocation(),
 			1.0f,
-			1.0f
+			FMath::FRandRange(0.9f, 1.10f)
 		);
 	}
 }

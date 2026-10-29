@@ -8,8 +8,10 @@
 #include "Engine/OverlapResult.h"
 
 #include "Components/CapsuleComponent.h"
+
 #include "CollisionShape.h"
 
+#include "Kismet/GameplayStatics.h"
 
 #include "DrawDebugHelpers.h" //근접 스윕 범위 디버그
 
@@ -30,6 +32,11 @@ UWarriorJob::UWarriorJob()
 	// 무기(WeaponMesh)는 BP 서브클래스(예: BP_WarriorJob)에서 직접 지정한다.
 }
 
+void UWarriorJob::Attack()
+{
+	Super::Attack();
+
+}
 
 // 최종 공격 함수
 void UWarriorJob::OnAttackNotify(FName NotifyName)
@@ -37,6 +44,12 @@ void UWarriorJob::OnAttackNotify(FName NotifyName)
 	if (!OwnerCharacter)
 	{
 		return;
+	}
+
+	// 사운드
+	if (OwnerCharacter && SwingSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(OwnerCharacter, SwingSound, OwnerCharacter->GetActorLocation());
 	}
 
 	// 전방으로 부채꼴 범위의 적들을 타격

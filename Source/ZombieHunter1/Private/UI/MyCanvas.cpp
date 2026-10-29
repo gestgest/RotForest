@@ -32,9 +32,9 @@ void UMyCanvas::NativeConstruct()
         BossArrow->SetVisibility(ESlateVisibility::Collapsed);
     }
 
-    // 모바일(안드로이드/iOS)에서만 터치 조이스틱 표시, PC에선 숨김.
+    // 모바일(안드로이드/iOS)이나 에디터에서만 터치 조이스틱 표시, PC에선 숨김.
     // 위젯이 만들어질 때 자동 실행되므로 BP가 SetCanvasWidget을 호출하든 말든 항상 적용됨.
-#if PLATFORM_ANDROID || PLATFORM_IOS
+#if PLATFORM_ANDROID || PLATFORM_IOS || WITH_EDITOR
     const ESlateVisibility JoystickVis = ESlateVisibility::Visible;
 #else
     const ESlateVisibility JoystickVis = ESlateVisibility::Collapsed;
