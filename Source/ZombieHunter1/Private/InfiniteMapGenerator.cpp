@@ -265,7 +265,7 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 	}
 
 	TArray<FRoadSegment> RoadSegments;
-	GetRoadSegmentsInChunk(Coord, RoadSegments);
+	GetRoadSegmentsInChunk(Coord, RoadSegments); //여기서 segments 위치 설정
 	SpawnRoad(RoadSegments, Chunk);
 
 	SpawnObstacles(Stream, Chunk, Origin, bIsPOIChunk, RoadSegments);
@@ -1189,7 +1189,7 @@ void AInfiniteMapGenerator::BuildRoadEdge(const FIntPoint& RegionA, const FIntPo
 	}
 
 	// 살짝 띄움 => 땅과 도로 똑같이 0이면 겹쳐서 디자인적으로 깨짐
-	const double LiftZ = 2.0 + Stream.RandRange(0, 7) * 0.4;
+	const double LiftZ = FloorThickness * 0.5 + 2.0 + Stream.RandRange(0, 7) * 0.4;
 	for (FVector& P : OutPoints)
 	{
 		P.Z = LiftZ;
@@ -1223,7 +1223,7 @@ void AInfiniteMapGenerator::GetRoadSegmentsInChunk(const FIntPoint & Coord, TArr
 
 			for (const FIntPoint& To : Targets)
 			{
-				BuildRoadEdge(From, To, Points);
+				BuildRoadEdge(From, To, Points); //
 
 				for (int32 i = 0; i < Points.Num() - 1; i++)
 				{
@@ -1320,7 +1320,7 @@ void AInfiniteMapGenerator::SpawnRoad(const TArray<FRoadSegment> & Segments, FMa
 		Piece->SetStaticMesh(RoadMesh);
 		if (RoadMaterial)
 		{
-			Piece->SetMaterial(0, RoadMaterial);
+			Piece->SetMaterial(0, RoadMaterial);	
 		}
 
 		// 구부리기
