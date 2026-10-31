@@ -91,11 +91,15 @@ private:
 	void SetupVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
 	void SpawnVillageGuards(const FVector& Center, FMapChunk& Chunk);
 	void SpawnVillagers(const FVector& Center, FMapChunk& Chunk);
+	
+	void SpawnGrass(const FIntPoint& Coord, FMapChunk& Chunk, const FVector& Origin, const TArray<FRoadSegment>& RoadSegments);
+	void SpawnRoad(const TArray<FRoadSegment>& Segments, FMapChunk& Chunk);
 
 	// [역병마을]
 	void SetupPlagueVillage(bool bIsPOIChunk, FPOIInfo& POI, const FVector Center, FMapChunk& Chunk, FRandomStream& Stream);
 	void SpawnPlagueVillageObjects(const FVector& Center, FMapChunk& Chunk, FRandomStream& Stream, bool bIsCenter);
-
+	void SpawnPlagueCandle(const FVector& Center, FMapChunk& Chunk);
+	AActor* SpawnDecoActor(TSubclassOf<AActor> ActorClass, const FVector& Location, const FRotator& Rotation);
 protected:
 	// [청크]
 	// 청크 한 변의 길이(cm) 
@@ -297,9 +301,28 @@ private: // 잔잔바리 함수들 변수들
 	float TimeSinceUpdate = 0.f;
 	bool bHasGenerated = false;
 
+	// [풀]
+	UPROPERTY(EditAnywhere, Category = "Map|Grass")
+	TArray<TObjectPtr<UStaticMesh>> GrassMeshes;
 
-	void SpawnPlagueCandle(const FVector& Center, FMapChunk& Chunk);
-	AActor* SpawnDecoActor(TSubclassOf<AActor> ActorClass, const FVector& Location, const FRotator& Rotation);
+	// 청크 하나(20m x 20m)에 뿌릴 풀 개수
+	UPROPERTY(EditAnywhere, Category = "Map|Grass", meta = (ClampMin = "0"))
+	int32 GrassPerChunk = 200;
+
+	UPROPERTY(EditAnywhere, Category = "Map|Grass", meta = (ClampMin = "0.1"))
+	float GrassMinScale = 0.8f;
+
+	UPROPERTY(EditAnywhere, Category = "Map|Grass", meta = (ClampMin = "0.1"))
+	float GrassMaxScale = 1.4f;
+
+	// 도로 중심에서 이 거리(cm) 안은 풀 없음
+	UPROPERTY(EditAnywhere, Category = "Map|Grass", meta = (ClampMin = "0"))
+	float GrassRoadClear = 150.f;
+
+	// 이 거리(cm) 밖 풀은 안 그림
+	UPROPERTY(EditAnywhere, Category = "Map|Grass", meta = (ClampMin = "500"))
+	float GrassCullDistance = 5000.f;
+
 
 	
 	// [도로 함수]
@@ -312,7 +335,6 @@ private: // 잔잔바리 함수들 변수들
 	// 도로 조각들
 	void GetRoadSegmentsInChunk(const FIntPoint& Coord, TArray<FRoadSegment>& OutSegments) const;
 
-	void SpawnRoad(const TArray<FRoadSegment>& Segments, FMapChunk& Chunk);
 
 	// NavMeshBoundsVolume를 플레이어 위치로 옮기고 내비 시스템에 갱신을 통지
 	void UpdateNavBoundsToPlayer();

@@ -22,6 +22,7 @@
 #include "Characters/Villager.h" // 마을 주민 (비전투 배회 NPC)
 #include "Characters/Boss.h" 
 
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SplineMeshComponent.h"
@@ -269,6 +270,10 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 	SpawnRoad(RoadSegments, Chunk);
 
 	SpawnObstacles(Stream, Chunk, Origin, bIsPOIChunk, RoadSegments);
+	if (!bIsPOIChunk)
+	{
+		SpawnGrass(Coord, Chunk, Origin, RoadSegments);
+	}
 	LoadedChunks.Add(Coord, MoveTemp(Chunk));
 }
 
@@ -624,6 +629,200 @@ void AInfiniteMapGenerator::SpawnVillageStructures(const FVector& Center, FMapCh
 		}
 	}
 }
+
+
+void AInfiniteMapGenerator::SpawnGrass(const FIntPoint& Coord, FMapChunk& Chunk, const FVector& Origin, const TArray<FRoadSegment>& RoadSegments)
+{
+	UWorld* World = GetWorld();
+	if (GrassMeshes.Num() <= 0 || GrassPerChunk <= 0 || !World)
+	{
+		return;
+	}
+	
+	//GetTypeHash는 뭐 좌표를 큰 숫자로 변환하는 함수
+	const uint32 Hash = HashCombine(GetTypeHash(Coord), static_cast<uint32>(GlobalSeed) ^ 0x6A55u);
+	FRandomStream Stream(static_cast<int32>(Hash));
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Params.Owner = this;
+
+	AActor* GrassActor = World->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, Params);
+	if (!GrassActor)
+	{
+		return;
+	}
+
+	// 유니티의 Transform 같은 설정
+	USceneComponent* Root = NewObject<USceneComponent>(GrassActor, TEXT("Root"));
+	GrassActor->SetRootComponent(Root);
+	Root->RegisterComponent();
+
+#if WITH_EDITOR
+	GrassActor->SetFolderPath("Spawned/Grass");
+#endif
+
+	// HISM => mesh 덩어리
+	TArray<UHierarchicalInstancedStaticMeshComponent*> Hisms;
+	for (UStaticMesh* Mesh : GrassMeshes)
+	{
+		UHierarchicalInstancedStaticMeshComponent* Hism = nullptr;
+		if (Mesh)
+		{
+			Hism = NewObject<UHierarchicalInstancedStaticMeshComponent>(GrassActor);
+
+			// Mesh 설정할땐 Movable 설정해야한다
+			Hism->SetMobility(EComponentMobility::Movable);
+			Hism->SetStaticMesh(Mesh);
+			Hism->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Hism->SetCanEverAffectNavigation(false);
+			Hism->SetCastShadow(false);
+
+			// GrassCullDistance 만큼 멀어지면 안 그린다.
+			Hism->SetCullDistances(
+				static_cast<int32>(GrassCullDistance * 0.8f),
+				static_cast<int32>(GrassCullDistance));
+
+			Hism->SetupAttachment(Root);
+			Hism->RegisterComponent();
+		}
+		Hisms.Add(Hism);
+	}
+
+	// 풀1 { 풀1의 오브젝트, }, 풀2 { 풀2의 오브젝트1, 풀2의 오브젝트2}
+	TArray<TArray<FTransform>> Transforms;
+	Transforms.SetNum(GrassMeshes.Num());
+
+	const float GrassZ = FloorThickness * 0.5f;
+	
+	for (int32 i = 0; i < GrassPerChunk; i++)
+	{
+		const int32 MeshIndex = Stream.RandRange(0, GrassMeshes.Num() - 1);
+
+		const float LocalX = Stream.FRandRange(0.f, ChunkSize);
+		const float LocalY = Stream.FRandRange(0.f, ChunkSize);
+
+		// 혹시 max값이 더 작을 수 있으니 Max 넣는 모숩
+		const float Scale = Stream.FRandRange(GrassMinScale, FMath::Max(GrassMinScale, GrassMaxScale));
+		const float Yaw = Stream.FRandRange(0.f, 360.f); // 회전값
+
+		if (!Hisms[MeshIndex])
+		{
+			continue;
+		}
+		const FVector Loc = Origin + FVector(LocalX, LocalY, GrassZ);
+
+		// 도로 판단 변수
+		bool bOnRoad = false; 
+		for (const FRoadSegment Seg : RoadSegments)
+		{
+			// PointDistToSegment
+			// 풀과 도로의 수직
+			// ㄴ 만약 수직 내렸는데 바깥 선분이면 그냥 Start와의 거리
+			// 그 어차피 선 기준으로 도로 폭보다 가까우면 도로안이니까 true
+			if (FMath::PointDistToSegment(Loc, Seg.Start, Seg.End) < GrassRoadClear)
+			{
+				bOnRoad = true;
+				break;
+			}
+		}
+		if (bOnRoad)
+		{
+			continue;
+		}
+		Transforms[MeshIndex].Add(FTransform(FRotator(0.f, Yaw, 0.f), Loc, FVector(Scale)));
+	}
+	
+
+	for (int32 i = 0; i < Hisms.Num(); i++)
+	{
+		if (Hisms[i] && Transforms[i].Num() > 0)
+		{
+			Hisms[i]->AddInstances(Transforms[i], false);
+		}
+	}
+	Chunk.SpawnedActors.Add(GrassActor);
+}
+void AInfiniteMapGenerator::SpawnRoad(const TArray<FRoadSegment>& Segments, FMapChunk& Chunk)
+{
+
+	// null 체크
+	if (!RoadMesh || !GetWorld())
+	{
+		return;
+	}
+
+	// 도로지역 아니면 안그림
+	bool bHasOwned = false;
+	for (const FRoadSegment& Seg : Segments)
+	{
+		if (Seg.bOwned)
+		{
+			bHasOwned = true;
+			break;
+		}
+	}
+	if (!bHasOwned)
+	{
+		return;
+	}
+
+	// 소환
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Params.Owner = this;
+
+	AActor* RoadActor = GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, Params);
+	if (!RoadActor)
+	{
+		return;
+	}
+
+	USceneComponent* Root = NewObject<USceneComponent>(RoadActor, TEXT("Root"));
+	RoadActor->SetRootComponent(Root);
+	Root->RegisterComponent();
+
+#if WITH_EDITOR
+	RoadActor->SetFolderPath(TEXT("Spawned/Road"));
+#endif
+
+	const float WidthScale = RoadWidth / FMath::Max(1.f, RoadMeshBaseSize);
+
+	for (const FRoadSegment& Seg : Segments)
+	{
+		if (!Seg.bOwned)
+		{
+			continue;
+		}
+
+		// 설정
+		USplineMeshComponent* Piece = NewObject<USplineMeshComponent>(RoadActor);
+		Piece->SetMobility(EComponentMobility::Movable);
+		Piece->SetStaticMesh(RoadMesh);
+		if (RoadMaterial)
+		{
+			Piece->SetMaterial(0, RoadMaterial);
+		}
+
+		// 구부리기
+		Piece->SetForwardAxis(ESplineMeshAxis::X, false);
+		Piece->SetStartAndEnd(Seg.Start, Seg.StartTangent, Seg.End, Seg.EndTangent, false);
+		Piece->SetStartScale(FVector2D(WidthScale, 1.f), false); // 폭 설정
+		Piece->SetEndScale(FVector2D(WidthScale, 1.f), false); // 폭 설정
+
+		Piece->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Piece->SetCanEverAffectNavigation(false);
+		Piece->SetCastShadow(false);
+
+		Piece->SetupAttachment(Root); // 부모 설정
+		Piece->RegisterComponent(); // 월드에 등록(랜더링)
+		Piece->UpdateMesh();
+	}
+
+	Chunk.SpawnedActors.Add(RoadActor);
+}
+
+
 
 // 발판 상태를 POIStates에 저장 (청크가 죽는 유일한 출구인 UnloadChunk에서 호출).
 // 기본값(CDO)과 같으면 저장하지 않는다 — 시드가 어차피 그대로 재생성하는 값이라 기억할 필요 없음.
@@ -1259,85 +1458,4 @@ void AInfiniteMapGenerator::GetRoadSegmentsInChunk(const FIntPoint & Coord, TArr
 			}
 		}
 	}
-}
-
-
-void AInfiniteMapGenerator::SpawnRoad(const TArray<FRoadSegment> & Segments, FMapChunk& Chunk)
-{
-
-	// null 체크
-	if (!RoadMesh || !GetWorld())
-	{
-		return;
-	}
-
-	// 도로지역 아니면 안그림
-	bool bHasOwned = false;
-	for (const FRoadSegment & Seg : Segments)
-	{
-		if (Seg.bOwned)
-		{
-			bHasOwned = true;
-			break;
-		}
-	}
-	if (!bHasOwned)
-	{
-		return;
-	}
-
-	// 소환
-	FActorSpawnParameters Params;
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	Params.Owner = this;
-
-	AActor* RoadActor = GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, Params);
-	if (!RoadActor)
-	{
-		return;
-	}
-
-	USceneComponent* Root = NewObject<USceneComponent>(RoadActor, TEXT("Root"));
-	RoadActor->SetRootComponent(Root);
-	Root->RegisterComponent();
-
-#if WITH_EDITOR
-	RoadActor->SetFolderPath(TEXT("Spawned/Road"));
-#endif
-
-	const float WidthScale = RoadWidth / FMath::Max(1.f, RoadMeshBaseSize);
-
-	for (const FRoadSegment& Seg : Segments)
-	{
-		if (!Seg.bOwned)
-		{
-			continue;
-		}
-
-		// 설정
-		USplineMeshComponent* Piece = NewObject<USplineMeshComponent>(RoadActor);
-		Piece->SetMobility(EComponentMobility::Movable);
-		Piece->SetStaticMesh(RoadMesh);
-		if (RoadMaterial)
-		{
-			Piece->SetMaterial(0, RoadMaterial);	
-		}
-
-		// 구부리기
-		Piece->SetForwardAxis(ESplineMeshAxis::X, false);
-		Piece->SetStartAndEnd(Seg.Start, Seg.StartTangent, Seg.End, Seg.EndTangent, false);
-		Piece->SetStartScale(FVector2D(WidthScale, 1.f), false); // 폭 설정
-		Piece->SetEndScale(FVector2D(WidthScale, 1.f), false); // 폭 설정
-
-		Piece->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		Piece->SetCanEverAffectNavigation(false);
-		Piece->SetCastShadow(false);
-
-		//
-		Piece->SetupAttachment(Root); // 부모 설정
-		Piece->RegisterComponent(); // 월드에 등록(랜더링)
-		Piece->UpdateMesh();
-	}
-
-	Chunk.SpawnedActors.Add(RoadActor);
 }
