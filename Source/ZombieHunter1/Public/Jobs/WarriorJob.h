@@ -19,7 +19,6 @@ class ZOMBIEHUNTER1_API UWarriorJob : public UJobComponent
 public:
 	UWarriorJob();
 	
-	virtual void Attack() override;
 	virtual void OnAttackNotify(FName NotifyName) override;
 
 private:

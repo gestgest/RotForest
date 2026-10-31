@@ -22,8 +22,10 @@
 #include "Characters/Villager.h" // 마을 주민 (비전투 배회 NPC)
 #include "Characters/Boss.h" 
 
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/SplineMeshComponent.h"
 
 //초기
 AInfiniteMapGenerator::AInfiniteMapGenerator()
@@ -133,6 +135,9 @@ void AInfiniteMapGenerator::Tick(float DeltaTime)
 		UpdateFogToPlayer(Center);
 	}
 }
+
+
+
 
 //플레이어를 추격하는 nav mesh
 void AInfiniteMapGenerator::UpdateNavBoundsToPlayer()
@@ -260,7 +265,15 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 			bVillage ? TEXT("Village") : TEXT("ZombieVillage"), Coord.X, Coord.Y, FootprintSize, FootprintSize);
 	}
 
-	SpawnObstacles(Stream, Chunk, Origin, bIsPOIChunk);
+	TArray<FRoadSegment> RoadSegments;
+	GetRoadSegmentsInChunk(Coord, RoadSegments); //여기서 segments 위치 설정
+	SpawnRoad(RoadSegments, Chunk);
+
+	SpawnObstacles(Stream, Chunk, Origin, bIsPOIChunk, RoadSegments);
+	if (!bIsPOIChunk)
+	{
+		SpawnGrass(Coord, Chunk, Origin, RoadSegments);
+	}
 	LoadedChunks.Add(Coord, MoveTemp(Chunk));
 }
 
@@ -268,7 +281,7 @@ void AInfiniteMapGenerator::GenerateChunk(const FIntPoint& Coord)
 
 
 // 장애물 생성 : 청크 안에 랜덤 배치 — POI 청크는 비워둔다 (마을 콘텐츠 자리)
-void AInfiniteMapGenerator::SpawnObstacles(FRandomStream & Stream, FMapChunk & Chunk, FVector Origin, bool bIsPOIChunk)
+void AInfiniteMapGenerator::SpawnObstacles(FRandomStream & Stream, FMapChunk & Chunk, FVector Origin, bool bIsPOIChunk, const TArray<FRoadSegment> & RoadSegments)
 {
 	if (!bIsPOIChunk && ObstacleMeshes.Num() > 0)
 	{
@@ -289,6 +302,23 @@ void AInfiniteMapGenerator::SpawnObstacles(FRandomStream & Stream, FMapChunk & C
 			// 중심 피벗 메시를 바닥 위에 앉히기 위한 Z 오프셋
 			//const float HalfHeight = (ObstacleMeshBaseSize * Scale) * 0.5f;
 			const FVector Loc = Origin + FVector(LocalX, LocalY, 0);
+
+			const float RoadClear = RoadWidth * 0.5f + ObstacleMeshBaseSize * Scale * 0.5f;
+			bool bOnRoad = false;
+
+			for (const FRoadSegment& RoadSegment : RoadSegments)
+			{
+				if (FMath::PointDistToSegment(Loc, RoadSegment.Start, RoadSegment.End) < RoadClear)
+				{
+					bOnRoad = true;
+					break;
+				}
+			}
+
+			if (bOnRoad)
+			{
+				continue;
+			}
 
 			if (AStaticMeshActor* Obstacle = SpawnObstacleMesh(Mesh, Loc, FRotator(0.f, Yaw, 0.f), FVector(Scale), nullptr))
 			{
@@ -327,7 +357,7 @@ namespace
 	}
 }
 
-//POI 발자국 반경(청크). 한 변이 region 크기보다 압도적으로 큰 경우를 막음
+//POI 영역 반경(청크). 한 변이 region 크기보다 압도적으로 큰 경우를 막음
 //= > 혹시모르는 try문이라고 생각하면 됨
 int32 AInfiniteMapGenerator::GetPOIRadiusInChunks() const
 {
@@ -336,10 +366,10 @@ int32 AInfiniteMapGenerator::GetPOIRadiusInChunks() const
 	return FMath::Min(Radius, (RegionSize - 1) / 2); //만약 크기를 무식
 }
 
-//이 청크가 POI 발자국 안에 있는지
+//이 청크가 POI 영역 안에 있는지
 bool AInfiniteMapGenerator::GetPOIAtChunk(const FIntPoint& ChunkCoord, FPOIInfo& OutInfo) const
 {
-	// 중심을 리전 안쪽으로 클램프해 발자국이 리전을 못 벗어나므로, 자기 리전만 검사하면 된다
+	// 중심을 리전 안쪽으로 클램프해 영역이 리전을 못 벗어나므로, 자기 리전만 검사하면 된다
 	const FPOIInfo Info = GetPOIForRegion(ChunkToRegion(ChunkCoord));
 	
 	//POIChance로 안 나올경우
@@ -360,7 +390,7 @@ bool AInfiniteMapGenerator::GetPOIAtChunk(const FIntPoint& ChunkCoord, FPOIInfo&
 	return false;
 }
 
-//월드 좌표가 "마을" 발자국 안인지 — 적 스폰 링 등 외부에서 질의 (좀비마을은 적 지역이라 해당 없음)
+//월드 좌표가 "마을" 영역 안인지 — 적 스폰 링 등 외부에서 질의 (좀비마을은 적 지역이라 해당 없음)
 bool AInfiniteMapGenerator::IsLocationInVillage(const FVector& WorldLocation) const
 {
 	FPOIInfo Info;
@@ -400,14 +430,14 @@ FPOIInfo AInfiniteMapGenerator::GetPOIForRegion(const FIntPoint& RegionCoord) co
 	Info.bHasPOI = true;
 
 
-	// 리전 내 POI 중심 위치. 발자국(2R+1)²이 리전 밖으로 삐져나가지 않게 중심을 [R, Size-1-R]에서만 뽑는다.
+	// 리전 내 POI 중심 위치. 영역(2R+1)²이 리전 밖으로 삐져나가지 않게 중심을 [R, Size-1-R]에서만 뽑는다.
 	// (삐져나가면 옆 리전 청크가 자기 리전만 검사하는 GetPOIAtChunk에서 잘려버림)
 	const int32 Radius = GetPOIRadiusInChunks();
 	const int32 MaxCell = Size - 1 - Radius;
 
 	//리전 위치 뽑는 코드
-	// 시작 리전은 발자국 가장자리(중심-R)가 플레이어 시작 청크(0,0)에서 최소 2청크 떨어지게.
-	// 발자국이 커서 불가능하면 리전에 들어가는 한 최대한 밀어낸다.
+	// 시작 리전은 영역 가장자리(중심-R)가 플레이어 시작 청크(0,0)에서 최소 2청크 떨어지게.
+	// 영역이 커서 불가능하면 리전에 들어가는 한 최대한 밀어낸다.
 	const int32 MinCell = FMath::Min(bStartRegion ? (Radius + 2) : Radius, MaxCell);
 	const int32 LocalX = Stream.RandRange(MinCell, MaxCell); 
 	const int32 LocalY = Stream.RandRange(MinCell, MaxCell);
@@ -551,7 +581,7 @@ void AInfiniteMapGenerator::SpawnVillagers(const FVector& Center, FMapChunk& Chu
 	}
 }
 
-// 마을 외곽 링(반경 2400 — 발자국 절반 3000 안쪽)에 구조물 6개.
+// 마을 외곽 링(반경 2400 — 영역 절반 3000 안쪽)에 구조물 6개.
 // 스폰존이 있는 북쪽(0°)과 그 반대쪽 남쪽(180°)은 비워서 마을 안팎으로 길이 뚫린 것처럼 보이게 한다.
 // 좌표는 경비병/주민처럼 고정 슬롯 — 슬롯당 메시 선택/스케일만 청크 시드로 살짝 흔든다(재생성해도 같은 그림).
 void AInfiniteMapGenerator::SpawnVillageStructures(const FVector& Center, FMapChunk& Chunk, FRandomStream& Stream)
@@ -599,6 +629,200 @@ void AInfiniteMapGenerator::SpawnVillageStructures(const FVector& Center, FMapCh
 		}
 	}
 }
+
+
+void AInfiniteMapGenerator::SpawnGrass(const FIntPoint& Coord, FMapChunk& Chunk, const FVector& Origin, const TArray<FRoadSegment>& RoadSegments)
+{
+	UWorld* World = GetWorld();
+	if (GrassMeshes.Num() <= 0 || GrassPerChunk <= 0 || !World)
+	{
+		return;
+	}
+	
+	//GetTypeHash는 뭐 좌표를 큰 숫자로 변환하는 함수
+	const uint32 Hash = HashCombine(GetTypeHash(Coord), static_cast<uint32>(GlobalSeed) ^ 0x6A55u);
+	FRandomStream Stream(static_cast<int32>(Hash));
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Params.Owner = this;
+
+	AActor* GrassActor = World->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, Params);
+	if (!GrassActor)
+	{
+		return;
+	}
+
+	// 유니티의 Transform 같은 설정
+	USceneComponent* Root = NewObject<USceneComponent>(GrassActor, TEXT("Root"));
+	GrassActor->SetRootComponent(Root);
+	Root->RegisterComponent();
+
+#if WITH_EDITOR
+	GrassActor->SetFolderPath("Spawned/Grass");
+#endif
+
+	// HISM => mesh 덩어리
+	TArray<UHierarchicalInstancedStaticMeshComponent*> Hisms;
+	for (UStaticMesh* Mesh : GrassMeshes)
+	{
+		UHierarchicalInstancedStaticMeshComponent* Hism = nullptr;
+		if (Mesh)
+		{
+			Hism = NewObject<UHierarchicalInstancedStaticMeshComponent>(GrassActor);
+
+			// Mesh 설정할땐 Movable 설정해야한다
+			Hism->SetMobility(EComponentMobility::Movable);
+			Hism->SetStaticMesh(Mesh);
+			Hism->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Hism->SetCanEverAffectNavigation(false);
+			Hism->SetCastShadow(false);
+
+			// GrassCullDistance 만큼 멀어지면 안 그린다.
+			Hism->SetCullDistances(
+				static_cast<int32>(GrassCullDistance * 0.8f),
+				static_cast<int32>(GrassCullDistance));
+
+			Hism->SetupAttachment(Root);
+			Hism->RegisterComponent();
+		}
+		Hisms.Add(Hism);
+	}
+
+	// 풀1 { 풀1의 오브젝트, }, 풀2 { 풀2의 오브젝트1, 풀2의 오브젝트2}
+	TArray<TArray<FTransform>> Transforms;
+	Transforms.SetNum(GrassMeshes.Num());
+
+	const float GrassZ = FloorThickness * 0.5f;
+	
+	for (int32 i = 0; i < GrassPerChunk; i++)
+	{
+		const int32 MeshIndex = Stream.RandRange(0, GrassMeshes.Num() - 1);
+
+		const float LocalX = Stream.FRandRange(0.f, ChunkSize);
+		const float LocalY = Stream.FRandRange(0.f, ChunkSize);
+
+		// 혹시 max값이 더 작을 수 있으니 Max 넣는 모숩
+		const float Scale = Stream.FRandRange(GrassMinScale, FMath::Max(GrassMinScale, GrassMaxScale));
+		const float Yaw = Stream.FRandRange(0.f, 360.f); // 회전값
+
+		if (!Hisms[MeshIndex])
+		{
+			continue;
+		}
+		const FVector Loc = Origin + FVector(LocalX, LocalY, GrassZ);
+
+		// 도로 판단 변수
+		bool bOnRoad = false; 
+		for (const FRoadSegment Seg : RoadSegments)
+		{
+			// PointDistToSegment
+			// 풀과 도로의 수직
+			// ㄴ 만약 수직 내렸는데 바깥 선분이면 그냥 Start와의 거리
+			// 그 어차피 선 기준으로 도로 폭보다 가까우면 도로안이니까 true
+			if (FMath::PointDistToSegment(Loc, Seg.Start, Seg.End) < GrassRoadClear)
+			{
+				bOnRoad = true;
+				break;
+			}
+		}
+		if (bOnRoad)
+		{
+			continue;
+		}
+		Transforms[MeshIndex].Add(FTransform(FRotator(0.f, Yaw, 0.f), Loc, FVector(Scale)));
+	}
+	
+
+	for (int32 i = 0; i < Hisms.Num(); i++)
+	{
+		if (Hisms[i] && Transforms[i].Num() > 0)
+		{
+			Hisms[i]->AddInstances(Transforms[i], false);
+		}
+	}
+	Chunk.SpawnedActors.Add(GrassActor);
+}
+void AInfiniteMapGenerator::SpawnRoad(const TArray<FRoadSegment>& Segments, FMapChunk& Chunk)
+{
+
+	// null 체크
+	if (!RoadMesh || !GetWorld())
+	{
+		return;
+	}
+
+	// 도로지역 아니면 안그림
+	bool bHasOwned = false;
+	for (const FRoadSegment& Seg : Segments)
+	{
+		if (Seg.bOwned)
+		{
+			bHasOwned = true;
+			break;
+		}
+	}
+	if (!bHasOwned)
+	{
+		return;
+	}
+
+	// 소환
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Params.Owner = this;
+
+	AActor* RoadActor = GetWorld()->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, Params);
+	if (!RoadActor)
+	{
+		return;
+	}
+
+	USceneComponent* Root = NewObject<USceneComponent>(RoadActor, TEXT("Root"));
+	RoadActor->SetRootComponent(Root);
+	Root->RegisterComponent();
+
+#if WITH_EDITOR
+	RoadActor->SetFolderPath(TEXT("Spawned/Road"));
+#endif
+
+	const float WidthScale = RoadWidth / FMath::Max(1.f, RoadMeshBaseSize);
+
+	for (const FRoadSegment& Seg : Segments)
+	{
+		if (!Seg.bOwned)
+		{
+			continue;
+		}
+
+		// 설정
+		USplineMeshComponent* Piece = NewObject<USplineMeshComponent>(RoadActor);
+		Piece->SetMobility(EComponentMobility::Movable);
+		Piece->SetStaticMesh(RoadMesh);
+		if (RoadMaterial)
+		{
+			Piece->SetMaterial(0, RoadMaterial);
+		}
+
+		// 구부리기
+		Piece->SetForwardAxis(ESplineMeshAxis::X, false);
+		Piece->SetStartAndEnd(Seg.Start, Seg.StartTangent, Seg.End, Seg.EndTangent, false);
+		Piece->SetStartScale(FVector2D(WidthScale, 1.f), false); // 폭 설정
+		Piece->SetEndScale(FVector2D(WidthScale, 1.f), false); // 폭 설정
+
+		Piece->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Piece->SetCanEverAffectNavigation(false);
+		Piece->SetCastShadow(false);
+
+		Piece->SetupAttachment(Root); // 부모 설정
+		Piece->RegisterComponent(); // 월드에 등록(랜더링)
+		Piece->UpdateMesh();
+	}
+
+	Chunk.SpawnedActors.Add(RoadActor);
+}
+
+
 
 // 발판 상태를 POIStates에 저장 (청크가 죽는 유일한 출구인 UnloadChunk에서 호출).
 // 기본값(CDO)과 같으면 저장하지 않는다 — 시드가 어차피 그대로 재생성하는 값이라 기억할 필요 없음.
@@ -1046,5 +1270,192 @@ void AInfiniteMapGenerator::SpawnPlagueCandle(const FVector& Center, FMapChunk& 
 			Chunk.SpawnedActors.Add(Candle);
 		}
 
+	}
+}
+
+// 맴버변수 없으면 그냥 이렇게
+namespace
+{
+	// P는 지나가야 할 점(앞 현재 뒤) => 마을, 역병마을
+	// T는 그 P1 P2의 비율
+
+	// P(T) = a + b·T + c·T² + d·T³
+	// 부드러운 곡선 방정식 
+	// ㄴ 점을 무조건 지나가야한다면 이거. 만약 곡선 조절에 신경쓰고싶다면 베지어 곡선
+	FVector CatmullRom(const FVector& P0, const FVector& P1, const FVector& P2, const FVector& P3, double T)
+	{
+		const double T2 = T * T;
+		const double T3 = T2 * T;
+		return 0.5 * ((2.0 * P1)
+			+ (P2 - P0) * T
+			+ (2.0 * P0 - 5.0 * P1 + 4.0 * P2 - P3) * T2
+			+ (3.0 * P1 - P0 - 3.0 * P2 + P3) * T3);
+	}
+}
+
+// 도로가 모이는 지점(교차로)을 반환
+FVector AInfiniteMapGenerator::GetRoadNode(const FIntPoint& RegionCoord) const
+{
+	const int32 Size = FMath::Max(2, RegionSizeInChunks);
+	const FPOIInfo Info = GetPOIForRegion(RegionCoord);
+
+	// 중심 POI를 기준으로. 만약 아니면 그냥 리전 중간?
+	const FIntPoint(NodeChunk) = Info.bHasPOI ?
+		Info.CenterChunk : FIntPoint(RegionCoord.X * Size + Size / 2, RegionCoord.Y * Size + Size / 2);
+
+	// 청크 사이즈로 변환
+	return FVector((NodeChunk.X + 0.5) * ChunkSize, (NodeChunk.Y + 0.5) * ChunkSize, 0.0);
+}
+
+// 점 계산 반환 (거의 마을과 마을 사이 느낌)
+void AInfiniteMapGenerator::BuildRoadEdge(const FIntPoint& RegionA, const FIntPoint& RegionB, TArray<FVector>& OutPoints) const
+{
+	OutPoints.Reset();
+
+	// 청크 사이즈 기준
+	
+	const FVector A = GetRoadNode(RegionA); // 도로의 첫 부분
+	const FVector B = GetRoadNode(RegionB); // 도로의 마지막 부분
+
+	// 생존자 편향
+	// 예를 들어 r값을 청크에도 똑같은 공식으로 하면 r이 0.7이상인 경우 값은 높은 확률로 r값에 비례해 높을 수 밖에 없다.
+	// 그래서 다르게 한다
+	const uint32 Hash = HashCombine(
+		HashCombine(GetTypeHash(RegionA), GetTypeHash(RegionB)),
+		HashCombine(static_cast<uint32>(GlobalSeed), 0x52A4D11u));
+	FRandomStream Stream(static_cast<int32>(Hash));
+
+	const FVector Dir = (B - A).GetSafeNormal2D(); // A -> B
+	const FVector Side(-Dir.Y, Dir.X, 0.0);
+
+	// 제어점 A - 여러가지 점 -> B
+	TArray<FVector> Ctrl;
+	Ctrl.Add(A);
+	const int32 N = FMath::Max(0, RoadWigglePoints);
+	for (int32 i = 1; i <= N; i++)
+	{
+		const double T = static_cast<double>(i) / (N + 1); // A와 B의 구간
+		const double Offset = Stream.FRandRange(-RoadWiggleAmplitude, RoadWiggleAmplitude);
+		Ctrl.Add(FMath::Lerp(A, B, T) + Side * Offset);
+	}
+	Ctrl.Add(B);
+
+	// 촘촘한 곡선 => 마을과 마을 사이 16개의 마디
+	const int32 Steps = 16;
+	TArray<FVector> Dense;
+	for (int32 s = 0; s < Ctrl.Num() - 1; s++)
+	{
+		const FVector& P0 = Ctrl[FMath::Max(s - 1, 0)];
+		const FVector& P1 = Ctrl[s];
+		const FVector& P2 = Ctrl[s + 1];
+		const FVector& P3 = Ctrl[FMath::Min(s + 2, Ctrl.Num() - 1)];
+
+		// 단계 나누기
+		for (int32 k = 0; k < Steps; k++)
+		{
+			Dense.Add(CatmullRom(P0, P1, P2, P3, static_cast<double>(k) / Steps));
+		}
+	}
+	Dense.Add(B); //마지막 점
+
+	// 세심한 말뚝박이? => 이거는 한번 다시 분석. 이해가 살짝 힘드네
+	const double SegLen = FMath::Max(50.0, static_cast<double>(RoadSegmentLength));
+	OutPoints.Add(A);
+	double Remain = SegLen; // 현재 값
+	for (int32 i = 1; i < Dense.Num(); i++)
+	{
+		FVector From = Dense[i - 1];
+		const FVector To = Dense[i];
+		double Len = FVector::Dist(From, To);
+
+		while (Len >= Remain)
+		{
+			From += (To - From).GetSafeNormal() * Remain;
+			OutPoints.Add(From);
+			Len -= Remain;
+			Remain = SegLen;
+		}
+		Remain -= Len;
+	}
+	// 마지막은 정확히 B
+	if (FVector::Dist(OutPoints.Last(), B) > SegLen * 0.3)
+	{
+		OutPoints.Add(B);
+	}
+	else
+	{
+		OutPoints.Last() = B;
+	}
+
+	// 살짝 띄움 => 땅과 도로 똑같이 0이면 겹쳐서 디자인적으로 깨짐
+	const double LiftZ = FloorThickness * 0.5 + 2.0 + Stream.RandRange(0, 7) * 0.4;
+	for (FVector& P : OutPoints)
+	{
+		P.Z = LiftZ;
+	}
+
+}
+
+
+void AInfiniteMapGenerator::GetRoadSegmentsInChunk(const FIntPoint & Coord, TArray<FRoadSegment> & OutSegments) const
+{
+	OutSegments.Reset();
+
+	const FIntPoint Region = ChunkToRegion(Coord);
+	// Coord위치의 (1,1) 청크 박스 => 그릴 박스
+	const FBox2D ChunkBox(
+		FVector2D(Coord.X * ChunkSize, Coord.Y * ChunkSize),
+		FVector2D((Coord.X + 1) * ChunkSize, (Coord.Y + 1) * ChunkSize));
+
+	// 지울 박스
+	const FBox2D NearBox = ChunkBox.ExpandBy(RoadWidth + RoadSegmentLength);
+	
+	TArray<FVector> Points;
+
+	// 3x3
+	for (int32 dy = -1; dy <= 1; dy++)
+	{
+		for (int32 dx = -1; dx <= 1; dx++)
+		{
+			const FIntPoint From = Region + FIntPoint(dx, dy);
+			const FIntPoint Targets[2] = { From + FIntPoint(1,0), From + FIntPoint(0,1) };
+
+			for (const FIntPoint& To : Targets)
+			{
+				BuildRoadEdge(From, To, Points); //
+
+				for (int32 i = 0; i < Points.Num() - 1; i++)
+				{
+					const FVector& P0 = Points[i];
+					const FVector& P1 = Points[i + 1];
+					const FVector Mid = (P0 + P1) / 2;
+
+					// Near 밖이면 버린다.
+					if (!NearBox.IsInside(FVector2D(Mid)))
+					{
+						continue;
+					}
+					
+					// 오브젝트걸리면 도로 X
+					const FIntPoint MidChunk = WorldToChunk(Mid);
+					FPOIInfo Unused;
+					if (GetPOIAtChunk(MidChunk, Unused))
+					{
+						continue;
+					}
+
+					const FVector& Prev = Points[FMath::Max(i - 1, 0)];
+					const FVector& Next = Points[FMath::Min(i + 2, Points.Num() - 1)];
+
+					FRoadSegment Seg;
+					Seg.Start = P0;
+					Seg.End = P1;
+					Seg.StartTangent = (P1 - Prev) * (i > 0 ? 0.5 : 1.0);
+					Seg.EndTangent = (Next - P0) * (i + 2 < Points.Num() ? 0.5 : 1.0);
+					Seg.bOwned = (MidChunk == Coord);
+					OutSegments.Add(Seg);
+				}
+			}
+		}
 	}
 }
