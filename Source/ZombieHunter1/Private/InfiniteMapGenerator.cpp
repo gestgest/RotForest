@@ -295,11 +295,11 @@ void AInfiniteMapGenerator::SpawnObstacles(FRandomStream & Stream, FMapChunk & C
 		for (int32 i = 0; i < Count; ++i)
 		{
 			UStaticMesh* Mesh = ObstacleMeshes[Stream.RandRange(0, ObstacleMeshes.Num() - 1)];
+			//여기에 if문 안하는 이유. 난수 꼬여서 지정된 시드값이어도 장애물이 다를까봐 
 			if (!Mesh)
 			{
 				continue;
 			}
-
 			const float LocalX = Stream.FRandRange(ChunkEdgeMargin, ChunkSize - ChunkEdgeMargin);
 			const float LocalY = Stream.FRandRange(ChunkEdgeMargin, ChunkSize - ChunkEdgeMargin);
 			const float Scale = Stream.FRandRange(ObstacleMinScale, ObstacleMaxScale);
@@ -707,8 +707,7 @@ void AInfiniteMapGenerator::SpawnGrass(const FIntPoint& Coord, FMapChunk& Chunk,
 		const float LocalX = Stream.FRandRange(0.f, ChunkSize);
 		const float LocalY = Stream.FRandRange(0.f, ChunkSize);
 
-		// 혹시 max값이 더 작을 수 있으니 Max 넣는 모숩
-		const float Scale = Stream.FRandRange(GrassMinScale, FMath::Max(GrassMinScale, GrassMaxScale));
+		const float Scale = Stream.FRandRange(GrassMinScale,GrassMaxScale);
 		const float Yaw = Stream.FRandRange(0.f, 360.f); // 회전값
 
 		if (!Hisms[MeshIndex])
