@@ -57,7 +57,13 @@ AInfiniteMapGenerator::AInfiniteMapGenerator()
 void AInfiniteMapGenerator::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	if (GlobalSeed == 0)
+	{
+		GlobalSeed = FMath::RandRange(1, MAX_int32);
+	}
 
+	UE_LOG(LogTemp, Log, TEXT("[Map] GlobalSeed = %d"), GlobalSeed);
 	// [디버그] 켜져 있으면 초기 생성도 안 함 (맵 없이 시작해 핑 비교용)
 	if (debugDisableGeneration)
 	{
@@ -671,7 +677,6 @@ void AInfiniteMapGenerator::SpawnGrass(const FIntPoint& Coord, FMapChunk& Chunk,
 		{
 			Hism = NewObject<UHierarchicalInstancedStaticMeshComponent>(GrassActor);
 
-			// Mesh 설정할땐 Movable 설정해야한다
 			Hism->SetMobility(EComponentMobility::Movable);
 			Hism->SetStaticMesh(Mesh);
 			Hism->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -714,7 +719,7 @@ void AInfiniteMapGenerator::SpawnGrass(const FIntPoint& Coord, FMapChunk& Chunk,
 
 		// 도로 판단 변수
 		bool bOnRoad = false; 
-		for (const FRoadSegment Seg : RoadSegments)
+		for (const FRoadSegment & Seg : RoadSegments)
 		{
 			// PointDistToSegment
 			// 풀과 도로의 수직

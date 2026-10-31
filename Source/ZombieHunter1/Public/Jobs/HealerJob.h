@@ -25,8 +25,8 @@ public:
 	void Heal();
 
 	// 한 번에 회복하는 체력
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Healer")
-	int32 HealAmount = 1;
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Healer")
+	// int32 HealAmount = 1;
 
 	// 회복 상한은 대상 캐릭터 자신의 MaxHP를 쓴다(힐러가 따로 들고 있지 않는다).
 

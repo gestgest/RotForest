@@ -110,7 +110,7 @@ void UHealerJob::Heal()
 }
 
 
-
+// 힐하는 공식
 void UHealerJob::HealCharacter(ACombatCharacter* Target)
 {
 	if (!Target)
@@ -121,7 +121,7 @@ void UHealerJob::HealCharacter(ACombatCharacter* Target)
 	// 피를 채워야 하는 경우 + 살아있는 경우
 	if (Target->GetHP() < Target->GetMaxHP() && !Target->GetIsDead())
 	{
-		const int32 NewHP = FMath::Min(Target->GetHP() + HealAmount, Target->GetMaxHP());
+		const int32 NewHP = FMath::Min(Target->GetHP() + GetDamage(), Target->GetMaxHP());
 		Target->SetHP(NewHP);
 	}
 	// else 풀피임
