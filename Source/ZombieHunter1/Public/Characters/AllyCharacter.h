@@ -79,6 +79,8 @@ protected:
 	// 복귀 기준점 => 동료: 리더, 경비병: 자리. 없으면 false
 	virtual bool GetAnchorLocation(FVector& OutLocation) const { return false; }
 	virtual bool TryReturnTeleport(float AnchorDist) { return false; }  // 일단 false
+	virtual bool IsGathering() const { return false; }
+
 
 	// DetectRadius 안에서 가장 가까운 적을 찾는다
 	AEnemy* FindNearestEnemy(const FVector& Origin) const;

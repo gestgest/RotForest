@@ -204,13 +204,13 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     }
 }
 
-void AMyPlayer::ShowOnItemText(FText& Text, EItemNotifyType Type)
+void AMyPlayer::ShowNotification(const FText& Text, ENotifyType Type)
 {
     if (!CanvasWidget)
     {
         return;
     }
-    CanvasWidget->AddItemNotification(Text, Type);
+    CanvasWidget->AddNotification(Text, Type);
 }
 
 
@@ -638,6 +638,46 @@ void AMyPlayer::OnRightMouseReleased() { bRightMouseHeld = false; }
 void AMyPlayer::OnAttackButtonPressed() { bAttackButtonHeld = true; }
 void AMyPlayer::OnAttackButtonReleased() { bAttackButtonHeld = false; }
 
+// 파티의 커맨드를 바꾸자
+void AMyPlayer::ToggleCompanionCommand()
+{
+    if (!Party)
+    {
+        return;
+    }
+
+    if (Party->GetAliveCount() == 0)
+    {
+        FText Msg = FText::FromString(TEXT("동료를 모집하면 사용할 수 있습니다."));
+        ShowNotification(Msg, ENotifyType::Blocked);
+        return;
+    }
+
+    // Party값 설정
+    Party->ToggleCommand();
+    RefreshCommandButton();
+}
+
+void AMyPlayer::RefreshCommandButton()
+{
+    if (!CanvasWidget || !Party)
+    {
+        return;
+    }
+
+    if (Party->GetAliveCount() == 0)
+    {
+        CanvasWidget->ShowCommandLocked();
+        return;
+    }
+
+    // UI 설정
+    if (CanvasWidget)
+    {
+        CanvasWidget->UpdateCommandIcon(Party->IsGathering());
+    }
+}
+
 void AMyPlayer::OnBackPressed()
 {
     if (CanvasWidget)
@@ -781,6 +821,12 @@ void AMyPlayer::ReStart()
         CurrentJob->BonusWeaponDamage -= WeaponLevel * WeaponDamagePerLevel;
     }
 
+    if (Party)
+    {
+        Party->SetCommand(EPartyCommand::Attack);
+    }
+    RefreshCommandButton();
+
     WeaponLevel = 0;
     //리스폰
     if (playerStart)
@@ -826,12 +872,19 @@ void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
             AttackBtn->OnPressed.AddUniqueDynamic(this, &AMyPlayer::OnAttackButtonPressed);
             AttackBtn->OnReleased.AddUniqueDynamic(this, &AMyPlayer::OnAttackButtonReleased);
         }
+        if (UButton* CommandBtn = CanvasWidget->GetCommandButton())
+        {
+            CommandBtn->OnPressed.AddUniqueDynamic(this, &AMyPlayer::ToggleCompanionCommand);
+        }
+        RefreshCommandButton();
 
         // 위젯이 막 연결된 시점에 현재 HP 기준으로 사망 UI/HP바를 동기화한다.
         // BeginPlay 때는 CanvasWidget이 아직 null이라 패널을 못 껐을 수 있으므로 여기서 확정.
         CanvasWidget->ShowDeathPanel(HP <= 0);
         UpdateHPUI();
         UpdateExpUI(); // 위젯 연결 시점에 경험치 표시도 현재 값으로 맞춘다
+
+
     }
 }
 

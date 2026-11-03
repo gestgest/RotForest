@@ -65,6 +65,8 @@ public:
 	void CheckDeath(bool bDead);
 
 
+	void RefreshCommandButton();
+
 protected:
 	// [아직 구현 안함] BP에서 이펙트/사운드/무기 외형 교체 등을 구현. => 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Weapon")
@@ -75,6 +77,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Player|Levelup")
 	USoundBase* LevelUpSound = nullptr;
+
 
 
 private: //평범한 변수 및 함수
@@ -300,6 +303,10 @@ private: //평범한 변수 및 함수
 	UFUNCTION()
 	void OnAttackButtonReleased();
 
+	UFUNCTION()
+	void ToggleCompanionCommand();
+
+
 
 	// 초기 셋업 / 내부 헬퍼 (BeginPlay 등 내부에서만 호출)
 	void OnTopDownMode();
@@ -339,8 +346,8 @@ private: //평범한 변수 및 함수
 	// 속도 체크
 	void DebugWalkSpeed(const FVector2D& Move);
 
+
 public: //Property Function
-	
 	// Boss에서 Player의 canvas 찾기용
 	UMyCanvas* GetCanvasWidget() const { return CanvasWidget; }
 
@@ -393,7 +400,7 @@ public: //Property Function
 	void SetAimInput(FVector2D Value);
 
 
-	void ShowOnItemText(FText& Text, EItemNotifyType Type = EItemNotifyType::Gain);
+	void ShowNotification(const FText& Text, ENotifyType Type = ENotifyType::Gain);
 
 
 	// 하체 yaw 오프셋(도). AnimInstance(UCombatAnimInstance)가 매 프레임 읽는다.

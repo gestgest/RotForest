@@ -85,7 +85,7 @@ void AItemSellZone::ShowSoldSummary(AMyPlayer * Player)
 
 	// 메세지 보여주고
 	FText Msg = FText::Format(FText::FromString(TEXT("아이템 {0}개를 팔아 {1}원을 받았습니다.")), SoldCount, SoldMoney);
-	Player->ShowOnItemText(Msg, EItemNotifyType::Gain);
+	Player->ShowNotification(Msg, ENotifyType::Gain);
 
 	// 초기화
 	SoldCount = 0;
