@@ -36,15 +36,19 @@ public:
 	// OutReplaced: 받은 캐릭터가 원래 들고 있던 무기 (없으면 nullptr)
 	ACombatCharacter* TryDistributeWeapon(UWeaponDataAsset* Item, UWeaponDataAsset*& OutReplaced);
 
+	EPartyCommand ToggleCommand();
+	void OnCompanionDied();
+
 	// 현재 섭외해 둔 동료 목록(읽기 전용)
 	FORCEINLINE const TArray<ACompanion*>& GetCompanions() const { return Companions; }
 
 	// 섭외 가능한 상태인지 검사하고, 죽은 동료를 명단에서 정리한다.
 	bool CanRecruit(UWorld* World);
 
-	EPartyCommand ToggleCommand();
 	bool IsGathering() const { return Command == EPartyCommand::Gather; }
 	void SetCommand(EPartyCommand NewCommand) { Command = NewCommand; }
+
+	int32 GetAliveCount() const;
 
 private:
 	EPartyCommand Command = EPartyCommand::Attack;
@@ -77,4 +81,6 @@ private:
 
 	// 이 동료에게 무기 장착
 	void EquipWeaponFromBag(ACompanion* Companion);
+
+	void NotifyCommandButton() const;
 };

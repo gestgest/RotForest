@@ -76,6 +76,17 @@ bool ACompanion::TryReturnTeleport(float AnchorDist)
 	return true;
 }
 
+void ACompanion::OnDeath()
+{
+	Super::OnDeath();
+
+	AMyPlayer *Player = Cast<AMyPlayer>(Leader);
+	if (UPartyComponent* Party = Player ? Player->GetParty() : nullptr)
+	{
+		Party->OnCompanionDied();
+	}
+}
+
 
 bool ACompanion::GetAnchorLocation(FVector& OutLocation) const
 {

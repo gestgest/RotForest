@@ -15,6 +15,7 @@ class ZOMBIEHUNTER1_API ACompanion : public AAllyCharacter
 protected:
 	virtual void MoveToAnchor() override;
 	virtual bool TryReturnTeleport(float AnchorDist) override;
+	virtual void OnDeath() override;
 
 	// [변수]
 	// 따라다닐 대상(보통 플레이어). 섭외 시 RecruitCompanion에서 설정.

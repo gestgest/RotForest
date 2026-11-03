@@ -216,6 +216,6 @@ bool AGaugeZone::NotifyFailOnce(AMyPlayer * Player, const FText& Msg)
 
 	bFailNotified = true;
 	FText Text = Msg;
-	Player->ShowOnItemText(Text, EItemNotifyType::Blocked);
+	Player->ShowNotification(Text, ENotifyType::Blocked);
 	return true;
 }

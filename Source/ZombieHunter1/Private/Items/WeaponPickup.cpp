@@ -99,13 +99,13 @@ void AWeaponPickup::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*
 			{
 				bNoTakerNotified = true;
 				FText Msg = FText::Format(FText::FromString(TEXT("가방이 가득 차 {0}을 넣을 수 없습니다.")), (WeaponItemData->Name));
-				MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Blocked);
+				MyPlayer->ShowNotification(Msg, ENotifyType::Blocked);
 			}
 			return;
 		}
 
 		FText Msg = FText::Format(FText::FromString(TEXT("{0}을 가방에 넣었습니다.")), (WeaponItemData->Name));
-		MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Gain);
+		MyPlayer->ShowNotification(Msg, ENotifyType::Gain);
 	}
 	// 대체 됐다면
 	else if (Replaced)
@@ -114,14 +114,14 @@ void AWeaponPickup::OnTriggerBeginOverlap(UPrimitiveComponent* /*OverlappedComp*
 		{
 			bNoTakerNotified = true;
 			FText Msg = FText::Format(FText::FromString(TEXT("가방이 가득 차 {0}을 바닥에 내려놓았습니다.")), (Replaced->Name));
-			MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Blocked);
+			MyPlayer->ShowNotification(Msg, ENotifyType::Blocked);
 
 			BecomeWeapon(Replaced);
 			return;
 		}
 		// else 가방안에 들어감
 		FText Msg = FText::Format(FText::FromString(TEXT("{0}을 가방에 넣었습니다.")), (Replaced->Name));
-		MyPlayer->ShowOnItemText(Msg, EItemNotifyType::Gain);
+		MyPlayer->ShowNotification(Msg, ENotifyType::Gain);
 	}
 
 	// 중복 오버랩 — 한 번 주운 뒤 이벤트가 또 들어오는 경우를 어떻게 막을지

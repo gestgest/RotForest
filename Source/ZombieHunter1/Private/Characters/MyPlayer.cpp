@@ -204,13 +204,13 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     }
 }
 
-void AMyPlayer::ShowOnItemText(FText& Text, EItemNotifyType Type)
+void AMyPlayer::ShowNotification(const FText& Text, ENotifyType Type)
 {
     if (!CanvasWidget)
     {
         return;
     }
-    CanvasWidget->AddItemNotification(Text, Type);
+    CanvasWidget->AddNotification(Text, Type);
 }
 
 
@@ -646,13 +646,35 @@ void AMyPlayer::ToggleCompanionCommand()
         return;
     }
 
+    if (Party->GetAliveCount() == 0)
+    {
+        FText Msg = FText::FromString(TEXT("동료를 모집하면 사용할 수 있습니다."));
+        ShowNotification(Msg, ENotifyType::Blocked);
+        return;
+    }
+
     // Party값 설정
-    const bool bIsGathering = Party->ToggleCommand() == EPartyCommand::Gather;
+    Party->ToggleCommand();
+    RefreshCommandButton();
+}
+
+void AMyPlayer::RefreshCommandButton()
+{
+    if (!CanvasWidget || !Party)
+    {
+        return;
+    }
+
+    if (Party->GetAliveCount() == 0)
+    {
+        CanvasWidget->ShowCommandLocked();
+        return;
+    }
 
     // UI 설정
     if (CanvasWidget)
     {
-        CanvasWidget->UpdateCommandIcon(bIsGathering);
+        CanvasWidget->UpdateCommandIcon(Party->IsGathering());
     }
 }
 
@@ -803,10 +825,7 @@ void AMyPlayer::ReStart()
     {
         Party->SetCommand(EPartyCommand::Attack);
     }
-    if (CanvasWidget)
-    {
-        CanvasWidget->UpdateCommandIcon(false);
-    }
+    RefreshCommandButton();
 
     WeaponLevel = 0;
     //리스폰
@@ -857,7 +876,7 @@ void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
         {
             CommandBtn->OnPressed.AddUniqueDynamic(this, &AMyPlayer::ToggleCompanionCommand);
         }
-        CanvasWidget->UpdateCommandIcon(Party && Party->IsGathering());
+        RefreshCommandButton();
 
         // 위젯이 막 연결된 시점에 현재 HP 기준으로 사망 UI/HP바를 동기화한다.
         // BeginPlay 때는 CanvasWidget이 아직 null이라 패널을 못 껐을 수 있으므로 여기서 확정.

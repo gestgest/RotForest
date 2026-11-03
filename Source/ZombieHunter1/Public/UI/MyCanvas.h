@@ -22,7 +22,7 @@ class ACombatCharacter;
 
 // 알림 메시지 종류. 색은 UMyCanvas가 정한다 — 호출부는 "무슨 일인지"만 넘긴다.
 UENUM(BlueprintType)
-enum class EItemNotifyType : uint8
+enum class ENotifyType : uint8
 {
 	Gain,		// 획득
 	Blocked,	// 장착 불가 (직업 불일치 등)
@@ -120,8 +120,8 @@ public:
     // 경험치 HUD 갱신 — AMyPlayer::UpdateExpUI가 호출. 위젯이 배치돼 있을 때만 그린다. 
     void UpdateExp(int32 Level, int32 Exp, int32 ExpToNext);
 
-    void AddItemNotification(const FText& Text, EItemNotifyType Type = EItemNotifyType::Gain);
-    void RemoveItemNotification();
+    void AddNotification(const FText& Text, ENotifyType Type = ENotifyType::Gain);
+    void RemoveNotification();
 
     void StartBossEncounter(ACombatCharacter* Boss, const FText& BossName);
     void EndBossEncounter(ACombatCharacter* Boss);
@@ -129,7 +129,7 @@ public:
     UVirtualJoystick* GetMoveJoystick() const { return MoveJoystick; }
     UButton* GetAttackButton() const { return AttackButton; }
 
-    void UpdateCommandIcon(const bool bIsGathering, const bool bHasCompanion);
+    void UpdateCommandIcon(const bool bIsGathering);
     void ShowCommandLocked();
     UButton* GetCommandButton() const { return CommandButton; }
 

@@ -105,18 +105,18 @@ void UMyCanvas::ToggleExitPanel()
 namespace
 {
 	// 종류별 글자색. 여기만 고치면 전체가 바뀐다.
-	FLinearColor GetItemNotifyColor(EItemNotifyType Type)
+	FLinearColor GetItemNotifyColor(ENotifyType Type)
 	{
 		switch (Type)
 		{
-		case EItemNotifyType::Blocked:   return FLinearColor(1.0f, 0.0f, 0.0f);	// 빨간 - 뭐 안된다는 내용
-		case EItemNotifyType::Companion: return FLinearColor(0.45f, 0.8f, 1.0f);	// 하늘 - 주체가 동료
+		case ENotifyType::Blocked:   return FLinearColor(1.0f, 0.0f, 0.0f);	// 빨간 - 뭐 안된다는 내용
+		case ENotifyType::Companion: return FLinearColor(0.45f, 0.8f, 1.0f);	// 하늘 - 주체가 동료
 		default:                         return FLinearColor::White;				// 획득
 		}
 	}
 }
 
-void UMyCanvas::AddItemNotification(const FText& Text, EItemNotifyType Type)
+void UMyCanvas::AddNotification(const FText& Text, ENotifyType Type)
 {
     if (!Vertical_ItemTextBox)
     {
@@ -132,11 +132,11 @@ void UMyCanvas::AddItemNotification(const FText& Text, EItemNotifyType Type)
 
     //5초후에 제거 느낌
     FTimerHandle TempHandle;
-    FTimerDelegate Delegate = FTimerDelegate::CreateUObject(this, &UMyCanvas::RemoveItemNotification);
+    FTimerDelegate Delegate = FTimerDelegate::CreateUObject(this, &UMyCanvas::RemoveNotification);
     GetWorld()->GetTimerManager().SetTimer(TempHandle, Delegate, 2.0f, false);
 }
 
-void UMyCanvas::RemoveItemNotification()
+void UMyCanvas::RemoveNotification()
 {
     if (Vertical_ItemTextBox && Vertical_ItemTextBox->GetChildrenCount() > 0)
     {
@@ -171,12 +171,11 @@ void UMyCanvas::EndBossEncounter(ACombatCharacter* Boss)
     }
 }
 
-void UMyCanvas::UpdateCommandIcon(const bool bIsGathering, const bool bHasCompanion)
+void UMyCanvas::UpdateCommandIcon(const bool bIsGathering)
 {
     if (CommandIcon)
     {
         CommandIcon->SetBrushFromTexture(bIsGathering ? GatherImage : AttackImage);
-        CommandIcon->SetColorAndOpacity(bHasCompanion ? FLinearColor::White : FLinearColor(0.35f, 0.35f, 0.35f, 1.0f)); //HDR
     }
 }
 
@@ -185,7 +184,6 @@ void UMyCanvas::ShowCommandLocked()
     if (CommandIcon)
     {
         CommandIcon->SetBrushFromTexture(LockImage);
-        CommandIcon->SetColorAndOpacity(FLinearColor(0.35f, 0.35f, 0.35f, 1.0f)); //HDR
     }
 }
 

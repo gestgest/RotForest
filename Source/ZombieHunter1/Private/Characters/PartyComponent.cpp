@@ -4,7 +4,7 @@
 #include "Characters/PartyComponent.h"
 #include "Characters/Companion.h"
 #include "Characters/CombatCharacter.h"
-#include "Characters/MyPlayer.h" //획득 문구 표시(ShowOnItemText)
+#include "Characters/MyPlayer.h" //획득 문구 표시(ShowNotification)
 #include "Jobs/JobComponent.h"
 #include "Items/ItemDataAsset.h"
 #include "GameFramework/Character.h"
@@ -47,7 +47,26 @@ void UPartyComponent::RecruitCompanion(TSubclassOf<UJobComponent> JobComponent)
 	UGameplayStatics::FinishSpawningActor(Companion, SpawnTM);
 	Companions.Add(Companion);
 	EquipWeaponFromBag(Companion);
+
+	NotifyCommandButton();
 }
+
+EPartyCommand UPartyComponent::ToggleCommand()
+{
+	Command = EPartyCommand::Attack == Command ? EPartyCommand::Gather : EPartyCommand::Attack;
+	return Command;
+}
+
+// 죽은 동료가 생기면 시그널 보내기
+void UPartyComponent::OnCompanionDied()
+{
+	if (GetAliveCount() == 0)
+	{
+		Command = EPartyCommand::Attack;
+	}
+	NotifyCommandButton();
+}
+
 
 // 섭외 가능한 직원 량인지 확인
 bool UPartyComponent::CanRecruit(UWorld* World)
@@ -76,11 +95,20 @@ bool UPartyComponent::CanRecruit(UWorld* World)
 	return true;
 }
 
-EPartyCommand UPartyComponent::ToggleCommand()
+
+int32 UPartyComponent::GetAliveCount() const
 {
-	Command = EPartyCommand::Attack == Command ? EPartyCommand::Gather : EPartyCommand::Attack;
-	return Command;
+	int32 Count = 0;
+	for (ACompanion *Companion : Companions)
+	{
+		if (IsValid(Companion) && !Companion->GetIsDead())
+		{
+			Count++;
+		}
+	}
+	return Count;
 }
+
 
 FTransform UPartyComponent::MakeSpawnTransform(UWorld* World) const
 {
@@ -192,7 +220,7 @@ void UPartyComponent::NotifyWeaponTaken(UWeaponDataAsset* Item, ACombatCharacter
 		Msg = FText::Format(FText::FromString(TEXT("{0} 동료가 {1}을 획득했습니다.")), JobName, Item->Name);
 	}
 
-	Player->ShowOnItemText(Msg);
+	Player->ShowNotification(Msg);
 }
 
 
@@ -237,6 +265,13 @@ void UPartyComponent::EquipWeaponFromBag(ACompanion *Companion)
 		{
 			Bag->TryAddItem(PrevWeapon);
 		}
-		
+	}
+}
+
+void UPartyComponent::NotifyCommandButton() const
+{
+	if (AMyPlayer * Player = Cast<AMyPlayer>(GetOwner()))
+	{
+		Player->RefreshCommandButton();
 	}
 }
