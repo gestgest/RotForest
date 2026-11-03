@@ -295,6 +295,7 @@ void AInfiniteMapGenerator::SpawnObstacles(FRandomStream & Stream, FMapChunk & C
 		for (int32 i = 0; i < Count; ++i)
 		{
 			UStaticMesh* Mesh = ObstacleMeshes[Stream.RandRange(0, ObstacleMeshes.Num() - 1)];
+
 			//여기에 if문 안하는 이유. 난수 꼬여서 지정된 시드값이어도 장애물이 다를까봐 
 			if (!Mesh)
 			{

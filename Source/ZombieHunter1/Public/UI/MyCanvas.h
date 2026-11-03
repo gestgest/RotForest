@@ -59,6 +59,12 @@ protected:
     UPROPERTY(meta = (BindWidgetOptional))
     UButton* AttackButton;
 
+    UPROPERTY(meta = (BindWidget))
+    UButton* CommandButton;
+
+    UPROPERTY(meta = (BindWidget))
+    UImage* CommandIcon;
+
 
     UPROPERTY(meta = (BindWidgetOptional))
     UVerticalBox* Vertical_ItemTextBox;
@@ -80,8 +86,18 @@ protected:
     UExitPanelWidget* ExitPanel;
 
 
-    UPROPERTY(meta =(BindWidgetOptional))
+    UPROPERTY(meta = (BindWidgetOptional))
     UImage* BossArrow;
+
+    UPROPERTY(EditAnywhere)
+    UTexture2D* GatherImage;
+
+    UPROPERTY(EditAnywhere)
+    UTexture2D* AttackImage;
+
+    UPROPERTY(EditAnywhere)
+    UTexture2D* LockImage;
+    
 
     // 마우스 가장자리에서 띄울 거리
     UPROPERTY(EditAnywhere, Category = "Boss")
@@ -112,6 +128,10 @@ public:
 
     UVirtualJoystick* GetMoveJoystick() const { return MoveJoystick; }
     UButton* GetAttackButton() const { return AttackButton; }
+
+    void UpdateCommandIcon(const bool bIsGathering, const bool bHasCompanion);
+    void ShowCommandLocked();
+    UButton* GetCommandButton() const { return CommandButton; }
 
 private:
     TWeakObjectPtr<ACombatCharacter> TargetBoss; //추격하는 보스. 화살표 쓰기 위함

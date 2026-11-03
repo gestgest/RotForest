@@ -76,6 +76,12 @@ bool UPartyComponent::CanRecruit(UWorld* World)
 	return true;
 }
 
+EPartyCommand UPartyComponent::ToggleCommand()
+{
+	Command = EPartyCommand::Attack == Command ? EPartyCommand::Gather : EPartyCommand::Attack;
+	return Command;
+}
+
 FTransform UPartyComponent::MakeSpawnTransform(UWorld* World) const
 {
 	// 소유자 회전 기준으로 오프셋을 적용해 옆/뒤쪽에 스폰(여러 명이면 살짝씩 벌어지게).

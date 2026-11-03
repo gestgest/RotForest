@@ -1,8 +1,12 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Characters/Companion.h"
-#include "NavigationSystem.h"
+#include "Characters/MyPlayer.h"
+#include "Characters/PartyComponent.h"
+
+
 #include "Components/CapsuleComponent.h"
+#include "NavigationSystem.h"
 #include "AIController.h"
 
 void ACompanion::MoveToAnchor()
@@ -82,4 +86,11 @@ bool ACompanion::GetAnchorLocation(FVector& OutLocation) const
 	OutLocation = Leader->GetActorLocation();
 	return true;
 
+}
+
+bool ACompanion::IsGathering() const
+{
+	const AMyPlayer* Player = Cast<AMyPlayer>(Leader);
+	const UPartyComponent* Party = Player ? Player->GetParty() : nullptr;
+	return Party && Party->IsGathering();
 }

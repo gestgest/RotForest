@@ -300,6 +300,9 @@ private: //평범한 변수 및 함수
 	UFUNCTION()
 	void OnAttackButtonReleased();
 
+	UFUNCTION()
+	void ToggleCompanionCommand();
+
 
 	// 초기 셋업 / 내부 헬퍼 (BeginPlay 등 내부에서만 호출)
 	void OnTopDownMode();
@@ -339,8 +342,8 @@ private: //평범한 변수 및 함수
 	// 속도 체크
 	void DebugWalkSpeed(const FVector2D& Move);
 
+
 public: //Property Function
-	
 	// Boss에서 Player의 canvas 찾기용
 	UMyCanvas* GetCanvasWidget() const { return CanvasWidget; }
 

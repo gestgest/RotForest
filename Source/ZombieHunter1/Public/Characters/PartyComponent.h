@@ -11,6 +11,15 @@ class ACombatCharacter;
 class UJobComponent;
 class UWeaponDataAsset;
 
+
+// 상태 만들고
+UENUM(BlueprintType)
+enum class EPartyCommand : uint8
+{
+	Attack UMETA(DisplayName="공격"),
+	Gather UMETA(DisplayName="소집"),
+};
+
 // 플레이어가 데리고 다니는 동료 파티 — 섭외/명단/장비 배분을 담당한다.
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ZOMBIEHUNTER1_API UPartyComponent : public UActorComponent
@@ -33,7 +42,13 @@ public:
 	// 섭외 가능한 상태인지 검사하고, 죽은 동료를 명단에서 정리한다.
 	bool CanRecruit(UWorld* World);
 
+	EPartyCommand ToggleCommand();
+	bool IsGathering() const { return Command == EPartyCommand::Gather; }
+	void SetCommand(EPartyCommand NewCommand) { Command = NewCommand; }
+
 private:
+	EPartyCommand Command = EPartyCommand::Attack;
+
 	// [명단]
 	// 스폰할 동료 클래스(BP_Companion 지정). 비우면 섭외 안 됨.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Party", meta = (AllowPrivateAccess = "true"))

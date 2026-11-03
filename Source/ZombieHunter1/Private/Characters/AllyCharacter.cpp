@@ -150,6 +150,15 @@ void AAllyCharacter::UpdateDecision()
 			State = EState::Following;
 			return;
 		}
+		
+		// 강제 소집
+		if (IsGathering())
+		{
+			CurrentTargetEnemy = nullptr;
+			State = EState::Following;
+			MoveToAnchor();
+			return;
+		}
 
 		// 복귀 => 복귀해야하는 거리보다 길다면
 		if (AnchorDist > HardTrackingDistance)

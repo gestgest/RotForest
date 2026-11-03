@@ -171,6 +171,24 @@ void UMyCanvas::EndBossEncounter(ACombatCharacter* Boss)
     }
 }
 
+void UMyCanvas::UpdateCommandIcon(const bool bIsGathering, const bool bHasCompanion)
+{
+    if (CommandIcon)
+    {
+        CommandIcon->SetBrushFromTexture(bIsGathering ? GatherImage : AttackImage);
+        CommandIcon->SetColorAndOpacity(bHasCompanion ? FLinearColor::White : FLinearColor(0.35f, 0.35f, 0.35f, 1.0f)); //HDR
+    }
+}
+
+void UMyCanvas::ShowCommandLocked()
+{
+    if (CommandIcon)
+    {
+        CommandIcon->SetBrushFromTexture(LockImage);
+        CommandIcon->SetColorAndOpacity(FLinearColor(0.35f, 0.35f, 0.35f, 1.0f)); //HDR
+    }
+}
+
 // 화살표 tick 함수
 void UMyCanvas::UpdateBossArrow()
 {

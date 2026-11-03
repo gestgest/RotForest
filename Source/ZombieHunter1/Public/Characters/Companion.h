@@ -32,6 +32,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Companion|Return")
 	float TeleportRadius = 400.0f;
 	virtual bool GetAnchorLocation(FVector& OutLocation) const override;
+	virtual bool IsGathering() const override;
+
+
 public:
 	void SetLeader(AActor* NewLeader) { Leader = NewLeader; }
 };
