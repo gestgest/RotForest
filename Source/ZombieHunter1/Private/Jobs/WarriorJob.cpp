@@ -24,7 +24,7 @@ UWarriorJob::UWarriorJob()
 	Stats.MaxHP = 25;
 	Stats.Damage = 1;
 	Stats.Speed = 700;
-	Stats.AttackInterval = 0.6;
+	Stats.AttackInterval = 0.6f;
 
 	// 근접: 붙어서 휘둘러야 하므로 교전 사거리를 짧게
 	EngageRange = 160.0f;
