@@ -92,7 +92,8 @@ _UpgradeReport_Files/
 # large files => SVN
 
 #나중에 AS 폴더 옮기면 AS만 ignore
-#Content/Characters/Companion/* 이거는
+#Content/Characters/Companion/*
+
 
 #ElfArden => BP와 ABP AM은 무시안함
 Content/Characters/ElfArden/Animations/AS
@@ -118,7 +119,11 @@ Content/Characters/Enemy/Skeleton_Knight_05/*
 Content/Characters/Enemy/Skeleton_Knight_06/*
 Content/Characters/Enemy/Skeleton_Knight_07/*
 SourceArt
-#Content/Characters/Wizard/*
+
+Content/Characters/Wizard/*
+# Animation
+Content/Characters/AS_Standing_Draw_Arrow_Anim_mixamo_com.uasset
+Content/Characters/Enemy/Animation/AS/AS_Standing_Draw_Arrow_Anim_mixamo_com_Enemy.uasset
 
 Content/StarterContent/*
 Content/Assassin/*
