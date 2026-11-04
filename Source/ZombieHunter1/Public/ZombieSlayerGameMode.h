@@ -50,7 +50,7 @@ private:
 	void initCoin(int index);
 
 	void Spawn();
-	void spawnCoin();
+	void SpawnCoin();
 	void RecycleFarCoins(const FVector& PlayerLocation);
 
 	void UpdateRot();
@@ -60,7 +60,7 @@ private:
 	// 너무 멀어졌거나 낙하한 적을 시야 밖 스폰 링으로 재배치 (LeashCheckInterval마다 호출) 
 	void RecycleFarEnemies();
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta=(AllowPrivateAccess = "True"), Category = "Pool")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta=(AllowPrivateAccess = "True"), Category = "Spawning")
 	int Max_Enemy_Size = 30;
 
 	// 레벨1 => StartEnemyCount, 레벨당 +EnemyPerLevel, 최대 Max_Enemy_Size
@@ -68,7 +68,7 @@ private:
 	int32 StartEnemyCount = 5;
 
 	UPROPERTY(EditAnywhere, Category = "Spawning")
-	int32 EnemyPerLevel = 10;
+	int32 EnemyPerLevel = 4;
 
 	// 레벨1 => StartCoinCount, 레벨당 +CoinPerLevel, 최대 Max_Coin_Size
 	UPROPERTY(EditAnywhere, Category = "Spawning")
@@ -77,8 +77,13 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Spawning")
 	int32 CoinPerLevel = 5;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = "True"), Category = "Pool")
-	int Max_Coin_Size = 20;
+	// 보스 하나 잡을 때 마다 
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	int32 CoinPerBossKill = 2;
+
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = "True"), Category = "Spawning")
+	int Max_Coin_Size = 40;
 
 	//[Rot]
 	UPROPERTY(EditAnywhere, Category = "Rot")
@@ -124,13 +129,15 @@ private:
 	TObjectPtr<AInfiniteMapGenerator> MapGenerator;
 
 	int enemy_size = 0;
-	int coin_size = 0;
+	int CoinSize = 0;
 
 	float RotUpdateInterval = 1.0f;
-	float RotElapsed = 0.0f;
-	float RotTime = 0.0f;
-	float RotBoss = 0.0f;
-	float RotBossTarget = 0.0f;
+	float RotElapsedTime = 0.0f;
+	float RotFromTime = 0.0f;
+	float RotFromBossCurrent = 0.0f;
+
+	// 잡은 보스 수 => 부패도 목표치, 코인 상한이 이 값에서 계산됨
+	int32 BossKillCount = 0;
 
 	FTimerHandle RotTimerHandle;
 
@@ -175,7 +182,7 @@ private:
 	float SpawnMaxDistance = 3500.0f;
 
 public:
-	float GetRot() const { return RotTime + RotBoss; }
+	float GetRot() const { return RotFromTime + RotFromBossCurrent; }
 
 	// 보스 BeginPlay에서 호출
 	void ApplyRotToBoss(AEnemy* Boss) const;

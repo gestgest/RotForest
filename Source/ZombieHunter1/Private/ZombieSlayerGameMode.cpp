@@ -58,7 +58,7 @@ void AZombieSlayerGameMode::StartPlay()
 void AZombieSlayerGameMode::init()
 {
     enemy_size = 0;
-    coin_size = 0;
+    CoinSize = 0;
 
     for (int i = 0; i < Max_Enemy_Size; i++)
     {
@@ -131,7 +131,7 @@ void AZombieSlayerGameMode::initCoin(int index)
 void AZombieSlayerGameMode::Spawn()
 {
     SpawnEnemy();
-    spawnCoin();
+    SpawnCoin();
 }
 
 
@@ -252,24 +252,25 @@ void AZombieSlayerGameMode::RecycleFarEnemies()
 
 void AZombieSlayerGameMode::UpdateRot()
 {
-    RotElapsed += RotUpdateInterval;
+    RotElapsedTime += RotUpdateInterval;
     
     // RotGraceTime 시간까지는 난이도 오르지 않기
-    if (RotElapsed > RotGraceTime)
+    if (RotElapsedTime > RotGraceTime)
     {
-        RotTime += RotPerMinute * (RotUpdateInterval / 60.0f);
+        RotFromTime += RotPerMinute * (RotUpdateInterval / 60.0f);
     }
 
-    // 보스
+    // 보스: 목표 = 잡은 수 × BossRotPerKill
+    const float BossTarget = BossKillCount * BossRotPerKill;
     const float BossRampSpeed = BossRotPerKill / FMath::Max(BossRotRampTime, 0.01f); // 0 나눗셈 방지
-    RotBoss = FMath::FInterpConstantTo(RotBoss, RotBossTarget, RotUpdateInterval, BossRampSpeed); // 직선 그래프
+    RotFromBossCurrent = FMath::FInterpConstantTo(RotFromBossCurrent, BossTarget, RotUpdateInterval, BossRampSpeed); // 직선 그래프
 
     // 디버깅
     if (bDebugRot && GEngine)
     {
         GEngine->AddOnScreenDebugMessage(7001, RotUpdateInterval + 0.5f, FColor::Green,
-            FString::Printf(TEXT("Rot %.2f (Time %.2f + Boss %.2f -> %.2f) %.0fs"),
-                GetRot(), RotTime, RotBoss, RotBossTarget, RotElapsed));
+            FString::Printf(TEXT("Rot %.2f (Time %.2f + Boss %.2f, Kills %d) %.0fs"),
+                GetRot(), RotFromTime, RotFromBossCurrent, BossKillCount, RotElapsedTime));
     }
 }
 
@@ -290,7 +291,7 @@ void AZombieSlayerGameMode::ApplyRotToBoss(AEnemy* Boss) const
     const float DamageMul = 1.0f + Rot * BossDamagePerRot;
 
     Boss->ApplyStatMultiplier(HPMul, DamageMul);
-}
+}   
 
 
 // 플레이어 기준 SpawnMinDistance~SpawnMaxDistance 링 안에서 NavMesh 위 지점을 찾는다.
@@ -328,7 +329,7 @@ bool AZombieSlayerGameMode::FindReachablePointInRing(const FVector& Center, FNav
 }
 
 
-void AZombieSlayerGameMode::spawnCoin()
+void AZombieSlayerGameMode::SpawnCoin()
 {
     AMyPlayer* MyPlayer =
         Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
@@ -341,46 +342,46 @@ void AZombieSlayerGameMode::spawnCoin()
     RecycleFarCoins(MyPlayer->GetActorLocation());
 
     // 레벨1 => 5, 레벨2 => 10, 레벨4 이상 => 20 (기본값 기준)
-    const int32 maxActive = FMath::Min(
+    const int32 MaxActive = FMath::Min(
         Max_Coin_Size,
-        StartCoinCount + (MyPlayer->GetLevel() - 1) * CoinPerLevel);
+        StartCoinCount + (MyPlayer->GetLevel() - 1) * CoinPerLevel
+    );
 
-    if (coin_size >= maxActive)
-    {
-        return;
-    }
+    // [속도] 이번에 새로 만들 최대 개수 => 기본 1, 보스 1마리당 +CoinPerBossKill
+    const int32 MaxSpawnThisTick = 1 + BossKillCount * CoinPerBossKill;
+    int32 SpawnedThisTick = 0;
 
-    ACoin* coin = nullptr;
-    for (ACoin* candidate : CoinPool)
+    const FVector UpVector(0, 0, 90.0f);
+
+    for (ACoin* Coin : CoinPool)
     {
-        if (IsValid(candidate) && candidate->IsHidden())
+        // 꽉 찬 경우
+        if (CoinSize >= MaxActive || SpawnedThisTick >= MaxSpawnThisTick)
         {
-            coin = candidate;
             break;
         }
+
+        if (!IsValid(Coin) || !Coin->IsHidden())
+        {
+            continue;
+        }
+
+        FNavLocation ResultLocation;
+
+        //NavMesh 위 영역 찾기
+        if (!FindReachablePointInRing(MyPlayer->GetActorLocation(), ResultLocation))
+        {
+            continue;
+        }
+        Coin->SetActorLocation(ResultLocation.Location + UpVector);
+        Coin->SetActorEnableCollision(true);
+        Coin->SetActorHiddenInGame(false);
+        Coin->SetCanGet(true);
+
+        CoinSize++;
+        SpawnedThisTick++;
     }
 
-    // 쓸 수 있는 코인이 없음
-    if (!coin)
-    {
-        return;
-    }
-
-    FNavLocation resultLocation;
-
-    // 시야 밖 링에 생성
-    if (!FindReachablePointInRing(MyPlayer->GetActorLocation(), resultLocation))
-    {
-        return;
-    }
-
-    const FVector upVector(0, 0, 90.0f);
-    coin->SetActorLocation(resultLocation.Location + upVector);
-    coin->SetActorEnableCollision(true);
-    coin->SetActorHiddenInGame(false);
-    coin->SetCanGet(true);
-
-    coin_size++;
 }
 
 //signal을 받아야지 될듯
@@ -407,7 +408,7 @@ void AZombieSlayerGameMode::DestroyCoin(int index)
         return;
     }
 
-    coin_size--;
+    CoinSize--;
     // null이 아니면, 근데 숨겨져있다면
     CoinPool[index]->SetCanGet(false);
     CoinPool[index]->SetActorEnableCollision(false); // 물리 비활성화
@@ -452,5 +453,5 @@ void AZombieSlayerGameMode::SetEnemiesFrozen(bool bFrozen)
 
 void AZombieSlayerGameMode::OnBossKilled()
 {
-    RotBossTarget += BossRotPerKill;
+    BossKillCount++;
 }

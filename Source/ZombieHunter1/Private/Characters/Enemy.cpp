@@ -460,6 +460,6 @@ void AEnemy::OnAIController()
 
 void AEnemy::ApplyStatMultiplier(float HPMul, float DamageMul)
 {
-	MaxHP = FMath::RoundToInt(BaseMaxHP * HPMul);
-	Damage = FMath::RoundToInt(BaseDamage * DamageMul);
+	MaxHP = FMath::Max(1, FMath::RoundToInt(BaseMaxHP * HPMul));
+	Damage = FMath::Max(1, FMath::RoundToInt(BaseDamage * DamageMul));
 }
