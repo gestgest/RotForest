@@ -396,7 +396,7 @@ void AZombieSlayerGameMode::DieEnemy(int index)
     if (enemyPool.IsValidIndex(index) && IsValid(enemyPool[index]))
     {
         enemyPool[index]->EnterPoolDormancy();  // 풀로 반납 (숨김 + 콜리전/이동/틱 정지)
-    }
+    }   
 }
 
 //signal을 받아야지 될듯
