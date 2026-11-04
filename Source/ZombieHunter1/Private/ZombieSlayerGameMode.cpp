@@ -2,6 +2,7 @@
 
 
 #include "ZombieSlayerGameMode.h"
+
 #include "InfiniteMapGenerator.h"
 #include "Characters/CombatRegistrySubsystem.h" // 보스까지 포함해 적 전체를 훑기 위해
 
@@ -42,7 +43,17 @@ void AZombieSlayerGameMode::StartPlay()
         LeashCheckInterval,
         true
     );
+
+    GetWorldTimerManager().SetTimer(
+        RotTimerHandle,
+        this,
+        &AZombieSlayerGameMode::UpdateRot,
+        RotUpdateInterval,
+        true
+    );
 }
+
+
 
 void AZombieSlayerGameMode::init()
 {
@@ -123,6 +134,9 @@ void AZombieSlayerGameMode::Spawn()
     spawnCoin();
 }
 
+
+
+
 // 풀에서 대기 중(숨김)인 적을 레벨 상한까지만 깨워 시야 밖 링에 배치한다.
 void AZombieSlayerGameMode::SpawnEnemy()
 {
@@ -166,6 +180,7 @@ void AZombieSlayerGameMode::SpawnEnemy()
         // pivot이 정 가운데라 +90
         enemy->SetActorLocation(resultLocation.Location + upVector);
         enemy->WakeFromPool();
+        ApplyRotToEnemy(enemy);
         enemy->ResetForSpawn();
 
         enemy_size++;
@@ -195,7 +210,7 @@ void AZombieSlayerGameMode::RecycleFarCoins(const FVector& PlayerLocation)
 }
 
 // 무한맵 리쉬: 플레이어에서 너무 멀어졌거나(청크 언로드로 지형 상실 직전) 이미 낙하한 적을
-// 플레이어 근처 NavMesh 위로 재배치한다. 적이 사라지는 대신 진행 방향에서 다시 나타나 압박 유지.
+// 플레이어 근처 NavMesh 위로 재배치한다. 
 void AZombieSlayerGameMode::RecycleFarEnemies()
 {
     AMyPlayer* myPlayer =
@@ -217,7 +232,7 @@ void AZombieSlayerGameMode::RecycleFarEnemies()
         }
 
         const FVector enemyLocation = enemy->GetActorLocation();
-        const bool bTooFar  = FVector::Dist2D(enemyLocation, playerLocation) > LeashDistance;
+        const bool bTooFar = FVector::Dist2D(enemyLocation, playerLocation) > LeashDistance;
         const bool bFalling = enemyLocation.Z < FallZThreshold;
         if (!bTooFar && !bFalling)
         {
@@ -229,10 +244,54 @@ void AZombieSlayerGameMode::RecycleFarEnemies()
         if (FindReachablePointInRing(playerLocation, resultLocation))
         {
             enemy->TeleportForLeash(resultLocation.Location + upVector);
+            ApplyRotToEnemy(enemy);
             enemy->ResetForSpawn(); // 리쉬된 적은 새 적 취급
         }
     }
 }
+
+void AZombieSlayerGameMode::UpdateRot()
+{
+    RotElapsed += RotUpdateInterval;
+    
+    // RotGraceTime 시간까지는 난이도 오르지 않기
+    if (RotElapsed > RotGraceTime)
+    {
+        RotTime += RotPerMinute * (RotUpdateInterval / 60.0f);
+    }
+
+    // 보스
+    const float BossRampSpeed = BossRotPerKill / FMath::Max(BossRotRampTime, 0.01f); // 0 나눗셈 방지
+    RotBoss = FMath::FInterpConstantTo(RotBoss, RotBossTarget, RotUpdateInterval, BossRampSpeed); // 직선 그래프
+
+    // 디버깅
+    if (bDebugRot && GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(7001, RotUpdateInterval + 0.5f, FColor::Green,
+            FString::Printf(TEXT("Rot %.2f (Time %.2f + Boss %.2f -> %.2f) %.0fs"),
+                GetRot(), RotTime, RotBoss, RotBossTarget, RotElapsed));
+    }
+}
+
+// 적에게 적용 (하나하나)
+void AZombieSlayerGameMode::ApplyRotToEnemy(AEnemy* Enemy) const
+{
+    const float Rot = GetRot();
+    const float HPMul = 1.0f + Rot * HPPerRot;
+    const float DamageMul = 1.0f + Rot * DamagePerRot;
+
+    Enemy->ApplyStatMultiplier(HPMul, DamageMul);
+}
+
+void AZombieSlayerGameMode::ApplyRotToBoss(AEnemy* Boss) const
+{
+    const float Rot = GetRot();
+    const float HPMul = 1.0f + Rot * BossHPPerRot;
+    const float DamageMul = 1.0f + Rot * BossDamagePerRot;
+
+    Boss->ApplyStatMultiplier(HPMul, DamageMul);
+}
+
 
 // 플레이어 기준 SpawnMinDistance~SpawnMaxDistance 링 안에서 NavMesh 위 지점을 찾는다.
 // 장애물 위나 NavMesh 빈 곳에 찍힐 수 있어 여러 번 시도한다.
@@ -355,7 +414,7 @@ void AZombieSlayerGameMode::DestroyCoin(int index)
     CoinPool[index]->SetActorHiddenInGame(true);  // 비활성화
 }
 
-// 디아블로식 사망 연출 — 플레이어가 죽으면(OnDeath) 적들의 시간을 멈추고,
+// 플레이어가 죽으면(OnDeath) 적들의 시간을 멈추고,
 // 부활하면(OnRevive) 다시 흐르게 한다. 플레이어 자신은 안 얼리므로 죽음 애니메이션은 그대로 재생된다.
 void AZombieSlayerGameMode::SetEnemiesFrozen(bool bFrozen)
 {
@@ -380,10 +439,18 @@ void AZombieSlayerGameMode::SetEnemiesFrozen(bool bFrozen)
     {
         GetWorldTimerManager().PauseTimer(SpawnTimerHandle);
         GetWorldTimerManager().PauseTimer(LeashTimerHandle);
+        GetWorldTimerManager().PauseTimer(RotTimerHandle);
     }
     else
     {
         GetWorldTimerManager().UnPauseTimer(SpawnTimerHandle);
         GetWorldTimerManager().UnPauseTimer(LeashTimerHandle);
+        GetWorldTimerManager().UnPauseTimer(RotTimerHandle);
     }
+}
+
+
+void AZombieSlayerGameMode::OnBossKilled()
+{
+    RotBossTarget += BossRotPerKill;
 }

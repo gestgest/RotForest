@@ -23,7 +23,6 @@ class ZOMBIEHUNTER1_API AEnemy : public ACombatCharacter
 {
 	GENERATED_BODY()
 
-
 public:
 	// Sets default values for this character's properties
 	AEnemy();
@@ -45,17 +44,26 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	//ㄴ TrackingPlayer
 
+	// Called to bind functionality to input
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
 	//UFUNCTION(BlueprintCallable)
 	//추격을 완료했다면 => Attack
 	void MoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result);
 
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+
+
+
+
+
+
+
+
 
 
 	//변수 — 체력/데미지/죽음/공격몽타주는 베이스(ACombatCharacter)로 이동.
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
 	USoundBase* AttackSound; //MS
 
@@ -82,12 +90,10 @@ public:
 
 
 
-
-
 	UFUNCTION() //몽타주의 delegate에 추가하려면 필수다.
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-	void SetID(int id);
+
 
 	/** 풀 대기 상태로 전환 — 숨김 + 콜리전/이동/틱 정지. 게임모드 풀이 반납 시 호출.
 	 *  SetActorHiddenInGame만으로는 중력이 계속 작동해서, 발밑 청크가 언로드되면
@@ -119,6 +125,10 @@ public:
 	//Enemy를 깨우는 함수?
 	void OnAIController();
 
+	void ApplyStatMultiplier(float HPMul, float DamageMul);
+
+	void SetID(int id);
+
 protected:
 	// 추격 가능한지 => 보스에서 갑자기 멈추는 기능으로 참조
 	virtual bool CanTrack() const { return true; }
@@ -143,6 +153,9 @@ private:
 	/** 시간 정지(플레이어 사망 연출) 중인지. CustomTimeDilation=0이어도 틱은 dt=0으로 계속 돌기 때문에
 	 *  TrackingPlayer 같은 로직은 이 플래그로 직접 막아야 한다. */
 	bool bFrozen = false;
+
+	int32 BaseMaxHP = 0;
+	int32 BaseDamage = 0;
 
 	void TrackingPlayer();
 };

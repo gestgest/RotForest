@@ -35,6 +35,9 @@ void AEnemy::BeginPlay()
 {
 	Super::BeginPlay();
 	CanAttack = true;
+
+	BaseMaxHP = MaxHP;
+	BaseDamage = Damage;
 	
 	UAnimInstance* animInstance = Cast<UAnimInstance>(GetMesh()->GetAnimInstance());
 	aiController = Cast<AAIController>(GetController());
@@ -453,4 +456,10 @@ void AEnemy::OnAIController()
 		PFC->OnRequestFinished.RemoveAll(this);   // ← 추가: 이미 걸려 있으면 제거 후 재등록
 		PFC->OnRequestFinished.AddUObject(this, &AEnemy::MoveCompleted);
 	}
+}
+
+void AEnemy::ApplyStatMultiplier(float HPMul, float DamageMul)
+{
+	MaxHP = FMath::RoundToInt(BaseMaxHP * HPMul);
+	Damage = FMath::RoundToInt(BaseDamage * DamageMul);
 }

@@ -7,6 +7,7 @@
 #include "Engine/OverlapResult.h"
 
 #include "InfiniteMapGenerator.h" // 클리어 기록을 남길 곳 (POIStates)
+#include "ZombieSlayerGameMode.h" // 좀비 강화
 
 #include "Items/WeaponPickup.h" // 바닥에 떨굴 전리품
 #include "Items/ItemDataAsset.h"
@@ -20,6 +21,12 @@ void ABoss::BeginPlay()
 {
     Super::BeginPlay();
     HomeLocation = GetActorLocation();
+
+    if (AZombieSlayerGameMode* GM = GetWorld()->GetAuthGameMode<AZombieSlayerGameMode>())
+    {
+        GM->ApplyRotToBoss(this);
+        ResetForSpawn();
+    }
 }
 
 void ABoss::Tick(float DeltaTime)
@@ -69,6 +76,12 @@ void ABoss::OnDeath()
 
     // 드롭은 마을 소속과 무관하다 — bHomeSet 체크보다 위에 둬야 소속 없는 보스도 전리품을 남긴다
     SpawnDropPickup();
+
+    if (AZombieSlayerGameMode *GM = GetWorld()->GetAuthGameMode<AZombieSlayerGameMode>())
+    {
+        GM->OnBossKilled();
+    }
+
 
     // 여기서 기록하지 않으면 청크가 언로드될 때 시체까지 Destroy되고,
     // 다시 방문했을 때 생성기가 아무것도 모른 채 풀피 보스를 새로 세운다.
