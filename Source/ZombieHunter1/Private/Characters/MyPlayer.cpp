@@ -18,6 +18,9 @@
 
 #include "InputCoreTypes.h"            //EKeys
 
+#include "Materials/MaterialParameterCollection.h"
+
+#include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/GameplayStatics.h" //getCharacter, sound
 
 #include "NiagaraFunctionLibrary.h" //레벨업 이펙트
@@ -126,6 +129,12 @@ void AMyPlayer::BeginPlay()
 void AMyPlayer::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+    
+    if (OcclusionMPC)
+    {
+        UKismetMaterialLibrary::SetVectorParameterValue(this, OcclusionMPC, TEXT("PlayerPos"), FLinearColor(GetActorLocation()));
+    }
+
 
     // 죽으면 입력 처리를 멈춤 (죽은 뒤 공격 몽타주가 또 재생되는 것 방지)
     if (IsDead)

@@ -22,6 +22,7 @@ class UInventoryComponent;
 class UMaterialInterface;
 class UNiagaraSystem;
 class USoundBase;
+class UMaterialParameterCollection;
 
 UCLASS()
 class ZOMBIEHUNTER1_API AMyPlayer : public ACombatCharacter
@@ -104,16 +105,12 @@ private: //평범한 변수 및 함수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio", meta = (AllowPrivateAccess = "true"))
 	USoundBase* AttackSound; //MS
 
-
-
 	// [Input Variable]
 	// 입력 누적값 (게임패드 / 터치를 분리 저장 후 Tick에서 합성)
 	FVector2D GamepadMove = FVector2D::ZeroVector;
 	FVector2D GamepadAim = FVector2D::ZeroVector;
 	FVector2D TouchMove = FVector2D::ZeroVector;
 	FVector2D TouchAim = FVector2D::ZeroVector;
-
-
 
 	// [조이스틱]
 	UPROPERTY()
@@ -169,16 +166,15 @@ private: //평범한 변수 및 함수
 	// 카메라 거리(암 길이) 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TopDown|Camera", meta = (AllowPrivateAccess = "true"))
 	float CameraDistance = 900.0f;
-	
+
+	UPROPERTY(EditAnywhere, Category = "TopDown|Camera")
+	UMaterialParameterCollection* OcclusionMPC;
 
 
 	// [Nav]
 	// NavMesh를 플레이어 주변에만 동적으로 생성시키는 인보커 (무한 맵용)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "TopDown|Navigation", meta = (AllowPrivateAccess = "true"))
 	UNavigationInvokerComponent* NavInvoker;
-
-
-
 
 
 
@@ -215,13 +211,11 @@ private: //평범한 변수 및 함수
 	FVector LastCursorPoint = FVector::ZeroVector;
 	bool bHasLastCursorPoint = false;
 
-	
 
 	// [UI]
 	UPROPERTY()
 	UMyCanvas* CanvasWidget = nullptr;
-
-
+	
 
 	// [파티]
 	// 동료 섭외/명단/장비 배분 담당. 동료 관련 설정값은 이 컴포넌트 Details에 있다.
