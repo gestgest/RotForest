@@ -1,10 +1,19 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Jobs/HealerJob.h"
+
 #include "Characters/CombatCharacter.h"
+#include "Characters/Companion.h"
 #include "Characters/Enemy.h"
+#include "Characters/MyPlayer.h"
+#include "Characters/CombatRegistrySubsystem.h"
+
+#include "Projectiles/Projectile.h"
+
 #include "Engine/World.h"
 #include "Engine/OverlapResult.h" 
+
+#include "NiagaraFunctionLibrary.h"
 #include "DrawDebugHelpers.h" // 힐 범위 디버그
 
 
@@ -13,100 +22,74 @@ UHealerJob::UHealerJob()
 {
 	JobType = EJobType::Healer;
 
-	Stats.MaxHP = 8;
-	Stats.Damage = 1;
+	Stats.MaxHP = 80;
+	Stats.Damage = 10;
 	Stats.Speed = 600;
-	Stats.AttackInterval = 10;
+	Stats.AttackInterval = 2.0f;
+
+	ProjectileClass = AProjectile::StaticClass();
 }
-
-//힐하는 거임
-void UHealerJob::Attack()
-{
-	// 힐 시전 모션(몽타주)이 있으면 재생. 힐 자체는 아래에서 즉시 처리한다.
-	Super::Attack();
-	//Heal();
-}
-
-// 힐은 10초에 한 번이라 Attack()에서만 그리면 거의 안 보인다. 매 프레임 현재 힐 범위를 그린다. 
-//= > 미안하다 이거 이제 범위 표시가 필요없다.
-void UHealerJob::TickJob(float DeltaTime)
-{
-	Super::TickJob(DeltaTime);
-
-	if (!bDebugAttack || !OwnerCharacter)
-	{
-		return;
-	}
-
-	UWorld* World = OwnerCharacter->GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	//const FVector Start = OwnerCharacter->GetActorLocation();
-	//const FVector End = Start + OwnerCharacter->GetActorForwardVector() * HealRange;
-	//const FColor Color = FColor::Cyan; // 힐 범위는 청록 — 전사 공격(초록/빨강)과 구분
-
-	//DrawDebugCircle(World, Start, HealRadius, 12, Color, false, -1.0f, 0, 1.0f);
-}
-
 
 
 void UHealerJob::OnAttackNotify(FName NotifyName)
 {
-	if (NotifyName == "Attack")
-		Heal();
+	if (NotifyName != "Attack")
+	{
+		return;
+	}
+
+	if (SpawnProjectileForward(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight))
+	{
+		PlayAttackSound();
+	}
 }
 
-
-void UHealerJob::Heal()
+void UHealerJob::OnProjectileHit(AEnemy* HitEnemy)
 {
-	if (!OwnerCharacter)
+	if (!OwnerCharacter || OwnerCharacter->GetIsDead())
 	{
 		return;
 	}
 
-	// 1) 시전자 자신 회복 — HP는 이제 공용 베이스(ACombatCharacter)에 있어 플레이어/동료 모두 가능.
-	if (ACombatCharacter* Self = Cast<ACombatCharacter>(OwnerCharacter))
-	{
-		HealCharacter(Self);
-	}
+	ACombatCharacter* HealTarget = FindHealTarget();
+	HealCharacter(HealTarget);
 
+	if (bDebugAttack && HealTarget && IsValid(HitEnemy))
+	{
+		DrawDebugLine(OwnerCharacter->GetWorld(), HitEnemy->GetActorLocation(),
+			HealTarget->GetActorLocation(), FColor::Green, false, 0.5f, 0, 2.0f);
+	}
+}
+
+ACombatCharacter* UHealerJob::FindHealTarget() const
+{
 	UWorld* World = OwnerCharacter->GetWorld();
-	if (!World)
+	UCombatRegistrySubsystem* Registry = World
+		? World->GetSubsystem<UCombatRegistrySubsystem>() : nullptr;
+	
+	if (!Registry)
 	{
-		return;
+		return nullptr;
 	}
 
-	// 2) 전방 범위의 아군(동료)도 회복 — 동료 시스템용
-	bool bDidHeal = false;
-	const FVector Center = OwnerCharacter->GetActorLocation();
+	TArray<ACombatCharacter*>Allies;
+	Registry->GetAllOfTeam(OwnerCharacter->TeamType, Allies);
 
-	TArray<FOverlapResult> Overlaps;
+	const FVector Origin = OwnerCharacter->GetActorLocation();
+	const float HealRadiusSq = HealRadius * HealRadius;
 
-	World->OverlapMultiByChannel(Overlaps, Center, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(HealRange));
+	ACombatCharacter* Best = nullptr;
+	// 최고값 설정
+	float BestRatio = TNumericLimits<float>::Max();
+	float BestDistSq = TNumericLimits<float>::Max();
 
-	for (const FOverlapResult& Overlap : Overlaps)
+	// todo
+	for (ACombatCharacter* Allie : Allies)
 	{
-		// 아군(플레이어/동료)만 회복한다 — 적(AEnemy)은 제외.
-		ACombatCharacter* Ally = Cast<ACombatCharacter>(Overlap.GetActor());
 
-		// 같은 팀은 힐
-		if (Ally && Ally->TeamType == OwnerCharacter->TeamType)
-		{
-			HealCharacter(Ally);
-			bDidHeal = true;
-		}
 	}
 
-	// 시전 순간: 아군이 잡혔으면 초록으로 한 번 강조(상시 표시는 TickJob에서)
-	if (bDebugAttack)
-	{
-		const FColor Color = bDidHeal ? FColor::Green : FColor::Silver;
-		DrawDebugCircle(World, Center, HealRadius, 32, Color, false, 2.0f, 0, 1.0f,
-			FVector(1, 0, 0), FVector(0, 1, 0), false);
-	}
+	return Best;
 }
 
 
