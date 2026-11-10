@@ -1,11 +1,20 @@
 ﻿#include "Projectiles/Projectile.h"
 #include "Projectiles/ProjectilePoolSubsystem.h"
+
 #include "Characters/Enemy.h"
-#include "TimerManager.h"
+#include "Characters/CombatCharacter.h"
+
+#include "Jobs/JobComponent.h"
+
 #include "Components/SphereComponent.h"
+
 #include "GameFramework/ProjectileMovementComponent.h"
+
 #include "Engine/OverlapResult.h" // FOverlapResult (범위 폭발 오버랩 결과)
+
 #include "Kismet/GameplayStatics.h"
+
+#include "TimerManager.h"
 #include "DrawDebugHelpers.h" // 디버그 범위 시각화
 #include "NiagaraFunctionLibrary.h" 
 
@@ -232,6 +241,15 @@ void AProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* O
 	{
 		// 단일 대상 (화살 등)
 		ApplyHit(HitEnemy);
+	}
+	
+	// 맞았는지 직업에게 알려주는 코드
+	if (ACombatCharacter* Shooter = Cast<ACombatCharacter>(GetInstigator()))
+	{
+		if (UJobComponent* Job = Shooter->GetJobComponent())
+		{
+			Job->OnProjectileHit(HitEnemy);
+		}
 	}
 
 	if (HitEffect)

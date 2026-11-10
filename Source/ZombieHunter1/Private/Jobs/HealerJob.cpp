@@ -80,15 +80,45 @@ ACombatCharacter* UHealerJob::FindHealTarget() const
 
 	ACombatCharacter* Best = nullptr;
 	// 최고값 설정
-	float BestRatio = TNumericLimits<float>::Max();
-	float BestDistSq = TNumericLimits<float>::Max();
+	float BestRatio = 1.0f;
 
 	// todo
-	for (ACombatCharacter* Allie : Allies)
+	for (ACombatCharacter* Ally : Allies)
 	{
+		if (Ally->IsHidden() || Ally->GetIsDead())
+		{
+			continue;
+		}
+
+		const float DistSq = FVector::DistSquared2D(Origin, Ally->GetActorLocation());
+
+		// 힐 범위 넘어서면
+		if (DistSq > HealRadiusSq)
+		{
+			continue;
+		}
+
+		// 죽거나 풀피라면
+		if (Ally->GetHP() <= 0 || Ally->GetHP() >= Ally->GetMaxHP())
+		{
+			continue;
+		}
+
+		float Ratio = static_cast<float>(Ally->GetHP()) / Ally->GetMaxHP();
+
+		// 플레이어냐
+		if (Ally->IsPlayerControlled())
+		{
+			Ratio -= PlayerPriorityBonus; // 플레이어에게 더 가중치
+		}
+
+		if (Ratio < BestRatio)
+		{
+			Best = Ally;
+			BestRatio = Ratio;
+		}
 
 	}
-
 	return Best;
 }
 
@@ -96,16 +126,18 @@ ACombatCharacter* UHealerJob::FindHealTarget() const
 // 힐하는 공식
 void UHealerJob::HealCharacter(ACombatCharacter* Target)
 {
-	if (!Target)
+	if (!Target || Target->GetIsDead() || Target->GetHP() >= Target->GetMaxHP())
 	{
 		return;
 	}
+	const int32 NewHP = FMath::Min(Target->GetHP() + GetDamage(), Target->GetMaxHP());
+	Target->SetHP(NewHP);
 
-	// 피를 채워야 하는 경우 + 살아있는 경우
-	if (Target->GetHP() < Target->GetMaxHP() && !Target->GetIsDead())
+	if (HealEffect)
 	{
-		const int32 NewHP = FMath::Min(Target->GetHP() + GetDamage(), Target->GetMaxHP());
-		Target->SetHP(NewHP);
+		const FVector Feet = Target->GetActorLocation() 
+			- FVector(0.0f, 0.0f, Target->GetSimpleCollisionHalfHeight());
+
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(OwnerCharacter, HealEffect, Feet);
 	}
-	// else 풀피임
 }

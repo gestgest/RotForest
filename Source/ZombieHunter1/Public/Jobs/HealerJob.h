@@ -25,7 +25,6 @@ protected:
 	// 대상 아군(플레이어/동료)을 MaxHP까지 회복 
 	void HealCharacter(ACombatCharacter* Target);
 	
-	AEnemy* FindAttackTarget() const;
 	ACombatCharacter* FindHealTarget() const;
 
 	UPROPERTY(EditAnywhere, Category = "Job|Healer")
@@ -37,17 +36,15 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Job|Healer")
 	UNiagaraSystem* HealEffect = nullptr;
 
-	// 힐 사거리
-	UPROPERTY(EditAnywhere, Category = "Job|Healer")
-	float HealRange = 600.0f;
 
 	// 힐 범위 반경(cm)
 	UPROPERTY(EditAnywhere, Category = "Job|Healer")
-	float HealRadius = 500.0f;
+	float HealRadius = 1000.0f;
 
 	// [투사체]
 	UPROPERTY(EditAnywhere, Category = "Job|Healer")
 	float ProjectileSpeed = 1200.0f;
+
 	UPROPERTY(EditAnywhere, Category = "Job|Healer")
 	float MuzzleOffset = 80.0f;
 

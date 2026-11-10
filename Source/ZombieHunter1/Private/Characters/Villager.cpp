@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Characters/Villager.h"
 #include "AIController.h"
@@ -9,6 +9,8 @@
 AVillager::AVillager()
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	TeamType = ETeam::Neutral;
 
 	// 걷는 방향으로 자연스럽게 회전 (동료와 동일한 설정)
 	bUseControllerRotationYaw = false;
