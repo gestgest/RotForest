@@ -100,6 +100,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Combat")
 	float EngageRange = 500.0f;
 
+	UPROPERTY(EditAnywhere, Category = "Job|Combat")
+	float ProjectileRangeMargin = 100.0f;
+
 	//직업의 공격 판정 범위를 화면에 그린다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Debug")
 	bool bDebugAttack = false;

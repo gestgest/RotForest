@@ -60,94 +60,6 @@ void AProjectile::BeginPlay()
 	}
 }
 
-void AProjectile::ActivateFromPool()
-{
-	bInFlight = true;
-
-	// 이전 사용자의 설정이 남지 않게 튜닝 값을 클래스(BP) 기본값으로 리셋.
-	// 궁수/마법사가 같은 발사체 클래스를 공유해도 폭발 반경 등이 새어 들어가지 않는다.
-	// (직업이 매 발사마다 Damage/속도/디버그를, 마법사가 ExplosionRadius를 다시 설정한다)
-	if (const AProjectile* CDO = GetClass()->GetDefaultObject<AProjectile>())
-	{
-		Damage = CDO->Damage;
-		KnockbackForce = CDO->KnockbackForce;
-		ExplosionRadius = CDO->ExplosionRadius;
-		HitSound = CDO->HitSound;
-		bDrawDebug = CDO->bDrawDebug;
-	}
-
-	SetActorHiddenInGame(false);
-	SetActorEnableCollision(true);
-	SetActorTickEnabled(true);
-
-	// 재사용 시 이동 컴포넌트를 다시 가동. (정지 시 UpdatedComponent가 풀릴 수 있어 재바인딩)
-	if (ProjectileMovement)
-	{
-		ProjectileMovement->SetUpdatedComponent(RootComponent);
-		ProjectileMovement->Activate(true);
-	}
-
-	// BP가 붙인 시각 컴포넌트를 켠다. Activate는 자식으로 전파되지 않아 직접 순회한다.
-	for (USceneComponent* Visual : CachedVisuals)
-	{
-		if (Visual)
-		{
-			Visual->Activate(/*bReset=*/true); // true = 나이아가라를 처음부터 다시 재생
-		}
-	}
-
-	// 디버그 사거리 라인 기준점 기록 (발사 지점/방향)
-	SpawnLocation = GetActorLocation();
-	SpawnForward = GetActorForwardVector();
-
-	// 빗나간 화살은 LifeSeconds 뒤 풀로 반환
-	GetWorldTimerManager().SetTimer(LifeTimerHandle, this, &AProjectile::OnLifeExpired, LifeSeconds);
-}
-
-void AProjectile::DeactivateForPool()
-{
-	bInFlight = false;
-
-	GetWorldTimerManager().ClearTimer(LifeTimerHandle);
-
-	SetActorHiddenInGame(true);
-	SetActorEnableCollision(false);
-	SetActorTickEnabled(false);
-
-	if (ProjectileMovement)
-	{
-		ProjectileMovement->StopMovementImmediately();
-		ProjectileMovement->Deactivate();
-	}
-
-
-	// 시각 컴포넌트 정지. 숨기기(SetActorHiddenInGame)만으로는 파티클 시뮬레이션이 안 멈춘다.
-	for (USceneComponent* Visual : CachedVisuals)
-	{
-		if (Visual)
-		{
-			Visual->Deactivate();
-		}
-	}
-}
-
-void AProjectile::ReturnToPool()
-{
-	if (UProjectilePoolSubsystem* Pool = GetWorld() ? GetWorld()->GetSubsystem<UProjectilePoolSubsystem>() : nullptr)
-	{
-		DeactivateForPool();
-		Pool->Release(this);
-	}
-	else
-	{
-		Destroy(); // 풀이 없는 예외 상황(월드 종료 중 등) 폴백
-	}
-}
-
-void AProjectile::OnLifeExpired()
-{
-	ReturnToPool();
-}
 
 void AProjectile::Tick(float DeltaSeconds)
 {
@@ -159,6 +71,7 @@ void AProjectile::Tick(float DeltaSeconds)
 	}
 	
 
+	// Debug =>
 	// 비행 중 충돌 구체(실제 적중 판정 범위)를 매 프레임 그린다.
 	DrawDebugSphere(GetWorld(), GetActorLocation(),
 		CollisionSphere->GetScaledSphereRadius(), 12, FColor::Cyan, false, -1.0f, 0, 1.0f);
@@ -170,9 +83,6 @@ void AProjectile::Tick(float DeltaSeconds)
 			ExplosionRadius, 16, FColor::Yellow, false, -1.0f, 0, 1.0f);
 	}
 
-	// 최대 사거리 = 속도 × 수명. 발사 지점에서 진행 방향으로 라인 + 끝점 표시.
-	const float Speed = ProjectileMovement ? ProjectileMovement->MaxSpeed : 0.0f;
-	const float MaxRange = Speed * LifeSeconds;
 	if (MaxRange > 0.0f)
 	{
 		const FVector EndPoint = SpawnLocation + SpawnForward * MaxRange;
@@ -180,6 +90,13 @@ void AProjectile::Tick(float DeltaSeconds)
 		DrawDebugSphere(GetWorld(), EndPoint, 20.0f, 8, FColor::Green, false, -1.0f, 0, 1.0f);
 	}
 }
+
+
+
+
+
+
+
 
 void AProjectile::SetInitialSpeed(float Speed)
 {
@@ -190,6 +107,7 @@ void AProjectile::SetInitialSpeed(float Speed)
 		// 이미 속도가 설정돼 발사된 경우를 대비해 현재 진행 방향으로 속도 갱신
 		ProjectileMovement->Velocity = GetActorForwardVector() * Speed;
 	}
+	RestartLifeTimer();
 }
 
 //적이 투사체를 맞춘다면
@@ -263,6 +181,105 @@ void AProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* O
 	}
 
 	ReturnToPool();
+}
+
+void AProjectile::ActivateFromPool()
+{
+	bInFlight = true;
+
+	// 이전 사용자의 설정이 남지 않게 튜닝 값을 클래스(BP) 기본값으로 리셋.
+	// 궁수/마법사가 같은 발사체 클래스를 공유해도 폭발 반경 등이 새어 들어가지 않는다.
+	// (직업이 매 발사마다 Damage/속도/디버그를, 마법사가 ExplosionRadius를 다시 설정한다)
+	if (const AProjectile* CDO = GetClass()->GetDefaultObject<AProjectile>())
+	{
+		Damage = CDO->Damage;
+		KnockbackForce = CDO->KnockbackForce;
+		ExplosionRadius = CDO->ExplosionRadius;
+		HitSound = CDO->HitSound;
+		bDrawDebug = CDO->bDrawDebug;
+	}
+
+	SetActorHiddenInGame(false);
+	SetActorEnableCollision(true);
+	SetActorTickEnabled(true);
+
+	// 재사용 시 이동 컴포넌트를 다시 가동. (정지 시 UpdatedComponent가 풀릴 수 있어 재바인딩)
+	if (ProjectileMovement)
+	{
+		ProjectileMovement->SetUpdatedComponent(RootComponent);
+		ProjectileMovement->Activate(true);
+	}
+
+	// BP가 붙인 시각 컴포넌트를 켠다. Activate는 자식으로 전파되지 않아 직접 순회한다.
+	for (USceneComponent* Visual : CachedVisuals)
+	{
+		if (Visual)
+		{
+			Visual->Activate(/*bReset=*/true); // true = 나이아가라를 처음부터 다시 재생
+		}
+	}
+
+	// 디버그 사거리 라인 기준점 기록 (발사 지점/방향)
+	SpawnLocation = GetActorLocation();
+	SpawnForward = GetActorForwardVector();
+
+	RestartLifeTimer();
+}
+
+void AProjectile::DeactivateForPool()
+{
+	bInFlight = false;
+
+	GetWorldTimerManager().ClearTimer(LifeTimerHandle);
+
+	SetActorHiddenInGame(true);
+	SetActorEnableCollision(false);
+	SetActorTickEnabled(false);
+
+	if (ProjectileMovement)
+	{
+		ProjectileMovement->StopMovementImmediately();
+		ProjectileMovement->Deactivate();
+	}
+
+
+	// 시각 컴포넌트 정지. 숨기기(SetActorHiddenInGame)만으로는 파티클 시뮬레이션이 안 멈춘다.
+	for (USceneComponent* Visual : CachedVisuals)
+	{
+		if (Visual)
+		{
+			Visual->Deactivate();
+		}
+	}
+}
+
+void AProjectile::ReturnToPool()
+{
+	if (UProjectilePoolSubsystem* Pool = GetWorld() ? GetWorld()->GetSubsystem<UProjectilePoolSubsystem>() : nullptr)
+	{
+		DeactivateForPool();
+		Pool->Release(this);
+	}
+	else
+	{
+		Destroy(); // 풀이 없는 예외 상황(월드 종료 중 등) 폴백
+	}
+}
+
+void AProjectile::OnLifeExpired()
+{
+	ReturnToPool();
+}
+
+void AProjectile::RestartLifeTimer()
+{
+	const float Speed = ProjectileMovement ? ProjectileMovement->MaxSpeed : 0.0f;
+
+	if (Speed <= 0.0f || MaxRange <= 0.0f)
+	{
+		return;
+	}
+	GetWorldTimerManager().SetTimer(LifeTimerHandle, this, &AProjectile::OnLifeExpired, MaxRange / Speed);
 }
 
 void AProjectile::ApplyHit(AEnemy* Enemy)

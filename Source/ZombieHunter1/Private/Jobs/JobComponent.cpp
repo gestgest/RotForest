@@ -125,10 +125,13 @@ AProjectile* UJobComponent::SpawnProjectileForward(TSubclassOf<AProjectile> Proj
 	{
 		Projectile = Pool->Acquire(ProjectileClass, SpawnLocation, SpawnRotation, OwnerCharacter, OwnerCharacter);
 	}
+
 	if (Projectile)
 	{
 		Projectile->Damage = GetDamage(); // 직업의 데미지(설계값+강화분)를 발사체에 전달
 		Projectile->bDrawDebug = bDebugAttack; // 공격 디버그가 켜져 있으면 발사체 경로/적중범위도 그린다
+
+		Projectile->MaxRange = EngageRange + ProjectileRangeMargin;
 		Projectile->SetInitialSpeed(Speed);
 	}
 	return Projectile;
