@@ -98,6 +98,9 @@ protected:
     UPROPERTY(EditAnywhere)
     UTexture2D* LockImage;
     
+    
+
+
 
     // 마우스 가장자리에서 띄울 거리
     UPROPERTY(EditAnywhere, Category = "Boss")

@@ -73,11 +73,6 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player|Weapon")
 	void OnWeaponUpgraded(int32 NewWeaponLevel);
 
-	UPROPERTY(EditAnywhere, Category = "Player|Levelup")
-	UNiagaraSystem* LevelUpEffect = nullptr;
-
-	UPROPERTY(EditAnywhere, Category = "Player|Levelup")
-	USoundBase* LevelUpSound = nullptr;
 
 
 
@@ -216,11 +211,20 @@ private: //평범한 변수 및 함수
 	UPROPERTY()
 	UMyCanvas* CanvasWidget = nullptr;
 	
-
 	// [파티]
 	// 동료 섭외/명단/장비 배분 담당. 동료 관련 설정값은 이 컴포넌트 Details에 있다.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Party", meta = (AllowPrivateAccess = "true"))
 	UPartyComponent* Party;
+
+	// [Command]
+	UPROPERTY(EditAnywhere, Category = "Player|Command")
+	USoundBase* LockSound;
+
+	UPROPERTY(EditAnywhere, Category = "Player|Command")
+	USoundBase* GatherSound;
+
+	UPROPERTY()
+	UAudioComponent* CommandAudio = nullptr;
 
 
 	// [가방]
@@ -228,7 +232,12 @@ private: //평범한 변수 및 함수
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
 	UInventoryComponent* Bag;
 
+	// [레벨업]
+	UPROPERTY(EditAnywhere, Category = "Player|Levelup")
+	UNiagaraSystem* LevelUpEffect = nullptr;
 
+	UPROPERTY(EditAnywhere, Category = "Player|Levelup")
+	USoundBase* LevelUpSound = nullptr;
 
 	// [Debug]
 	// 켜면 화면에 이동 입력 크기 / 실제 속도 / MaxWalkSpeed를 출력한다.
@@ -238,7 +247,6 @@ private: //평범한 변수 및 함수
 	// true면 C 키로 디버그용 돈 획득(AddMoney)을 테스트할 수 있다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug", meta = (AllowPrivateAccess = "true"))
 	bool bDebugAddMoneyKey = true;
-
 
 
 

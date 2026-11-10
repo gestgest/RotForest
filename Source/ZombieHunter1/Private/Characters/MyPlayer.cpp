@@ -28,6 +28,7 @@
 #include "Animation/AnimInstance.h" //SetRootMotionMode, ERootMotionMode
 #include "Animation/AnimMontage.h" //공격 몽타주 길이
 
+#include "Components/AudioComponent.h"
 
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/CharacterMovementComponent.h" //GetCharacterMovement
@@ -659,11 +660,30 @@ void AMyPlayer::ToggleCompanionCommand()
     {
         FText Msg = FText::FromString(TEXT("동료를 모집하면 사용할 수 있습니다."));
         ShowNotification(Msg, ENotifyType::Blocked);
+
+        if(LockSound)
+            UGameplayStatics::PlaySound2D(this, LockSound);
+
         return;
     }
 
     // Party값 설정
-    Party->ToggleCommand();
+    const bool bIsGathering = Party->ToggleCommand() == EPartyCommand::Gather;
+
+    if (CommandAudio)
+    {
+        CommandAudio->FadeOut(0.05f, 0.0f);
+    }
+
+    if (bIsGathering && GatherSound)
+    {
+        if (UAudioComponent* Audio = UGameplayStatics::SpawnSound2D(this, GatherSound))
+        {
+            CommandAudio = Audio;
+            Audio->FadeIn(0.6f, 1.0f, 0.0f, EAudioFaderCurve::SCurve);
+        }
+    }
+
     RefreshCommandButton();
 }
 
