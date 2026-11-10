@@ -37,6 +37,11 @@ protected:
 	UNiagaraSystem* HealEffect = nullptr;
 
 
+	// 힐 이펙트 지속시간
+	UPROPERTY(EditAnywhere, Category = "Job|Healer")
+	float HealEffectDuration = 0.5f;
+
+
 	// 힐 범위 반경(cm)
 	UPROPERTY(EditAnywhere, Category = "Job|Healer")
 	float HealRadius = 1000.0f;

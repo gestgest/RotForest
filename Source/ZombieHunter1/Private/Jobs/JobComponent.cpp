@@ -137,7 +137,6 @@ AProjectile* UJobComponent::SpawnProjectileForward(TSubclassOf<AProjectile> Proj
 	return Projectile;
 }
 
-// 주로 
 void UJobComponent::ApplyLevel(int32 Level)
 {
 	BonusLevelDamage = FMath::RoundToInt(Stats.Damage * DamageGrowth * (Level - 1));

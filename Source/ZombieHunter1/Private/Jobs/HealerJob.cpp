@@ -14,6 +14,7 @@
 #include "Engine/OverlapResult.h" 
 
 #include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 #include "DrawDebugHelpers.h" // 힐 범위 디버그
 
 
@@ -135,9 +136,22 @@ void UHealerJob::HealCharacter(ACombatCharacter* Target)
 
 	if (HealEffect)
 	{
-		const FVector Feet = Target->GetActorLocation() 
-			- FVector(0.0f, 0.0f, Target->GetSimpleCollisionHalfHeight());
+		//const FVector Position = FVector::ZeroVector;
+		const FVector Position(0.0f, 0.0f, -Target->GetSimpleCollisionHalfHeight() / 2);
 
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(OwnerCharacter, HealEffect, Feet);
+		UNiagaraComponent* Effect = UNiagaraFunctionLibrary::SpawnSystemAttached(
+			HealEffect, Target->GetRootComponent(), NAME_None,
+			Position, FRotator::ZeroRotator,
+			EAttachLocation::KeepRelativeOffset, true);
+
+		// 지속시간동안
+		if (Effect && HealEffectDuration > 0.0f)
+		{
+			TWeakObjectPtr<UNiagaraComponent> WeakEffect = Effect;
+			FTimerHandle Handle;
+
+			Target->GetWorldTimerManager().SetTimer(
+				Handle, Effect, &UNiagaraComponent::Deactivate, HealEffectDuration, false);
+		}
 	}
 }
