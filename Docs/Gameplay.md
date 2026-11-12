@@ -244,7 +244,7 @@ UItemDataAsset   : 이름 · 무게 · 판매 가격
 
 - 안드로이드 뒤로가기를 누르면 게임이 일시정지되고 "계속하기 / 나가기" 창(`ExitPanelWidget`)이 뜹니다.
 - 메뉴 버튼은 `UMainButton`을 부모로 하는 `WBP_Button` 하나로 통일했습니다. 메인 메뉴 · 게임 준비 · 사망 패널 · 나가기 창이 같은 버튼을 씁니다.
-- 구글 플레이 비공개 테스트를 마치고, 현재 프로덕션(정식 출시) 단계를 진행 중입니다. ([개인정보처리방침](../PRIVACY.md))
+- 구글 플레이 비공개 테스트를 거쳐 정식 출시했습니다. ([Google Play](https://play.google.com/store/apps/details?id=com.XYG.RotForest) · [개인정보처리방침](../PRIVACY.md))
 
 ---
 
