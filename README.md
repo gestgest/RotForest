@@ -5,7 +5,7 @@ _구 Zombie Hunter, 리마스터 후 RotForest_
 > 동료를 늘리고 무기를 강화하는 한 판 단위의 게임입니다.
 
 - [구글플레이 링크](https://play.google.com/store/apps/details?id=com.XYG.RotForest)
-<img width="400" height="225" alt="image" src="https://github.com/user-attachments/assets/3cf841d7-f134-4238-89e0-a38e6d723b7c" />
+<img width="947" height="464" alt="image" src="https://github.com/user-attachments/assets/f5c8077b-b948-49a1-a9e9-a6b2267427c3" />
 
 
 | 항목 | 내용 |
