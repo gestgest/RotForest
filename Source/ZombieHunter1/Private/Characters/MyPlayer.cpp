@@ -51,18 +51,6 @@
 #include "ZombieSlayerGameMode.h" //사망 시 적 시간 정지(SetEnemiesFrozen)
 
 
-// 모바일(안드로이드/iOS) 플랫폼이면 true. 터치 조이스틱 표시 여부 판단용.
-// 컴파일 타임 매크로라 PC 빌드에선 항상 false → 조이스틱 숨김.
-static bool IsMobilePlatform()
-{
-#if PLATFORM_ANDROID || PLATFORM_IOS
-    return true;
-#else
-    return false;
-#endif
-}
-
-
 // 생성자
 AMyPlayer::AMyPlayer()
 {
@@ -884,20 +872,13 @@ void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
     // (플레이어가 캔버스를 들고 있으므로 캔버스가 거꾸로 플레이어를 찾을 필요 없음)
     if (CanvasWidget)
     {
-        // 모바일(안드로이드/iOS)에서만 터치 조이스틱을 표시한다. PC에선 숨겨서
-        // 마우스(로스트아크식) 조작만 쓰고, 클릭이 조이스틱 위젯에 먹히지 않게 한다.
-        // Collapsed = 화면에서 빠지고 히트테스트도 안 됨 → 마우스 클릭이 게임으로 전달.
-        const ESlateVisibility JoystickVis =
-            IsMobilePlatform() ? ESlateVisibility::Visible : ESlateVisibility::Collapsed;
-
+        // 조이스틱 표시 여부는 UMyCanvas::NativeConstruct가 정한다. 여기선 입력만 연결.
         if (UVirtualJoystick* MoveStick = CanvasWidget->GetMoveJoystick())
         {
-            MoveStick->SetVisibility(JoystickVis);
             MoveStick->OnJoystickMoved.AddUniqueDynamic(this, &AMyPlayer::OnMoveJoystickMoved);
         }
         if (UButton* AttackBtn = CanvasWidget->GetAttackButton())
         {
-            AttackBtn->SetVisibility(JoystickVis);
             AttackBtn->OnPressed.AddUniqueDynamic(this, &AMyPlayer::OnAttackButtonPressed);
             AttackBtn->OnReleased.AddUniqueDynamic(this, &AMyPlayer::OnAttackButtonReleased);
         }
@@ -1056,3 +1037,4 @@ void AMyPlayer::GiveKillExp(int32 Amount, ACombatCharacter * Killer)
     
 
 }
+

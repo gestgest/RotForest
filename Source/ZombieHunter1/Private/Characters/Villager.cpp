@@ -10,7 +10,7 @@ AVillager::AVillager()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	TeamType = ETeam::Neutral;
+	TeamType = ETeam::Ally;
 
 	// 걷는 방향으로 자연스럽게 회전 (동료와 동일한 설정)
 	bUseControllerRotationYaw = false;
