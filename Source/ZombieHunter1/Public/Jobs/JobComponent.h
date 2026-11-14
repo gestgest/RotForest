@@ -16,7 +16,6 @@ class USkeletalMesh;
 class UJobComponent;
 class UWeaponDataAsset;
 class USkillDataAsset;
-class UNiagaraSystem;
 
 struct FOverlapResult;
 
@@ -126,8 +125,9 @@ protected:
 	
 	void StartSkillCooldown();
 
+	void SetOwnerMovementLocked(bool bLocked);
+
 	TArray<AEnemy*> FindEnemiesInRadius(const FVector& Center, float Radius) const;
-	AEnemy* FindNearestEnemy(float Radius) const;
 
 	UPROPERTY(EditDefaultsOnly, Category="Job|Skill")
 	USkillDataAsset* SkillData = nullptr;
@@ -166,10 +166,10 @@ public:
 
 
 	// 꾹 누르는 스킬 멈추는 기능
-	virtual void StopSkill();
+	virtual void StopSkill() {}
 
 	// AI 전용
-	virtual bool WantsToUseSkill(AEnemy* Target) const { return false; }
+	virtual bool WantsToUseSkill(AEnemy* Target)  { return false; }
 
 	bool IsSkillUnlocked() const;
 	bool CanUseSkill() const;

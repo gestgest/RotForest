@@ -215,6 +215,30 @@ void UJobComponent::StartSkillCooldown()
 	SkillReadyTime = GetWorld()->GetTimeSeconds() + Cooldown;
 }
 
+void UJobComponent::SetOwnerMovementLocked(bool bLocked)
+{
+	if (!OwnerCharacter)
+	{
+		return;
+	}
+
+	UCharacterMovementComponent* Move = OwnerCharacter->GetCharacterMovement();
+	if (!Move)
+	{
+		return;
+	}
+
+	if (bLocked)
+	{
+		Move->StopMovementImmediately();
+		Move->DisableMovement();
+	}
+	else if (!OwnerCharacter->GetIsDead())
+	{
+		Move->SetMovementMode(MOVE_Walking);
+	}
+}
+
 // UI 표시용
 float UJobComponent::GetSkillCooldownRatio() const
 {
@@ -226,13 +250,12 @@ float UJobComponent::GetSkillCooldownRatio() const
 	const float Cooldown = SkillData ? SkillData->Cooldown : 0.0f;
 	UWorld* World = GetWorld();
 
-	
 	if (Cooldown <= 0.0f || !World)
 	{
 		return 0.0f;
 	}
 	const float Remaining = SkillReadyTime - World->GetTimeSeconds();
-	return FMath::Clamp(SkillReadyTime / Cooldown, 0.0f, 1.0f);
+	return FMath::Clamp(Remaining / Cooldown, 0.0f, 1.0f);
 }
 
 // 적을 찾아보자
@@ -261,28 +284,4 @@ TArray<AEnemy*> UJobComponent::FindEnemiesInRadius(const FVector& Center, float 
 		}
 	}
 	return Out;
-}
-
-// 가장 가까운 적
-AEnemy* UJobComponent::FindNearestEnemy(float Radius) const
-{
-	if (!OwnerCharacter)
-	{
-		return nullptr;
-	}
-
-	const FVector Origin = OwnerCharacter->GetActorLocation();
-	AEnemy* Best = nullptr;
-
-	float BestDistSq = TNumericLimits<float>::Max();
-	for (AEnemy* Enemy : FindEnemiesInRadius(Origin, Radius))
-	{
-		const float DistSq = FVector::DistSquared2D(Origin, Enemy->GetActorLocation());
-		if (DistSq > BestDistSq)
-		{
-			BestDistSq = DistSq;
-			Best = Enemy;
-		}
-	}
-	return Best;
 }
