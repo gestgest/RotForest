@@ -93,6 +93,7 @@ protected:
 	void FaceActor(AActor* Target);
 	
 public:
+	virtual ACombatCharacter* GetSkillTarget() const override;
 
 	// 멈춰서 공격할 거리(cm) => 직업 사거리
 	float GetEngageRange() const;

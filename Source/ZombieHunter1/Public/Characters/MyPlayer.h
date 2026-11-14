@@ -384,6 +384,8 @@ public: //Property Function
 	//AddCoin
 	UFUNCTION(BlueprintCallable)
 	void AddMoney();
+	
+	virtual ACombatCharacter* GetSkillTarget() const override { return AutoTarget.Get(); }
 
 	// 판매처럼 한 번에 여러 개를 얻을 때
 	void GainMoney(int32 Amount);

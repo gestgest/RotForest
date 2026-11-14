@@ -261,7 +261,7 @@ public: //Property
 	virtual void AddExp(int32 Amount);
 	
 	virtual void ApplyLevelUp();
-
+	virtual ACombatCharacter* GetSkillTarget() const { return nullptr; }
 
 	
 

@@ -152,8 +152,12 @@ void AMyPlayer::Tick(float DeltaTime)
 
     DebugWalkSpeed(Move);
 
-    UpdateMovement(DeltaTime, Move);
-    UpdateAimAndAttack(DeltaTime, Aim, Move);
+    // 연사 중일 경우 이동 회전을 막는다.
+    if (!(CurrentJob && CurrentJob->IsSkillActive()))
+    {
+        UpdateMovement(DeltaTime, Move);
+        UpdateAimAndAttack(DeltaTime, Aim, Move);
+    }
 
     // 다리를 이동 방향으로 돌리기 위한 각도 갱신(상체/조준은 액터 회전 그대로). AnimBP가 LegYawOffset을 읽는다.
     UpdateLegYawOffset(DeltaTime);

@@ -1,7 +1,12 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Jobs/ArcherJob.h"
+
+#include "Characters/Enemy.h"
+
 #include "Projectiles/Projectile.h"
+
+#include "TimerManager.h"
 
 UArcherJob::UArcherJob()
 {
@@ -25,7 +30,7 @@ UArcherJob::UArcherJob()
 void UArcherJob::FireArrow()
 {
 	// 화살은 단일 대상 발사체 (폭발 없음). 스폰은 베이스 공용 헬퍼가 담당.
-	SpawnProjectile(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight);
+	SpawnProjectileForward(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight);
     PlayAttackSound();
 }
 
@@ -40,8 +45,57 @@ void UArcherJob::Attack()
 {
 	Super::Attack();   // 몽타주 재생
 	PlayBowDraw();     // 활 애니도 같이 시작
-	// FireArrow();  ← 삭제
 }
+
+void UArcherJob::StopSkill()
+{
+    if (!bSkillActive)
+    {
+        return;
+    }
+
+    if (OwnerCharacter)
+    {
+        FTimerManager& Timers = OwnerCharacter->GetWorldTimerManager();
+        Timers.ClearTimer(QuickShotFireTimer);
+        Timers.ClearTimer(QuickShotEndTimer);
+    }
+    SetOwnerMovementLocked(false);
+
+    bSkillActive = false;
+    StartSkillCooldown();
+}
+
+void UArcherJob::FireQuickShot()
+{
+    if (!OwnerCharacter || OwnerCharacter->GetIsDead())
+    {
+        StopSkill();
+        return;
+    }
+
+    FVector Dir = OwnerCharacter->GetActorForwardVector();
+    ACombatCharacter* Target = OwnerCharacter->GetSkillTarget();
+    if (Target && !Target->GetIsDead())
+    {
+        Dir = (Target->GetActorLocation() - OwnerCharacter->GetActorLocation()).GetSafeNormal2D();
+        OwnerCharacter->SetActorRotation(FRotator(0.0f, Dir.Rotation().Yaw, 0.0f));
+    }
+
+    if (AProjectile* Arrow = SpawnProjectile(ProjectileClass, Dir, ProjectileSpeed, MuzzleOffset, MuzzleHeight))
+    {
+        Arrow->Damage = FMath::Max(1, GetDamage()); // 이거는 데미지 좀 고민해봄
+        PlayAttackSound(); // 근데 이거 스킬 사운드 넣어야하는 거 아닌가? => 근데 어차피 지금 이 구조자체는 마음에 듬
+    }
+}
+
+bool UArcherJob::WantsToUseSkill(AEnemy* Target)
+{
+    return Target != nullptr;
+}
+
+
+
 
 void UArcherJob::PlayBowDraw()
 {

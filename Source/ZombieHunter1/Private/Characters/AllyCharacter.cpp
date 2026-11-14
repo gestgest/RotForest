@@ -293,6 +293,11 @@ void AAllyCharacter::FaceActor(AActor* Target)
 	}
 }
 
+ACombatCharacter* AAllyCharacter::GetSkillTarget() const
+{
+	return CurrentTargetEnemy;
+}
+
 // 멈춰서 공격할 거리 = 직업의 교전 사거리(근접=짧게, 원거리=길게). 직업이 없으면 동료 AttackRange로 폴백.
 // Tick(조준/공격)과 UpdateDecision(이동 명령)이 이 함수 하나를 공유해야 값이 어긋나지 않는다.
 float AAllyCharacter::GetEngageRange() const

@@ -43,13 +43,22 @@ public:
 	float MuzzleHeight = 50.0f;
 
 	virtual void Attack() override;
+	virtual void StopSkill() override;
+	virtual bool WantsToUseSkill(AEnemy* Target) override;
+
 	
 	virtual float GetAttackYawOffset() const override { return AttackYawOffset; }
 
 protected:
+	virtual void UseSkill() override;
+	
+
 	//전방으로 화살 1발 발사
 	void FireArrow();
 	void PlayBowDraw();
+
+	// [스킬]
+	void FireQuickShot();
 
 	// 활이 정면으로 가도록 몸을 돌리는 각도
 	UPROPERTY(EditAnywhere, Category = "Job|Combat")
@@ -58,6 +67,17 @@ protected:
 	// UArcherJob — 미세조정용. 1.0보다 크면 살짝 먼저 다 당겨진다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Job|Archer")
 	float BowDrawRateScale = 1.05f;
+
+	UPROPERTY(EditAnywhere, Category = "Job|Skill")
+	float QuickShotFireInterval = 0.1f;
+
+	UPROPERTY(EditAnywhere, Category = "Job|Skill")
+	float QuickShotMaxDuration = 3.0f;
+
+
+	FTimerHandle QuickShotFireTimer;
+	FTimerHandle QuickShotEndTimer;
+
 private:
 	void ResetBow();
 
