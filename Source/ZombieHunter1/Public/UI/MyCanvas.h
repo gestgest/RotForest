@@ -106,6 +106,10 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Boss")
     float BossArrowEdgeMargin = 60.0f;
 
+    // 에디터(PIE)에서 터치 조이스틱을 보일지. 모바일은 항상 보임, 패키징 PC는 항상 숨김
+    UPROPERTY(EditAnywhere, Category = "Debug")
+    bool bShowTouchUIInEditor = true;
+
 
 
 public:
@@ -135,6 +139,9 @@ public:
     void UpdateCommandIcon(const bool bIsGathering);
     void ShowCommandLocked();
     UButton* GetCommandButton() const { return CommandButton; }
+
+    // 터치 조이스틱/공격 버튼을 보여줄지
+    bool ShouldShowTouchUI() const;
 
 private:
     TWeakObjectPtr<ACombatCharacter> TargetBoss; //추격하는 보스. 화살표 쓰기 위함

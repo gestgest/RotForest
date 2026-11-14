@@ -32,14 +32,9 @@ void UMyCanvas::NativeConstruct()
         BossArrow->SetVisibility(ESlateVisibility::Collapsed);
     }
 
-    // 모바일(안드로이드/iOS)이나 에디터에서만 터치 조이스틱 표시, PC에선 숨김.
-    // 위젯이 만들어질 때 자동 실행되므로 BP가 SetCanvasWidget을 호출하든 말든 항상 적용됨.
-    // || WITH_EDITOR
-#if PLATFORM_ANDROID || PLATFORM_IOS
-    const ESlateVisibility JoystickVis = ESlateVisibility::Visible;
-#else
-    const ESlateVisibility JoystickVis = ESlateVisibility::Collapsed;
-#endif
+    // 터치 조이스틱 표시. Collapsed면 히트테스트도 안 돼서 마우스 클릭이 게임으로 전달됨
+    const ESlateVisibility JoystickVis =
+        ShouldShowTouchUI() ? ESlateVisibility::Visible : ESlateVisibility::Collapsed;
     if (MoveJoystick) { MoveJoystick->SetVisibility(JoystickVis); }
     if (AttackButton) { AttackButton->SetVisibility(JoystickVis); }
 
@@ -257,4 +252,15 @@ void UMyCanvas::UpdateBossArrow()
     BossArrow->SetRenderTransformAngle(FMath::RadiansToDegrees(FMath::Atan2(Dir.Y, Dir.X)));
     BossArrow->SetVisibility(ESlateVisibility::HitTestInvisible);
 
+}
+
+bool UMyCanvas::ShouldShowTouchUI() const
+{
+#if PLATFORM_ANDROID || PLATFORM_IOS
+    return true;
+#elif WITH_EDITOR
+    return bShowTouchUIInEditor;
+#else
+    return false;
+#endif
 }
