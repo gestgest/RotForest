@@ -98,13 +98,15 @@ protected: //핵심 함수의 부품
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	int32 MaxHP = 5;
 
-	/** 죽었는지 여부. HP<=0이면 true. */
+	// 죽었는지 여부. HP<=0이면 true.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	bool IsDead = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float AttackRange = 100.0f;
 
+	// 받은 피해
+	float DamageTakenMultiplier = 1.0f;
 
 	// [공격 시간]
 	// 마지막 공격 이후 누적 시간(TickAttack이 관리).
@@ -225,6 +227,10 @@ public: //Property
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	ETeam TeamType;
+
+
+	void SetDamageReduction(float Reduction);
+	void ClearDamageReduction();
 
 
 

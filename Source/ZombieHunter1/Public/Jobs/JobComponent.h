@@ -15,6 +15,8 @@ class AProjectile;
 class USkeletalMesh;
 class UJobComponent;
 class UWeaponDataAsset;
+class USkillDataAsset;
+class UNiagaraSystem;
 
 struct FOverlapResult;
 
@@ -89,6 +91,8 @@ public:
 	// 매 프레임 호출(플레이어 Tick). 조준과 무관한 패시브 효과(자가 회복 등)용. 기본 구현 없음. 
 	virtual void TickJob(float DeltaTime);
 
+	// 스킬 시작
+	bool TryStartSkill();
 
 
 protected:
@@ -111,10 +115,28 @@ protected:
 	/** 공격 사운드를 소유자 위치에서 재생 */
 	void PlayAttackSound();
 
-	//원거리 투사체 생성
 	AProjectile* SpawnProjectileForward(TSubclassOf<AProjectile> ProjectileClass, float Speed, float MuzzleOffset, float MuzzleHeight);
 
+	//원거리 투사체 생성
+	AProjectile* SpawnProjectile(TSubclassOf<AProjectile> ProjectileClass, const FVector& Dir, float Speed, float MuzzleOffset, float MuzzleHeight);
+
 	virtual bool HitEnemy(TSet<AEnemy*>& HitEnemies, const FOverlapResult& Result, const FVector& Origin, const FVector& AimDir) { return true; }
+
+	virtual void UseSkill() {}
+	
+	void StartSkillCooldown();
+
+	TArray<AEnemy*> FindEnemiesInRadius(const FVector& Center, float Radius) const;
+	AEnemy* FindNearestEnemy(float Radius) const;
+
+	UPROPERTY(EditDefaultsOnly, Category="Job|Skill")
+	USkillDataAsset* SkillData = nullptr;
+
+	// 스킬 상태 => 꾹 누르는 상태
+	bool bSkillActive = false;
+
+	// 쿨타임 끝나는 월드 시각 (초)
+	float SkillReadyTime = 0.0f;
 
 private:
 
@@ -141,6 +163,24 @@ public:
 	virtual void OnProjectileHit(AEnemy* HitEnemy) {}
 
 	void ApplyLevel(int32 Level);
+
+
+	// 꾹 누르는 스킬 멈추는 기능
+	virtual void StopSkill();
+
+	// AI 전용
+	virtual bool WantsToUseSkill(AEnemy* Target) const { return false; }
+
+	bool IsSkillUnlocked() const;
+	bool CanUseSkill() const;
+	bool IsSkillActive() const { return bSkillActive; }
+
+	float GetSkillCooldownRatio() const;
+
+	const USkillDataAsset* GetSkillData() const { return SkillData; }
+
+
+
 
 	////////////////////////////////////////////////////////////////////////
 	//Variables

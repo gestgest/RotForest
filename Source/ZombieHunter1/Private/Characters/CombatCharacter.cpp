@@ -126,7 +126,7 @@ bool ACombatCharacter::TickAttack(float DeltaTime, bool bWantsToAttack)
 {
 	TimeSinceLastAttack += DeltaTime;
 
-	if (!bWantsToAttack || !CurrentJob || IsDead)
+	if (!bWantsToAttack || !CurrentJob || IsDead || CurrentJob->IsSkillActive())
 	{
 		return false;
 	}
@@ -396,8 +396,24 @@ UAnimMontage* ACombatCharacter::GetAttackMontageForJob(EJobType JobType) const
 	return DefaultAttackMontage;
 }
 
+void ACombatCharacter::SetDamageReduction(float Reduction)
+{
+	DamageTakenMultiplier = 1.0f - FMath::Clamp(Reduction, 0.0f, 1.0f);
+}
+
+void ACombatCharacter::ClearDamageReduction()
+{
+	DamageTakenMultiplier = 1.0f;
+}
+
 void ACombatCharacter::AddHP(int32 add_hp)
 {
+	// 피해 감소
+	if (add_hp < 0 && DamageTakenMultiplier < 1.0f)
+	{
+		// 피해 1은 받는다.
+		add_hp = FMath::Min(-1, FMath::RoundToInt(add_hp * DamageTakenMultiplier));
+	}
 	SetHP(HP + add_hp);
 }
 

@@ -25,7 +25,7 @@ UArcherJob::UArcherJob()
 void UArcherJob::FireArrow()
 {
 	// 화살은 단일 대상 발사체 (폭발 없음). 스폰은 베이스 공용 헬퍼가 담당.
-	SpawnProjectileForward(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight);
+	SpawnProjectile(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight);
     PlayAttackSound();
 }
 
