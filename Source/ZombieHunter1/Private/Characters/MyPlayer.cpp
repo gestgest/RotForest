@@ -335,7 +335,6 @@ void AMyPlayer::OnTopDownMode()
     }
 
 
-
     PlayerControllerRef = Cast<APlayerController>(GetController());
 
     // 탑다운: 컨트롤러 yaw를 0으로 고정하고 마우스 Look 입력을 무시한다.

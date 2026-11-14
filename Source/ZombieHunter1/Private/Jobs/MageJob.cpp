@@ -27,7 +27,7 @@ void UMageJob::Attack()
 void UMageJob::CastSpell()
 {
 	// 베이스 공용 헬퍼로 발사체를 스폰한 뒤, 폭발 반경만 마법사 값으로 설정한다.
-	AProjectile* Spell = SpawnProjectile(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight);
+	AProjectile* Spell = SpawnProjectileForward(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight);
 	if (Spell)
 	{
 		Spell->ExplosionRadius = ExplosionRadius;

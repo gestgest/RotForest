@@ -47,6 +47,19 @@ void UArcherJob::Attack()
 	PlayBowDraw();     // 활 애니도 같이 시작
 }
 
+void UArcherJob::UseSkill()
+{
+    bSkillActive = true;
+    SetOwnerMovementLocked(true);
+
+    FireQuickShot();
+
+    FTimerManager& Timers = OwnerCharacter->GetWorldTimerManager();
+
+    Timers.SetTimer(QuickShotFireTimer, this, &UArcherJob::FireQuickShot, QuickShotFireInterval, true);
+    Timers.SetTimer(QuickShotEndTimer, this, &UArcherJob::StopSkill, QuickShotMaxDuration, false);
+}
+
 void UArcherJob::StopSkill()
 {
     if (!bSkillActive)

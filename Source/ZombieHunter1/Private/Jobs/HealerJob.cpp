@@ -39,7 +39,7 @@ void UHealerJob::OnAttackNotify(FName NotifyName)
 		return;
 	}
 
-	if (SpawnProjectile(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight))
+	if (SpawnProjectileForward(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight))
 	{
 		PlayAttackSound();
 	}
