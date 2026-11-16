@@ -104,7 +104,13 @@ void UArcherJob::FireQuickShot()
 
 bool UArcherJob::WantsToUseSkill(AEnemy* Target)
 {
-    return Target != nullptr;
+    if (!Target || Target->GetIsDead())
+    {
+        return false;
+    }
+
+    // todo 이거 궁수는 속사가 평타의 상위호환 아닌까?
+    return RollAISkill(OwnerCharacter->GetAttackInterval());
 }
 
 

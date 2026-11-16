@@ -53,7 +53,7 @@ void UHealerJob::OnProjectileHit(AEnemy* HitEnemy)
 	}
 
 	ACombatCharacter* HealTarget = FindHealTarget();
-	HealCharacter(HealTarget);
+	HealCharacter(HealTarget, GetDamage());
 
 	if (bDebugAttack && HealTarget && IsValid(HitEnemy))
 	{
@@ -61,6 +61,49 @@ void UHealerJob::OnProjectileHit(AEnemy* HitEnemy)
 			HealTarget->GetActorLocation(), FColor::Green, false, 0.5f, 0, 2.0f);
 	}
 }
+
+void UHealerJob::UseSkill()
+{
+	for (ACombatCharacter* Ally : GetAlliesInHealRange())
+	{
+		HealCharacter(Ally, GetDamage());
+	}
+}
+
+bool UHealerJob::WantsToUseSkill(AEnemy * Target)
+{
+	bool bAnyHurt = false;
+
+	for (ACombatCharacter* Ally : GetAlliesInHealRange())
+	{
+		// 풀피
+		if (Ally->GetHP() != Ally->GetMaxHP())
+		{
+			bAnyHurt = true;
+			break;
+		}
+	}
+
+	if (!bAnyHurt)
+	{
+		return false;
+	}
+	
+	const bool bIsCombat = Target && !Target->GetIsDead();
+	if (!bIsCombat)
+	{
+		return true;
+	}
+
+	return RollAISkill(OwnerCharacter->GetAttackInterval());
+}
+
+
+
+
+
+
+
 
 ACombatCharacter* UHealerJob::FindHealTarget() const
 {
@@ -125,13 +168,13 @@ ACombatCharacter* UHealerJob::FindHealTarget() const
 
 
 // 힐하는 공식
-void UHealerJob::HealCharacter(ACombatCharacter* Target)
+void UHealerJob::HealCharacter(ACombatCharacter* Target, int32 Amount)
 {
 	if (!Target || Target->GetIsDead() || Target->GetHP() >= Target->GetMaxHP())
 	{
 		return;
 	}
-	const int32 NewHP = FMath::Min(Target->GetHP() + GetDamage(), Target->GetMaxHP());
+	const int32 NewHP = FMath::Min(Target->GetHP() + Amount, Target->GetMaxHP());
 	Target->SetHP(NewHP);
 
 	if (HealEffect)
@@ -154,4 +197,41 @@ void UHealerJob::HealCharacter(ACombatCharacter* Target)
 				Handle, Effect, &UNiagaraComponent::Deactivate, HealEffectDuration, false);
 		}
 	}
+}
+
+// 동료 전부를 가져와서 주변 힐
+TArray<ACombatCharacter*> UHealerJob::GetAlliesInHealRange() const
+{
+	TArray<ACombatCharacter*> Out;
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return Out;
+	}
+	UCombatRegistrySubsystem* Registry = World->GetSubsystem<UCombatRegistrySubsystem>();
+	if (!Registry)
+	{
+		return Out;
+	}
+
+	TArray<ACombatCharacter*> Allies;
+	Registry->GetAllOfTeam(ETeam::Ally, Allies);
+
+	const FVector Origin = OwnerCharacter->GetActorLocation();
+	const float HealDistSq = HealRadius * HealRadius;
+
+	for (ACombatCharacter* Ally : Allies)
+	{
+		// 동료가 아닌경우, 죽은 경우
+		if (!Ally || Ally->IsHidden() || Ally->GetIsDead())
+		{
+			continue;
+		}
+		if (FVector::DistSquared2D(Origin, Ally->GetActorLocation()) <= HealDistSq)
+		{
+			Out.Add(Ally);
+		}
+	}
+
+	return Out;
 }

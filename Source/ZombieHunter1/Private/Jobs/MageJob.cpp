@@ -78,17 +78,8 @@ bool UMageJob::WantsToUseSkill(AEnemy* Target)
 	{
 		return false;
 	}
-
-	const float Now = GetWorld()->GetTimeSeconds();
-	if (Now < NextFireZoneRollTime)
-	{
-		return false;
-	}
-
-	// 그냥 평타 단위로 해야 될듯한데
-	NextFireZoneRollTime = Now + OwnerCharacter->GetAttackInterval();
-
-	return FMath::FRand() <= AISkillChance;
+	
+	return RollAISkill(OwnerCharacter->GetAttackInterval());
 }
 
 // 화염구 소환

@@ -341,6 +341,16 @@ private: //평범한 변수 및 함수
 
 	void ApplyLevelUp();
 
+	UFUNCTION()
+	void OnSkillPressed();
+
+	UFUNCTION()
+	void OnSkillReleased();
+
+	// 스킬 버튼 쿨타임 표시
+	void UpdateSkillUI();
+
+
 	// [Debug]
 	// 속도 체크
 	void DebugWalkSpeed(const FVector2D& Move);

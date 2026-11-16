@@ -44,6 +44,7 @@
 
 #include "Jobs/JobComponent.h"
 #include "Jobs/WarriorJob.h"
+#include "Jobs/SkillDataAsset.h"
 
 #include "Characters/PartyComponent.h" //동료 파티(섭외·장비 배분)
 
@@ -167,6 +168,7 @@ void AMyPlayer::Tick(float DeltaTime)
     {
         CurrentJob->TickJob(DeltaTime);
     }
+    UpdateSkillUI();
 }
 
 
@@ -201,6 +203,14 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     if (bDebugAddMoneyKey)
     {
         PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::AddMoney);
+        FInputKeyBinding ExpBinding(FInputChord(EKeys::X), IE_Pressed);
+        ExpBinding.KeyDelegate.GetDelegateForManualSet().BindLambda([this]()
+            {
+                AddExp(10);
+            });
+        PlayerInputComponent->KeyBindings.Add(ExpBinding);
+        PlayerInputComponent->BindKey(EKeys::Q, IE_Pressed, this, &AMyPlayer::OnSkillPressed);
+        PlayerInputComponent->BindKey(EKeys::Q, IE_Released, this, &AMyPlayer::OnSkillReleased);
         //PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::OnAttackButtonPressed);
         //PlayerInputComponent->BindKey(EKeys::C, IE_Released, this, &AMyPlayer::OnAttackButtonReleased);
     }
@@ -889,6 +899,11 @@ void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
         {
             CommandBtn->OnPressed.AddUniqueDynamic(this, &AMyPlayer::ToggleCompanionCommand);
         }
+        if (UButton* SkillButton= CanvasWidget->GetSkillButton())
+        {
+            SkillButton->OnPressed.AddUniqueDynamic(this, &AMyPlayer::OnSkillPressed);
+            SkillButton->OnReleased.AddUniqueDynamic(this, &AMyPlayer::OnSkillReleased);
+        }
         RefreshCommandButton();
 
         // 위젯이 막 연결된 시점에 현재 HP 기준으로 사망 UI/HP바를 동기화한다.
@@ -922,10 +937,56 @@ void AMyPlayer::ApplyLevelUp()
     {
         UGameplayStatics::PlaySound2D(this, LevelUpSound);
     }
+    const USkillDataAsset* SkillData = CurrentJob ? CurrentJob->GetSkillData() : nullptr;
+
+    // 레벨업 했으니 해금해야지
+    if (SkillData && Level == SkillData->UnlockLevel)
+    {
+        ShowNotification(FText::Format(
+            FText::FromString(TEXT("스킬 해금 : {0}")), SkillData->SkillName
+        ));
+    }
 
     OnLevelUp(Level);
 }
 
+void AMyPlayer::OnSkillPressed()
+{
+    const USkillDataAsset* Data = CurrentJob ? CurrentJob->GetSkillData() : nullptr;
+    if (!Data || IsDead)
+    {
+        return;
+    }
+    // 잠겨있다면
+    if (!CurrentJob->IsSkillUnlocked())
+    {
+        ShowNotification(FText::Format(
+            FText::FromString(TEXT("LV.{0}에 해금됩니다.")),
+            FText::AsNumber(Data->UnlockLevel)),
+            ENotifyType::Blocked);
+    }
+
+    CurrentJob->TryStartSkill();
+}
+
+void AMyPlayer::OnSkillReleased()
+{
+    if (CurrentJob)
+    {
+        CurrentJob->StopSkill();
+    }
+}
+
+
+void AMyPlayer::UpdateSkillUI()
+{
+    const USkillDataAsset* Data = CurrentJob ? CurrentJob->GetSkillData() : nullptr;
+    if (!Data || !CanvasWidget)
+    {
+        return;
+    }
+    CanvasWidget->UpdateSkillButton(CurrentJob->IsSkillUnlocked(), Data->Icon, CurrentJob->GetSkillCooldownRatio());
+}
 
 
 // 공격 중에는 클릭한 방향을 유지해야 해서, 그 유지 시간을 몽타주 길이로 잡는다.

@@ -120,7 +120,7 @@ protected:
 	void SetOwnerMovementLocked(bool bLocked);
 
 	TArray<AEnemy*> FindEnemiesInRadius(const FVector& Center, float Radius) const;
-
+	virtual bool RollAISkill(const float NextTime);
 
 
 	UPROPERTY(EditDefaultsOnly, Category="Job|Skill")
@@ -136,14 +136,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Combat")
 	float EngageRange = 500.0f;
 
+	UPROPERTY(EditAnywhere, Category = "Job|Skill")
+	float AISkillChance = 0.5f;
+
+	float NextSkillRollTime = 0.0f;
+
+	
 	//직업의 공격 판정 범위를 화면에 그린다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Debug")
 	bool bDebugAttack = false;
 
+
 private:
-
-
-
 	UPROPERTY(EditAnywhere, Category = "Job|Combat")
 	float ProjectileRangeMargin = 100.0f;
 

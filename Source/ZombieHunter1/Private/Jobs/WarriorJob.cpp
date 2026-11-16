@@ -215,12 +215,5 @@ bool UWarriorJob::WantsToUseSkill(AEnemy* Target)
 		return false;
 	}
 
-	const float Now = GetWorld()->GetTimeSeconds();
-	if (Now < NextShieldRollTime)
-	{
-		return false;
-	}
-	NextShieldRollTime = Now + OwnerCharacter->GetAttackInterval();
-
-	return FMath::FRand() < AIShieldChance;
+	return RollAISkill(OwnerCharacter->GetAttackInterval());
 }

@@ -64,10 +64,5 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Job|Skill")
 	float ShieldPushForce = 700.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Job|Skill")
-	float AIShieldChance = 0.5f;
-
-	float NextShieldRollTime = 0.0f;
-
 	FTimerHandle ShieldEndTimer;
 };

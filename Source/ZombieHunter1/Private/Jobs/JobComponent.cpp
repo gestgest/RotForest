@@ -285,3 +285,17 @@ TArray<AEnemy*> UJobComponent::FindEnemiesInRadius(const FVector& Center, float 
 	}
 	return Out;
 }
+
+bool UJobComponent::RollAISkill(const float NextTime)
+{
+	const float Now = GetWorld()->GetTimeSeconds();
+
+	// 아직 다음 생각까지 남음
+	if (Now < NextSkillRollTime)
+	{
+		return false;
+	}
+	NextSkillRollTime = Now + NextTime;
+
+	return FMath::FRand() < AISkillChance;
+}

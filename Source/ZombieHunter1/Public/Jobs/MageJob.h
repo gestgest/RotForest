@@ -60,12 +60,4 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Job|Skill")
 	float DefaultFireZoneForwardDistance = 400.0f;
-
-	UPROPERTY(EditAnywhere, Category = "Job|Skill")
-	float AISkillChance = 0.2f;
-
-	UPROPERTY(EditAnywhere, Category = "Job|Skill")
-	float AIThinkTime = 1.0f;
-
-	float NextFireZoneRollTime = 0.0f;
 };

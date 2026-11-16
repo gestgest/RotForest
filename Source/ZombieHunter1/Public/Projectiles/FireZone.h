@@ -34,7 +34,7 @@ protected:
 	float Radius = 300.f;
 
 	UPROPERTY(EditAnywhere, Category = "FireZone")
-	float Duration = 0.4f;
+	float Duration = 5.0f;
 
 	UPROPERTY(EditAnywhere, Category = "FireZone")
 	float TickInterval = 0.5f;

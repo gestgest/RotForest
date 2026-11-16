@@ -137,7 +137,6 @@ void AAllyCharacter::UpdateDecision()
 	const FVector MyLoc = GetActorLocation();
 	FVector AnchorLoc;
 
-	// 
 	if (GetAnchorLocation(AnchorLoc))
 	{
 		// 목표 거리
@@ -192,6 +191,13 @@ void AAllyCharacter::UpdateDecision()
 		CurrentTargetEnemy = FindNearestEnemy(MyLoc);
 	}
 	
+	// 스킬
+	if (CurrentJob && CurrentJob->CanUseSkill() 
+		&& CurrentJob->WantsToUseSkill(CurrentTargetEnemy))
+	{
+		CurrentJob->TryStartSkill();
+	}
+
 	if (!CurrentTargetEnemy)
 	{
 		State = EState::Following;
