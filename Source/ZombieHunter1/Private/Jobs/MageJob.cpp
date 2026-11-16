@@ -1,6 +1,9 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Jobs/MageJob.h"
+#include "Characters/Enemy.h"
+
+#include "Projectiles/FireZone.h"
 #include "Projectiles/Projectile.h"
 
 UMageJob::UMageJob()
@@ -15,12 +18,77 @@ UMageJob::UMageJob()
 	ProjectileClass = AProjectile::StaticClass();
 
 	EngageRange = 800.0f;
+	FireZoneClass = AFireZone::StaticClass();
 }
 
 void UMageJob::Attack()
 {
 	// 공격 몽타주가 있으면 재생(시전 모션). 발사체는 곧바로 발사.
 	Super::Attack();
+}
+void UMageJob::OnAttackNotify(FName NotifyName)
+{
+	if (NotifyName == "Attack")
+		CastSpell();
+}
+
+
+void UMageJob::UseSkill()
+{
+	if (!FireZoneClass)
+	{
+		return;
+	}
+
+	FVector Loc;
+	ACombatCharacter* Target = OwnerCharacter->GetSkillTarget();
+
+	// 적이 있는 경우
+	if (Target && !Target->GetIsDead())
+	{
+		Loc = Target->GetActorLocation();
+		Loc.Z -= Target->GetSimpleCollisionHalfHeight(); // 밑바닥
+	}
+	else
+	{
+		Loc = OwnerCharacter->GetActorLocation() + OwnerCharacter->GetActorForwardVector() * DefaultFireZoneForwardDistance;
+		Loc.Z -= OwnerCharacter->GetSimpleCollisionHalfHeight(); // 밑바닥
+	}
+
+	FActorSpawnParameters Params;
+	Params.Owner = OwnerCharacter;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	if (AFireZone* Zone = GetWorld()->SpawnActor<AFireZone>(FireZoneClass, Loc, FRotator::ZeroRotator, Params))
+	{
+		// 화염 장판 init
+		Zone->Init(GetDamage(), OwnerCharacter);
+	}
+}
+
+bool UMageJob::WantsToUseSkill(AEnemy* Target)
+{
+	if (!Target || Target->GetIsDead())
+	{
+		return false;
+	}
+
+	// 거리가 너무 길면
+	if (FVector::Dist(Target->GetActorLocation(), OwnerCharacter->GetActorLocation()) > EngageRange)
+	{
+		return false;
+	}
+
+	const float Now = GetWorld()->GetTimeSeconds();
+	if (Now < NextFireZoneRollTime)
+	{
+		return false;
+	}
+
+	// 그냥 평타 단위로 해야 될듯한데
+	NextFireZoneRollTime = Now + OwnerCharacter->GetAttackInterval();
+
+	return FMath::FRand() <= AISkillChance;
 }
 
 // 화염구 소환
@@ -35,8 +103,3 @@ void UMageJob::CastSpell()
 	}
 }
 
-void UMageJob::OnAttackNotify(FName NotifyName)
-{
-	if(NotifyName == "Attack")
-		CastSpell();
-}

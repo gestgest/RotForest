@@ -7,6 +7,7 @@
 #include "MageJob.generated.h"
 
 class AProjectile;
+class AFireZone;
 
 /**
  * 마법사(원거리/범위) 직업.
@@ -21,8 +22,16 @@ class ZOMBIEHUNTER1_API UMageJob : public UJobComponent
 public:
 	UMageJob();
 	
-	virtual void OnAttackNotify(FName NotifyName) override;
 	virtual void Attack() override;
+	virtual void OnAttackNotify(FName NotifyName) override;
+
+	virtual bool WantsToUseSkill(AEnemy* Target) override;
+protected:
+	virtual void UseSkill() override;
+
+
+	// 전방으로 폭발 마법 발사체 1발 발사
+	void CastSpell();
 
 
 	/** 발사할 마법 발사체 클래스. BP에서 이펙트 달린 BP_Fireball을 지정하면 보임. */
@@ -45,8 +54,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Job|Mage")
 	float MuzzleHeight = 50.0f;
 
+	// [화염 장판]
+	UPROPERTY(EditAnywhere, Category = "Job|Skill")
+	TSubclassOf<AFireZone> FireZoneClass;
 
-protected:
-	/** 전방으로 폭발 마법 발사체 1발 발사 */
-	void CastSpell();
+	UPROPERTY(EditAnywhere, Category = "Job|Skill")
+	float DefaultFireZoneForwardDistance = 400.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Job|Skill")
+	float AISkillChance = 0.2f;
+
+	UPROPERTY(EditAnywhere, Category = "Job|Skill")
+	float AIThinkTime = 1.0f;
+
+	float NextFireZoneRollTime = 0.0f;
 };
