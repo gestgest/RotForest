@@ -11,6 +11,10 @@
 
 #include "Projectiles/Projectile.h"
 
+#include "Animation/AnimInstance.h"
+
+#include "Components/SkeletalMeshComponent.h"
+
 #include "Engine/World.h"
 #include "Engine/OverlapResult.h" 
 
@@ -35,14 +39,20 @@ UHealerJob::UHealerJob()
 
 void UHealerJob::OnAttackNotify(FName NotifyName)
 {
-	if (NotifyName != "Attack")
+	if (NotifyName == "Heal")
 	{
+		if (bSkillActive && !bHealApplied)
+		{
+			ApplyMassHeal();
+		}
 		return;
 	}
-
-	if (SpawnProjectileForward(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight))
+	if (NotifyName == "Attack")
 	{
-		PlayAttackSound();
+		if (SpawnProjectileForward(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight))
+		{
+			PlayAttackSound();
+		}
 	}
 }
 
@@ -65,15 +75,22 @@ void UHealerJob::OnProjectileHit(AEnemy* HitEnemy)
 
 void UHealerJob::UseSkill()
 {
-	if (HealMontage)
-	{
-		OwnerCharacter->PlayAnimMontage(HealMontage);
-	}
+	UAnimInstance* Anim = OwnerCharacter->GetMesh() ? OwnerCharacter->GetMesh()->GetAnimInstance() : nullptr;
 
-	for (ACombatCharacter* Ally : GetAlliesInHealRange())
+	// 일단 재생시킨다.
+	if (!HealMontage || !Anim || OwnerCharacter->PlayAnimMontage(HealMontage) <= 0.0f)
 	{
-		HealCharacter(Ally, FMath::RoundToInt(GetDamage() * SkillData->DamageRatio));
+		ApplyMassHeal();
+		return;
 	}
+	
+	bSkillActive = true;
+	bHealApplied = false;
+
+	FOnMontageEnded EndDelegate;
+	EndDelegate.BindUObject(this, &UHealerJob::OnHealMontageEnded);
+	Anim->Montage_SetEndDelegate(EndDelegate, HealMontage);
+
 }
 
 bool UHealerJob::WantsToUseSkill(AEnemy * Target)
@@ -240,4 +257,33 @@ TArray<ACombatCharacter*> UHealerJob::GetAlliesInHealRange() const
 	}
 
 	return Out;
+}
+
+void UHealerJob::OnHealMontageEnded(UAnimMontage * Montage, bool bInterrupt)
+{
+	// 스킬을 발동하지 않았다면
+	if (!bSkillActive)
+	{
+		return;
+	}
+	bSkillActive = false;
+	
+	// 내가 살아있다면. 힐을 받지 않았다면
+	if (!bHealApplied && OwnerCharacter && !OwnerCharacter->GetIsDead())
+	{
+		ApplyMassHeal();
+	}
+
+	StartSkillCooldown();
+}
+
+void UHealerJob::ApplyMassHeal()
+{
+	bHealApplied = true;
+
+	const int32 Amount = FMath::RoundToInt(GetDamage() * SkillData->DamageRatio);
+	for (ACombatCharacter* Ally : GetAlliesInHealRange())
+	{
+		HealCharacter(Ally, Amount);
+	}
 }

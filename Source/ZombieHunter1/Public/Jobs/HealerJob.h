@@ -35,7 +35,7 @@ protected:
 	TSubclassOf<AProjectile> ProjectileClass;
 
 	UPROPERTY(EditAnywhere, Category = "Job|Healer")
-	UAnimMontage* HealMontage;
+	UAnimMontage* HealMontage = nullptr;
 
 	UPROPERTY(EditAnywhere, Category = "Job|Healer", meta = (ClampMin = "0", ClampMax = "1"))
 	float PlayerPriorityBonus = 0.1f;
@@ -63,5 +63,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Job|Healer")
 	float MuzzleHeight = 50.0f;
 private:
+
+	bool bHealApplied = false;
+
 	TArray<ACombatCharacter*> GetAlliesInHealRange() const;
+	void OnHealMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void FinishMassHeal();
+	void ApplyMassHeal();
 };
