@@ -1,6 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Jobs/HealerJob.h"
+#include "Jobs/SkillDataAsset.h"
 
 #include "Characters/CombatCharacter.h"
 #include "Characters/Companion.h"
@@ -9,6 +10,10 @@
 #include "Characters/CombatRegistrySubsystem.h"
 
 #include "Projectiles/Projectile.h"
+
+#include "Animation/AnimInstance.h"
+
+#include "Components/SkeletalMeshComponent.h"
 
 #include "Engine/World.h"
 #include "Engine/OverlapResult.h" 
@@ -34,14 +39,20 @@ UHealerJob::UHealerJob()
 
 void UHealerJob::OnAttackNotify(FName NotifyName)
 {
-	if (NotifyName != "Attack")
+	if (NotifyName == "Heal")
 	{
+		if (bSkillActive && !bHealApplied)
+		{
+			ApplyMassHeal();
+		}
 		return;
 	}
-
-	if (SpawnProjectileForward(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight))
+	if (NotifyName == "Attack")
 	{
-		PlayAttackSound();
+		if (SpawnProjectileForward(ProjectileClass, ProjectileSpeed, MuzzleOffset, MuzzleHeight))
+		{
+			PlayAttackSound();
+		}
 	}
 }
 
@@ -53,7 +64,7 @@ void UHealerJob::OnProjectileHit(AEnemy* HitEnemy)
 	}
 
 	ACombatCharacter* HealTarget = FindHealTarget();
-	HealCharacter(HealTarget);
+	HealCharacter(HealTarget, GetDamage());
 
 	if (bDebugAttack && HealTarget && IsValid(HitEnemy))
 	{
@@ -61,6 +72,61 @@ void UHealerJob::OnProjectileHit(AEnemy* HitEnemy)
 			HealTarget->GetActorLocation(), FColor::Green, false, 0.5f, 0, 2.0f);
 	}
 }
+
+void UHealerJob::UseSkill()
+{
+	UAnimInstance* Anim = OwnerCharacter->GetMesh() ? OwnerCharacter->GetMesh()->GetAnimInstance() : nullptr;
+
+	// 일단 재생시킨다.
+	if (!HealMontage || !Anim || OwnerCharacter->PlayAnimMontage(HealMontage) <= 0.0f)
+	{
+		ApplyMassHeal();
+		return;
+	}
+	
+	bSkillActive = true;
+	bHealApplied = false;
+
+	FOnMontageEnded EndDelegate;
+	EndDelegate.BindUObject(this, &UHealerJob::OnHealMontageEnded);
+	Anim->Montage_SetEndDelegate(EndDelegate, HealMontage);
+
+}
+
+bool UHealerJob::WantsToUseSkill(AEnemy * Target)
+{
+	bool bAnyHurt = false;
+
+	for (ACombatCharacter* Ally : GetAlliesInHealRange())
+	{
+		// 풀피
+		if (Ally->GetHP() != Ally->GetMaxHP())
+		{
+			bAnyHurt = true;
+			break;
+		}
+	}
+
+	if (!bAnyHurt)
+	{
+		return false;
+	}
+	
+	const bool bIsCombat = Target && !Target->GetIsDead();
+	if (!bIsCombat)
+	{
+		return true;
+	}
+
+	return RollAISkill(OwnerCharacter->GetAttackInterval());
+}
+
+
+
+
+
+
+
 
 ACombatCharacter* UHealerJob::FindHealTarget() const
 {
@@ -125,13 +191,13 @@ ACombatCharacter* UHealerJob::FindHealTarget() const
 
 
 // 힐하는 공식
-void UHealerJob::HealCharacter(ACombatCharacter* Target)
+void UHealerJob::HealCharacter(ACombatCharacter* Target, int32 Amount)
 {
 	if (!Target || Target->GetIsDead() || Target->GetHP() >= Target->GetMaxHP())
 	{
 		return;
 	}
-	const int32 NewHP = FMath::Min(Target->GetHP() + GetDamage(), Target->GetMaxHP());
+	const int32 NewHP = FMath::Min(Target->GetHP() + Amount, Target->GetMaxHP());
 	Target->SetHP(NewHP);
 
 	if (HealEffect)
@@ -153,5 +219,71 @@ void UHealerJob::HealCharacter(ACombatCharacter* Target)
 			Target->GetWorldTimerManager().SetTimer(
 				Handle, Effect, &UNiagaraComponent::Deactivate, HealEffectDuration, false);
 		}
+	}
+}
+
+// 동료 전부를 가져와서 주변 힐
+TArray<ACombatCharacter*> UHealerJob::GetAlliesInHealRange() const
+{
+	TArray<ACombatCharacter*> Out;
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return Out;
+	}
+	UCombatRegistrySubsystem* Registry = World->GetSubsystem<UCombatRegistrySubsystem>();
+	if (!Registry)
+	{
+		return Out;
+	}
+
+	TArray<ACombatCharacter*> Allies;
+	Registry->GetAllOfTeam(ETeam::Ally, Allies);
+
+	const FVector Origin = OwnerCharacter->GetActorLocation();
+	const float HealDistSq = HealRadius * HealRadius;
+
+	for (ACombatCharacter* Ally : Allies)
+	{
+		// 동료가 아닌경우, 죽은 경우
+		if (!Ally || Ally->IsHidden() || Ally->GetIsDead())
+		{
+			continue;
+		}
+		if (FVector::DistSquared2D(Origin, Ally->GetActorLocation()) <= HealDistSq)
+		{
+			Out.Add(Ally);
+		}
+	}
+
+	return Out;
+}
+
+void UHealerJob::OnHealMontageEnded(UAnimMontage * Montage, bool bInterrupt)
+{
+	// 스킬을 발동하지 않았다면
+	if (!bSkillActive)
+	{
+		return;
+	}
+	bSkillActive = false;
+	
+	// 내가 살아있다면. 힐을 받지 않았다면
+	if (!bHealApplied && OwnerCharacter && !OwnerCharacter->GetIsDead())
+	{
+		ApplyMassHeal();
+	}
+
+	StartSkillCooldown();
+}
+
+void UHealerJob::ApplyMassHeal()
+{
+	bHealApplied = true;
+
+	const int32 Amount = FMath::RoundToInt(GetDamage() * SkillData->DamageRatio);
+	for (ACombatCharacter* Ally : GetAlliesInHealRange())
+	{
+		HealCharacter(Ally, Amount);
 	}
 }

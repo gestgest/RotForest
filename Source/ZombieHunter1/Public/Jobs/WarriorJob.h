@@ -21,8 +21,18 @@ public:
 	
 	virtual void OnAttackNotify(FName NotifyName) override;
 
+
+protected:
+	virtual bool HitEnemy(TSet<AEnemy*>& HitEnemies, const FOverlapResult& Result, const FVector& Origin, const FVector& AimDir) override;
+
+	virtual void UseSkill() override;
+public:
+	virtual void StopSkill() override;
+	virtual bool WantsToUseSkill(AEnemy* Target) override;
+
 private:
-	// WarriorJob.h
+	void ShieldPush();
+
 	UPROPERTY(EditAnywhere, Category = "Job|Combat")
 	USoundBase* SwingSound = nullptr;
 
@@ -34,9 +44,25 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Job|Combat", meta = (ClampMin = "0", ClampMax = "360"))
 	float SwingAngle = 120.0f;
 
-	/** 적중 시 적을 밀어내는 힘 */
+	// 적중 시 적을 밀어내는 힘
 	UPROPERTY(EditAnywhere, Category = "Job|Combat")
 	float KnockbackForce = 500.0f;
 
-	virtual bool HitEnemy(TSet<AEnemy*>& HitEnemies, const FOverlapResult& Result, const FVector & Origin, const FVector& AimDir) override;
+	// [스킬]
+	UPROPERTY(EditAnywhere, Category="Job|Skill")
+	UAnimMontage* ShieldMontage = nullptr;
+
+	UPROPERTY(EditAnywhere, Category = "Job|Skill", meta=(ClampMin ="0", ClampMax="1"))
+	float ShieldReduction = 0.7f;
+
+	UPROPERTY(EditAnywhere, Category = "Job|Skill")
+	float ShieldMaxDuration = 5.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Job|Skill")
+	float ShieldPushRadius = 300.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Job|Skill")
+	float ShieldPushForce = 700.0f;
+
+	FTimerHandle ShieldEndTimer;
 };

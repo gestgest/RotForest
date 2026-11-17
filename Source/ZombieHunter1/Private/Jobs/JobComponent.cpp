@@ -1,13 +1,23 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Jobs/JobComponent.h"
+
+#include "Characters/Enemy.h"
 #include "Characters/MyPlayer.h"
 #include "Characters/CombatCharacter.h"
+
 #include "Projectiles/Projectile.h"
 #include "Projectiles/ProjectilePoolSubsystem.h"
+
+#include "Jobs/SkillDataAsset.h"
+
 #include "Items/ItemDataAsset.h"
+
 #include "Engine/World.h"
+#include "Engine/OverlapResult.h"
+
 #include "Kismet/GameplayStatics.h"
+
 #include "GameFramework/CharacterMovementComponent.h"
 
 
@@ -51,6 +61,28 @@ void UJobComponent::Attack()
 	}
 }
 
+bool UJobComponent::TryStartSkill()
+{
+	if (!CanUseSkill())
+	{
+		return false;
+	}
+
+	if (SkillData->Sound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, SkillData->Sound, OwnerCharacter->GetActorLocation());
+	}
+
+	UseSkill();
+	
+	// 즉발은 바로 쿨타임
+	if (!bSkillActive)
+	{
+		StartSkillCooldown();
+	}
+	return true;
+}
+
 // 무기는 캐릭터가 소유하므로 소유자가 없으면(CDO 등) 무기분은 빠진다.
 int32 UJobComponent::GetDamage() const
 {
@@ -89,18 +121,18 @@ void UJobComponent::PlayAttackSound()
 }
 
 
-
-/**
- * 원거리 용도
- * 전방으로 발사체를 스폰하고 직업의 Damage/속도를 적용해 반환한다 (궁수/마법사 공용).
- * @param ProjectileClass  스폰할 발사체 클래스
- * @param Speed            발사 속도(cm/s)
- * @param MuzzleOffset     캐릭터 앞쪽으로 스폰하는 거리(cm)
- * @param MuzzleHeight     스폰 높이 보정(cm)
- * @return 스폰된 발사체(실패 시 nullptr). 호출 측에서 폭발반경 등 추가 설정 가능.
- */
-
 AProjectile* UJobComponent::SpawnProjectileForward(TSubclassOf<AProjectile> ProjectileClass, float Speed, float MuzzleOffset, float MuzzleHeight)
+{
+	if (!OwnerCharacter)
+	{
+		return nullptr;
+	}
+
+	return SpawnProjectile(ProjectileClass, OwnerCharacter->GetAttackAimDir(), Speed, MuzzleOffset, MuzzleHeight);
+}
+
+
+AProjectile* UJobComponent::SpawnProjectile(TSubclassOf<AProjectile> ProjectileClass, const FVector& Dir, float Speed, float MuzzleOffset, float MuzzleHeight)
 {
 	//자기 자신이 없거나 투사체 클래스가 없다면
 	if (!OwnerCharacter || !ProjectileClass)
@@ -114,10 +146,9 @@ AProjectile* UJobComponent::SpawnProjectileForward(TSubclassOf<AProjectile> Proj
 		return nullptr;
 	}
 
-	const FVector Forward = OwnerCharacter->GetAttackAimDir();
 	const FVector SpawnLocation =
-		OwnerCharacter->GetActorLocation() + Forward * MuzzleOffset + FVector(0, 0, MuzzleHeight);
-	const FRotator SpawnRotation = Forward.Rotation();
+		OwnerCharacter->GetActorLocation() + Dir * MuzzleOffset + FVector(0, 0, MuzzleHeight);
+	const FRotator SpawnRotation = Dir.Rotation();
 
 	// 풀에서 획득(재사용 또는 최초 1회만 스폰) — Destroy 대신 풀로 반환되는 수명 구조.
 	AProjectile* Projectile = nullptr;
@@ -137,6 +168,7 @@ AProjectile* UJobComponent::SpawnProjectileForward(TSubclassOf<AProjectile> Proj
 	return Projectile;
 }
 
+
 void UJobComponent::ApplyLevel(int32 Level)
 {
 	BonusLevelDamage = FMath::RoundToInt(Stats.Damage * DamageGrowth * (Level - 1));
@@ -145,5 +177,127 @@ void UJobComponent::ApplyLevel(int32 Level)
 	{
 		OwnerCharacter->SetMaxHP(Stats.MaxHP * (1.0f + HPGrowth * (Level - 1)));
 	}
+}
 
+
+
+
+// 스킬 레벨 가져와서 넘지 않으면 true
+bool UJobComponent::IsSkillUnlocked() const
+{
+	if (!SkillData)
+	{
+		return false;
+	}
+
+	const int32 Level = OwnerCharacter ? OwnerCharacter->GetLevel() : 1;
+
+	return Level >= SkillData->UnlockLevel;
+}
+
+// 쿨타임 관련
+bool UJobComponent::CanUseSkill() const
+{
+	if (!OwnerCharacter || OwnerCharacter->GetIsDead() || bSkillActive || !IsSkillUnlocked())
+	{
+		return false;
+	}
+
+	const bool bCanUseSkill = GetWorld()->GetTimeSeconds() >= SkillReadyTime;
+
+	// 생각해보아요 : 아니 이거 스킬이 여러 개면 안된다.
+	return bCanUseSkill;
+}
+
+void UJobComponent::StartSkillCooldown()
+{
+	const float Cooldown = SkillData ? SkillData->Cooldown : 0.0f;
+
+	// 생각해보아요 이것도 스킬이 여러개면 안될듯한데. => 확장성 논란
+	SkillReadyTime = GetWorld()->GetTimeSeconds() + Cooldown;
+}
+
+void UJobComponent::SetOwnerMovementLocked(bool bLocked)
+{
+	if (!OwnerCharacter)
+	{
+		return;
+	}
+
+	UCharacterMovementComponent* Move = OwnerCharacter->GetCharacterMovement();
+	if (!Move)
+	{
+		return;
+	}
+
+	if (bLocked)
+	{
+		Move->StopMovementImmediately();
+		Move->DisableMovement();
+	}
+	else if (!OwnerCharacter->GetIsDead())
+	{
+		Move->SetMovementMode(MOVE_Walking);
+	}
+}
+
+// UI 표시용
+float UJobComponent::GetSkillCooldownRatio() const
+{
+	if (bSkillActive)
+	{
+		return 1.0f;
+	}
+
+	const float Cooldown = SkillData ? SkillData->Cooldown : 0.0f;
+	UWorld* World = GetWorld();
+
+	if (Cooldown <= 0.0f || !World)
+	{
+		return 0.0f;
+	}
+	const float Remaining = SkillReadyTime - World->GetTimeSeconds();
+	return FMath::Clamp(Remaining / Cooldown, 0.0f, 1.0f);
+}
+
+// 적을 찾아보자
+TArray<AEnemy*> UJobComponent::FindEnemiesInRadius(const FVector& Center, float Radius) const
+{
+	TArray<AEnemy*> Out;
+	if (!OwnerCharacter)
+	{
+		return Out;
+	}
+
+	TArray<FOverlapResult> Overlaps;
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECollisionChannel::ECC_Pawn);
+	//FCollisionQueryParams QueryParams;
+	//QueryParams.AddIgnoredActor()
+
+	GetWorld()->OverlapMultiByObjectType(Overlaps, Center, FQuat::Identity, ObjectParams, FCollisionShape::MakeSphere(Radius));
+
+	for (const FOverlapResult& Result : Overlaps)
+	{
+		AEnemy* Enemy = Cast<AEnemy>(Result.GetActor());
+		if (Enemy && !Enemy->GetIsDead() && !Enemy->IsHidden())
+		{
+			Out.AddUnique(Enemy);
+		}
+	}
+	return Out;
+}
+
+bool UJobComponent::RollAISkill(const float NextTime)
+{
+	const float Now = GetWorld()->GetTimeSeconds();
+
+	// 아직 다음 생각까지 남음
+	if (Now < NextSkillRollTime)
+	{
+		return false;
+	}
+	NextSkillRollTime = Now + NextTime;
+
+	return FMath::FRand() < AISkillChance;
 }

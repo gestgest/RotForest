@@ -137,7 +137,6 @@ void AAllyCharacter::UpdateDecision()
 	const FVector MyLoc = GetActorLocation();
 	FVector AnchorLoc;
 
-	// 
 	if (GetAnchorLocation(AnchorLoc))
 	{
 		// 목표 거리
@@ -192,6 +191,13 @@ void AAllyCharacter::UpdateDecision()
 		CurrentTargetEnemy = FindNearestEnemy(MyLoc);
 	}
 	
+	// 스킬
+	if (CurrentJob && CurrentJob->CanUseSkill() 
+		&& CurrentJob->WantsToUseSkill(CurrentTargetEnemy))
+	{
+		CurrentJob->TryStartSkill();
+	}
+
 	if (!CurrentTargetEnemy)
 	{
 		State = EState::Following;
@@ -291,6 +297,11 @@ void AAllyCharacter::FaceActor(AActor* Target)
 	{
 		SetActorRotation(FRotator(0.0f, Dir.Rotation().Yaw, 0.0f));
 	}
+}
+
+ACombatCharacter* AAllyCharacter::GetSkillTarget() const
+{
+	return CurrentTargetEnemy;
 }
 
 // 멈춰서 공격할 거리 = 직업의 교전 사거리(근접=짧게, 원거리=길게). 직업이 없으면 동료 AttackRange로 폴백.

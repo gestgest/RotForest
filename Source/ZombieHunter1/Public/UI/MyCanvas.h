@@ -65,6 +65,18 @@ protected:
     UPROPERTY(meta = (BindWidget))
     UImage* CommandIcon;
 
+    // [Skill]
+    UPROPERTY(meta = (BindWidget))
+    UButton* SkillButton;
+
+    UPROPERTY(meta = (BindWidget))
+    UImage* Skill_Icon;
+
+    UPROPERTY(meta = (BindWidget))
+    UProgressBar* SkillCooldownBar;
+
+
+
 
     UPROPERTY(meta = (BindWidgetOptional))
     UVerticalBox* Vertical_ItemTextBox;
@@ -142,6 +154,10 @@ public:
 
     // 터치 조이스틱/공격 버튼을 보여줄지
     bool ShouldShowTouchUI() const;
+
+    UButton* GetSkillButton() const { return SkillButton; }
+    void UpdateSkillButton(bool bUnlocked, UTexture2D* Icon, float CooldownRatio);
+
 
 private:
     TWeakObjectPtr<ACombatCharacter> TargetBoss; //추격하는 보스. 화살표 쓰기 위함

@@ -20,15 +20,22 @@ public:
 
 	virtual void OnAttackNotify(FName NotifyName) override;
 	virtual void OnProjectileHit(AEnemy* HitEnemy) override;
+	virtual bool WantsToUseSkill(AEnemy* Target) override;
 
 protected:
+	virtual void UseSkill() override;
+
 	// 대상 아군(플레이어/동료)을 MaxHP까지 회복 
-	void HealCharacter(ACombatCharacter* Target);
+	void HealCharacter(ACombatCharacter* Target, int32 Amount);
 	
 	ACombatCharacter* FindHealTarget() const;
 
+
 	UPROPERTY(EditAnywhere, Category = "Job|Healer")
 	TSubclassOf<AProjectile> ProjectileClass;
+
+	UPROPERTY(EditAnywhere, Category = "Job|Healer")
+	UAnimMontage* HealMontage = nullptr;
 
 	UPROPERTY(EditAnywhere, Category = "Job|Healer", meta = (ClampMin = "0", ClampMax = "1"))
 	float PlayerPriorityBonus = 0.1f;
@@ -55,4 +62,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Job|Healer")
 	float MuzzleHeight = 50.0f;
+private:
+
+	bool bHealApplied = false;
+
+	TArray<ACombatCharacter*> GetAlliesInHealRange() const;
+	void OnHealMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void FinishMassHeal();
+	void ApplyMassHeal();
 };

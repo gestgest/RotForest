@@ -11,6 +11,8 @@
 
 #include "CollisionShape.h"
 
+#include "TimerManager.h"
+
 #include "Kismet/GameplayStatics.h"
 
 #include "DrawDebugHelpers.h" //근접 스윕 범위 디버그
@@ -104,14 +106,14 @@ void UWarriorJob::OnAttackNotify(FName NotifyName)
 	}
 }
 
-bool UWarriorJob::HitEnemy(TSet<AEnemy*> & HitEnemies, const FOverlapResult& Result, const FVector& Origin, const FVector & AimDir)
+bool UWarriorJob::HitEnemy(TSet<AEnemy*>& HitEnemies, const FOverlapResult& Result, const FVector& Origin, const FVector& AimDir)
 {
 	AEnemy* NewHitEnemy = Cast<AEnemy>(Result.GetActor());
-	if (!NewHitEnemy || HitEnemies.Contains(NewHitEnemy))
+	if (!NewHitEnemy || NewHitEnemy->GetIsDead() || NewHitEnemy->IsHidden() || HitEnemies.Contains(NewHitEnemy))
 	{
 		return false;
 	}
-	
+
 	// cos 값 => -1 ~ 1
 	const float CosHalfAngle = FMath::Cos(FMath::DegreesToRadians(SwingAngle * 0.5f));
 
@@ -141,8 +143,83 @@ bool UWarriorJob::HitEnemy(TSet<AEnemy*> & HitEnemies, const FOverlapResult& Res
 	UE_LOG(LogTemp, Log, TEXT("Hit Enemy!"));
 
 	NewHitEnemy->TakeHit(GetDamage(), OwnerCharacter);
-	
+
 	const FVector force = AimDir * KnockbackForce + FVector(0, 0, 100);
 	NewHitEnemy->LaunchCharacter(force, false, false);
 	return true;
+}
+
+void UWarriorJob::UseSkill()
+{
+	bSkillActive = true;
+	SetOwnerMovementLocked(true);
+	OwnerCharacter->SetDamageReduction(ShieldReduction);
+	
+	// 몽타주
+	if (ShieldMontage)
+	{
+		OwnerCharacter->PlayAnimMontage(ShieldMontage);
+
+		if (UAnimInstance* Anim = OwnerCharacter->GetMesh()->GetAnimInstance())
+		{
+			Anim->Montage_SetNextSection(TEXT("Default"), TEXT("Default"), ShieldMontage);
+		}
+	}
+
+	OwnerCharacter->GetWorldTimerManager().SetTimer(ShieldEndTimer, this, &UWarriorJob::StopSkill, ShieldMaxDuration, false);
+}
+
+void UWarriorJob::StopSkill()
+{
+	if (!bSkillActive)
+	{
+		return;
+	}
+
+	if (OwnerCharacter)
+	{
+		OwnerCharacter->GetWorldTimerManager().ClearTimer(ShieldEndTimer);
+		OwnerCharacter->ClearDamageReduction();
+
+		if (!OwnerCharacter->GetIsDead())
+		{
+			if (ShieldMontage)
+			{
+				OwnerCharacter->StopAnimMontage(ShieldMontage);
+			}
+			// 적들 살짝 밀치기
+			ShieldPush();
+		}
+	}
+	SetOwnerMovementLocked(false);
+
+	bSkillActive = false;
+	StartSkillCooldown();
+}
+
+// 밀치기지만 지금은 오히려 어색할 거 같다.
+void UWarriorJob::ShieldPush()
+{
+	//const FVector Origin = OwnerCharacter->GetActorLocation();
+	//for (AEnemy* Enemy : FindEnemiesInRadius(Origin, ShieldPushRadius))
+	//{
+	//	const FVector Dir = (Enemy->GetActorLocation() - Origin).GetSafeNormal2D();
+	//	Enemy->LaunchCharacter(Dir * ShieldPushForce + FVector(0, 0, 150), true, false);
+	//}
+
+	//if (bDebugAttack)
+	//{
+	//	DrawDebugSphere(GetWorld(), Origin, ShieldPushRadius, 16, FColor::Cyan, false, 0.5f);
+	//}
+}
+
+// 스킬을 쓸건지 평타를 쓸건지
+bool UWarriorJob::WantsToUseSkill(AEnemy* Target) 
+{
+	if (!Target || FVector::Dist2D(Target->GetActorLocation(), OwnerCharacter->GetActorLocation()) >= EngageRange)
+	{
+		return false;
+	}
+
+	return RollAISkill(OwnerCharacter->GetAttackInterval());
 }

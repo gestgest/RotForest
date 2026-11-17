@@ -341,6 +341,16 @@ private: //평범한 변수 및 함수
 
 	void ApplyLevelUp();
 
+	UFUNCTION()
+	void OnSkillPressed();
+
+	UFUNCTION()
+	void OnSkillReleased();
+
+	// 스킬 버튼 쿨타임 표시
+	void UpdateSkillUI();
+
+
 	// [Debug]
 	// 속도 체크
 	void DebugWalkSpeed(const FVector2D& Move);
@@ -384,6 +394,8 @@ public: //Property Function
 	//AddCoin
 	UFUNCTION(BlueprintCallable)
 	void AddMoney();
+	
+	virtual ACombatCharacter* GetSkillTarget() const override { return AutoTarget.Get(); }
 
 	// 판매처럼 한 번에 여러 개를 얻을 때
 	void GainMoney(int32 Amount);

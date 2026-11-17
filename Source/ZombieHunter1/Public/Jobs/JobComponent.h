@@ -15,6 +15,7 @@ class AProjectile;
 class USkeletalMesh;
 class UJobComponent;
 class UWeaponDataAsset;
+class USkillDataAsset;
 
 struct FOverlapResult;
 
@@ -85,38 +86,71 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Job")
 	virtual void Attack();
 
-
 	// 매 프레임 호출(플레이어 Tick). 조준과 무관한 패시브 효과(자가 회복 등)용. 기본 구현 없음. 
 	virtual void TickJob(float DeltaTime);
 
 
+	// 공격 몽타주의 Notify에서 호출되는 실제 타격 판정. 기본 구현은 비어 있음. 
+	virtual void OnAttackNotify(FName NotifyName);
+	// 공격 몽타주가 끝까지 재생됐을 때. 기본 구현 없음.
+	virtual void OnAttackMontageEnded() {}
+	virtual void OnProjectileHit(AEnemy* HitEnemy) {}
+
+	// 스킬 시작
+	bool TryStartSkill();
+
 
 protected:
-	// 소유 캐릭터 — 플레이어 또는 동료 AI (InitializeForOwner에서 설정) 
-	UPROPERTY()
-	ACombatCharacter* OwnerCharacter = nullptr;
+	virtual bool HitEnemy(TSet<AEnemy*>& HitEnemies, const FOverlapResult& Result, const FVector& Origin, const FVector& AimDir) { return true; }
+
+	virtual void UseSkill() {}
+
+
+	// 공격 사운드를 소유자 위치에서 재생 
+	void PlayAttackSound();
+
+	AProjectile* SpawnProjectileForward(TSubclassOf<AProjectile> ProjectileClass, float Speed, float MuzzleOffset, float MuzzleHeight);
+
+	//원거리 투사체 생성
+	AProjectile* SpawnProjectile(TSubclassOf<AProjectile> ProjectileClass, const FVector& Dir, float Speed, float MuzzleOffset, float MuzzleHeight);
+
+	
+	void StartSkillCooldown();
+
+	void SetOwnerMovementLocked(bool bLocked);
+
+	TArray<AEnemy*> FindEnemiesInRadius(const FVector& Center, float Radius) const;
+	virtual bool RollAISkill(const float NextTime);
+
+
+	UPROPERTY(EditDefaultsOnly, Category="Job|Skill")
+	USkillDataAsset* SkillData = nullptr;
+
+	// 스킬 상태 => 꾹 누르는 상태
+	bool bSkillActive = false;
+
+	// 쿨타임 끝나는 월드 시각 (초)
+	float SkillReadyTime = 0.0f;
 
 	// 동료 AI 교전 사거리(cm) — 적이 이 거리 안에 들면 멈춰서 공격한다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Combat")
 	float EngageRange = 500.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Job|Combat")
-	float ProjectileRangeMargin = 100.0f;
+	UPROPERTY(EditAnywhere, Category = "Job|Skill")
+	float AISkillChance = 0.5f;
 
+	float NextSkillRollTime = 0.0f;
+
+	
 	//직업의 공격 판정 범위를 화면에 그린다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Debug")
 	bool bDebugAttack = false;
 
 
-	/** 공격 사운드를 소유자 위치에서 재생 */
-	void PlayAttackSound();
-
-	//원거리 투사체 생성
-	AProjectile* SpawnProjectileForward(TSubclassOf<AProjectile> ProjectileClass, float Speed, float MuzzleOffset, float MuzzleHeight);
-
-	virtual bool HitEnemy(TSet<AEnemy*>& HitEnemies, const FOverlapResult& Result, const FVector& Origin, const FVector& AimDir) { return true; }
-
 private:
+	UPROPERTY(EditAnywhere, Category = "Job|Combat")
+	float ProjectileRangeMargin = 100.0f;
+
 
 	// 공격 적중 시 재생할 사운드
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"), Category = "Job|Combat")
@@ -134,16 +168,31 @@ private:
 
 public:
 
-	// 공격 몽타주의 Notify에서 호출되는 실제 타격 판정. 기본 구현은 비어 있음. 
-	virtual void OnAttackNotify(FName NotifyName);
-	// 공격 몽타주가 끝까지 재생됐을 때. 기본 구현 없음.
-	virtual void OnAttackMontageEnded() {}
-	virtual void OnProjectileHit(AEnemy* HitEnemy) {}
-
 	void ApplyLevel(int32 Level);
 
+
+	// 꾹 누르는 스킬 멈추는 기능
+	virtual void StopSkill() {}
+
+	// AI 전용
+	virtual bool WantsToUseSkill(AEnemy* Target)  { return false; }
+
+	bool IsSkillUnlocked() const;
+	bool CanUseSkill() const;
+	bool IsSkillActive() const { return bSkillActive; }
+
+	float GetSkillCooldownRatio() const;
+
+	const USkillDataAsset* GetSkillData() const { return SkillData; }
+
+
+
+
 	////////////////////////////////////////////////////////////////////////
-	//Variables
+	// 소유 캐릭터 — 플레이어 또는 동료 AI (InitializeForOwner에서 설정) 
+	UPROPERTY()
+	ACombatCharacter* OwnerCharacter = nullptr;
+
 	// 직업 이름
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Job")
 	EJobType JobType = EJobType::Warrior;

@@ -33,6 +33,11 @@ ACombatCharacter::ACombatCharacter()
 
 	WeaponSlot = CreateDefaultSubobject<UChildActorComponent>(TEXT("WeaponSlot"));
 	WeaponSlot->SetupAttachment(GetMesh(), DefaultWeaponSocket);
+
+	ShieldMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ShieldMesh"));
+	ShieldMeshComponent->SetupAttachment(GetMesh());
+	ShieldMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	ShieldMeshComponent->SetVisibility(false);
 }
 
 void ACombatCharacter::BeginPlay()
@@ -119,6 +124,8 @@ void ACombatCharacter::CreateJobComponent()
 		CurrentJob->RegisterComponent();
 		CurrentJob->InitializeForOwner(this);
 	}
+
+	RefreshShieldMesh();
 }
 
 //공격
@@ -126,7 +133,7 @@ bool ACombatCharacter::TickAttack(float DeltaTime, bool bWantsToAttack)
 {
 	TimeSinceLastAttack += DeltaTime;
 
-	if (!bWantsToAttack || !CurrentJob || IsDead)
+	if (!bWantsToAttack || !CurrentJob || IsDead || CurrentJob->IsSkillActive())
 	{
 		return false;
 	}
@@ -244,6 +251,37 @@ bool ACombatCharacter::AttachWeaponSlot(FName Socket)
 
 	return true;
 	
+}
+
+void ACombatCharacter::RefreshShieldMesh()
+{
+	if (!ShieldMeshComponent)
+	{
+		return;
+	}
+
+	const bool bWantsShield = ShieldMesh && CurrentJob && CurrentJob->JobType == EJobType::Warrior;
+	if (!bWantsShield)
+	{
+		ShieldMeshComponent->SetVisibility(false);
+		return;
+	}
+
+	USkeletalMeshComponent* MeshComp = GetMesh();
+
+	// 소켓이 없는 경우
+	if (!MeshComp || !MeshComp->DoesSocketExist(ShieldSocketName))
+	{
+		UE_LOG(LogWeapon, Error, TEXT("[%s] 방패 소켓 '%s'이(가) '%s' 스켈레톤에 없다."),
+			*GetName(), *ShieldSocketName.ToString(),
+			*GetNameSafe(MeshComp ? MeshComp->GetSkinnedAsset() : nullptr));
+		return;
+	}
+
+	ShieldMeshComponent->AttachToComponent(MeshComp,
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale, ShieldSocketName);
+	ShieldMeshComponent->SetSkeletalMeshAsset(ShieldMesh);
+	ShieldMeshComponent->SetVisibility(true);
 }
 
 
@@ -396,8 +434,24 @@ UAnimMontage* ACombatCharacter::GetAttackMontageForJob(EJobType JobType) const
 	return DefaultAttackMontage;
 }
 
+void ACombatCharacter::SetDamageReduction(float Reduction)
+{
+	DamageTakenMultiplier = 1.0f - FMath::Clamp(Reduction, 0.0f, 1.0f);
+}
+
+void ACombatCharacter::ClearDamageReduction()
+{
+	DamageTakenMultiplier = 1.0f;
+}
+
 void ACombatCharacter::AddHP(int32 add_hp)
 {
+	// 피해 감소
+	if (add_hp < 0 && DamageTakenMultiplier < 1.0f)
+	{
+		// 피해 1은 받는다.
+		add_hp = FMath::Min(-1, FMath::RoundToInt(add_hp * DamageTakenMultiplier));
+	}
 	SetHP(HP + add_hp);
 }
 

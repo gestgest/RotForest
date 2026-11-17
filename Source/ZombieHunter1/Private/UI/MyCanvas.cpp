@@ -264,3 +264,21 @@ bool UMyCanvas::ShouldShowTouchUI() const
     return false;
 #endif
 }
+
+void UMyCanvas::UpdateSkillButton(bool bUnlocked, UTexture2D * Icon, float CooldownRatio)
+{
+    if (Skill_Icon)
+    {
+        UTexture2D * Wanted = bUnlocked ? Icon : LockImage;
+
+        // 만약 이미지가 다른 경우
+        if (Wanted && Skill_Icon->GetBrush().GetResourceObject() != Wanted)
+        {
+            Skill_Icon->SetBrushFromTexture(Wanted);
+        }
+    }
+    if (SkillCooldownBar)
+    {
+        SkillCooldownBar->SetPercent(bUnlocked ? CooldownRatio : 0.0f);
+    }
+}

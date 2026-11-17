@@ -98,13 +98,15 @@ protected: //핵심 함수의 부품
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	int32 MaxHP = 5;
 
-	/** 죽었는지 여부. HP<=0이면 true. */
+	// 죽었는지 여부. HP<=0이면 true.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	bool IsDead = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float AttackRange = 100.0f;
 
+	// 받은 피해
+	float DamageTakenMultiplier = 1.0f;
 
 	// [공격 시간]
 	// 마지막 공격 이후 누적 시간(TickAttack이 관리).
@@ -135,6 +137,16 @@ protected: //핵심 함수의 부품
 	// 무기 슬롯. 붙는 소켓은 무기 DA의 SocketName
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	UChildActorComponent* WeaponSlot = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	USkeletalMesh* ShieldMesh = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	FName ShieldSocketName = TEXT("socket_shield");
+
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	USkeletalMeshComponent* ShieldMeshComponent = nullptr;
+
 
 
 	/** JobAttackMontages에 없다면 호출되는 디폴트 공격 몽타주.  */
@@ -197,6 +209,9 @@ protected: //핵심 함수의 부품
 	// 무기 슬롯을 Socket에 붙인다
 	bool AttachWeaponSlot(FName Socket);
 
+	// 전사일 때 발동. 방패 들기
+	void RefreshShieldMesh();
+
 	// HP 변화에 따라 IsDead를 바꾸고 OnDeath/OnRevive 훅을 전환 시점에 1회씩 호출. 
 	void SetDead(bool bNewDead);
 	
@@ -227,6 +242,10 @@ public: //Property
 	ETeam TeamType;
 
 
+	void SetDamageReduction(float Reduction);
+	void ClearDamageReduction();
+
+
 
 	//여기서 호출하면 인라인화된다.
 	int32 GetMaxHP() { return MaxHP; }
@@ -255,7 +274,7 @@ public: //Property
 	virtual void AddExp(int32 Amount);
 	
 	virtual void ApplyLevelUp();
-
+	virtual ACombatCharacter* GetSkillTarget() const { return nullptr; }
 
 	
 
