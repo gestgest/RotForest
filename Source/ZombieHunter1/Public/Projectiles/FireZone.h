@@ -25,7 +25,6 @@ protected:
 	void DealDamage();
 
 
-
 	UPROPERTY(VisibleAnywhere)
 	UNiagaraComponent* Effect;
 

@@ -159,6 +159,11 @@ void UWarriorJob::UseSkill()
 	if (ShieldMontage)
 	{
 		OwnerCharacter->PlayAnimMontage(ShieldMontage);
+
+		if (UAnimInstance* Anim = OwnerCharacter->GetMesh()->GetAnimInstance())
+		{
+			Anim->Montage_SetNextSection(TEXT("Default"), TEXT("Default"), ShieldMontage);
+		}
 	}
 
 	OwnerCharacter->GetWorldTimerManager().SetTimer(ShieldEndTimer, this, &UWarriorJob::StopSkill, ShieldMaxDuration, false);
@@ -192,19 +197,20 @@ void UWarriorJob::StopSkill()
 	StartSkillCooldown();
 }
 
+// 밀치기지만 지금은 오히려 어색할 거 같다.
 void UWarriorJob::ShieldPush()
 {
-	const FVector Origin = OwnerCharacter->GetActorLocation();
-	for (AEnemy* Enemy : FindEnemiesInRadius(Origin, ShieldPushRadius))
-	{
-		const FVector Dir = (Enemy->GetActorLocation() - Origin).GetSafeNormal2D();
-		Enemy->LaunchCharacter(Dir * ShieldPushForce + FVector(0, 0, 150), true, false);
-	}
+	//const FVector Origin = OwnerCharacter->GetActorLocation();
+	//for (AEnemy* Enemy : FindEnemiesInRadius(Origin, ShieldPushRadius))
+	//{
+	//	const FVector Dir = (Enemy->GetActorLocation() - Origin).GetSafeNormal2D();
+	//	Enemy->LaunchCharacter(Dir * ShieldPushForce + FVector(0, 0, 150), true, false);
+	//}
 
-	if (bDebugAttack)
-	{
-		DrawDebugSphere(GetWorld(), Origin, ShieldPushRadius, 16, FColor::Cyan, false, 0.5f);
-	}
+	//if (bDebugAttack)
+	//{
+	//	DrawDebugSphere(GetWorld(), Origin, ShieldPushRadius, 16, FColor::Cyan, false, 0.5f);
+	//}
 }
 
 // 스킬을 쓸건지 평타를 쓸건지

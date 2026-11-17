@@ -138,6 +138,16 @@ protected: //핵심 함수의 부품
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
 	UChildActorComponent* WeaponSlot = nullptr;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	USkeletalMesh* ShieldMesh = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	FName ShieldSocketName = TEXT("socket_shield");
+
+	UPROPERTY(EditDefaultsOnly, Category = "Shield")
+	USkeletalMeshComponent* ShieldMeshComponent = nullptr;
+
+
 
 	/** JobAttackMontages에 없다면 호출되는 디폴트 공격 몽타주.  */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
@@ -198,6 +208,9 @@ protected: //핵심 함수의 부품
 
 	// 무기 슬롯을 Socket에 붙인다
 	bool AttachWeaponSlot(FName Socket);
+
+	// 전사일 때 발동. 방패 들기
+	void RefreshShieldMesh();
 
 	// HP 변화에 따라 IsDead를 바꾸고 OnDeath/OnRevive 훅을 전환 시점에 1회씩 호출. 
 	void SetDead(bool bNewDead);

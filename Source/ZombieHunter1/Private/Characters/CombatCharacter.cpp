@@ -33,6 +33,11 @@ ACombatCharacter::ACombatCharacter()
 
 	WeaponSlot = CreateDefaultSubobject<UChildActorComponent>(TEXT("WeaponSlot"));
 	WeaponSlot->SetupAttachment(GetMesh(), DefaultWeaponSocket);
+
+	ShieldMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ShieldMesh"));
+	ShieldMeshComponent->SetupAttachment(GetMesh());
+	ShieldMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	ShieldMeshComponent->SetVisibility(false);
 }
 
 void ACombatCharacter::BeginPlay()
@@ -119,6 +124,8 @@ void ACombatCharacter::CreateJobComponent()
 		CurrentJob->RegisterComponent();
 		CurrentJob->InitializeForOwner(this);
 	}
+
+	RefreshShieldMesh();
 }
 
 //공격
@@ -244,6 +251,37 @@ bool ACombatCharacter::AttachWeaponSlot(FName Socket)
 
 	return true;
 	
+}
+
+void ACombatCharacter::RefreshShieldMesh()
+{
+	if (!ShieldMeshComponent)
+	{
+		return;
+	}
+
+	const bool bWantsShield = ShieldMesh && CurrentJob && CurrentJob->JobType == EJobType::Warrior;
+	if (!bWantsShield)
+	{
+		ShieldMeshComponent->SetVisibility(false);
+		return;
+	}
+
+	USkeletalMeshComponent* MeshComp = GetMesh();
+
+	// 소켓이 없는 경우
+	if (!MeshComp || !MeshComp->DoesSocketExist(ShieldSocketName))
+	{
+		UE_LOG(LogWeapon, Error, TEXT("[%s] 방패 소켓 '%s'이(가) '%s' 스켈레톤에 없다."),
+			*GetName(), *ShieldSocketName.ToString(),
+			*GetNameSafe(MeshComp ? MeshComp->GetSkinnedAsset() : nullptr));
+		return;
+	}
+
+	ShieldMeshComponent->AttachToComponent(MeshComp,
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale, ShieldSocketName);
+	ShieldMeshComponent->SetSkeletalMeshAsset(ShieldMesh);
+	ShieldMeshComponent->SetVisibility(true);
 }
 
 
