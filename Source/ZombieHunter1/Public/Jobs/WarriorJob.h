@@ -56,7 +56,7 @@ private:
 	float ShieldReduction = 0.7f;
 
 	UPROPERTY(EditAnywhere, Category = "Job|Skill")
-	float ShieldMaxDuration = 3.0f;
+	float ShieldMaxDuration = 5.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Job|Skill")
 	float ShieldPushRadius = 300.0f;

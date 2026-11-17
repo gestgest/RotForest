@@ -203,8 +203,10 @@ bool UJobComponent::CanUseSkill() const
 		return false;
 	}
 
+	const bool bCanUseSkill = GetWorld()->GetTimeSeconds() >= SkillReadyTime;
+
 	// 생각해보아요 : 아니 이거 스킬이 여러 개면 안된다.
-	return GetWorld()->GetTimeSeconds() >= SkillReadyTime;
+	return bCanUseSkill;
 }
 
 void UJobComponent::StartSkillCooldown()

@@ -2,6 +2,7 @@
 
 #include "Jobs/ArcherJob.h"
 
+#include "Jobs/SkillDataAsset.h"
 #include "Characters/Enemy.h"
 
 #include "Projectiles/Projectile.h"
@@ -97,7 +98,7 @@ void UArcherJob::FireQuickShot()
 
     if (AProjectile* Arrow = SpawnProjectile(ProjectileClass, Dir, ProjectileSpeed, MuzzleOffset, MuzzleHeight))
     {
-        Arrow->Damage = FMath::Max(1, GetDamage()); // 이거는 데미지 좀 고민해봄
+        Arrow->Damage = FMath::Max(1, FMath::RoundToInt(GetDamage() * SkillData->DamageRatio));
         PlayAttackSound(); // 근데 이거 스킬 사운드 넣어야하는 거 아닌가? => 근데 어차피 지금 이 구조자체는 마음에 듬
     }
 }

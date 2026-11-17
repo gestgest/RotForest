@@ -34,6 +34,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Job|Healer")
 	TSubclassOf<AProjectile> ProjectileClass;
 
+	UPROPERTY(EditAnywhere, Category = "Job|Healer")
+	UAnimMontage* HealMontage;
+
 	UPROPERTY(EditAnywhere, Category = "Job|Healer", meta = (ClampMin = "0", ClampMax = "1"))
 	float PlayerPriorityBonus = 0.1f;
 

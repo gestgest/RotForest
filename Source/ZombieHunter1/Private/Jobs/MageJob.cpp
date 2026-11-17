@@ -1,6 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Jobs/MageJob.h"
+#include "Jobs/SkillDataAsset.h"
 #include "Characters/Enemy.h"
 
 #include "Projectiles/FireZone.h"
@@ -62,7 +63,7 @@ void UMageJob::UseSkill()
 	if (AFireZone* Zone = GetWorld()->SpawnActor<AFireZone>(FireZoneClass, Loc, FRotator::ZeroRotator, Params))
 	{
 		// 화염 장판 init
-		Zone->Init(GetDamage(), OwnerCharacter);
+		Zone->Init(FMath::RoundToInt(GetDamage() * SkillData->DamageRatio), OwnerCharacter);
 	}
 }
 

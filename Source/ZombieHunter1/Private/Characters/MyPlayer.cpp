@@ -964,6 +964,23 @@ void AMyPlayer::OnSkillPressed()
             FText::FromString(TEXT("LV.{0}에 해금됩니다.")),
             FText::AsNumber(Data->UnlockLevel)),
             ENotifyType::Blocked);
+        return;
+    }
+
+    // 스킬 사용 중이면 아무것도 안 함
+    if (CurrentJob->IsSkillActive())
+    {
+        return;
+    }
+
+    // 쿨타임이면
+    if (!CurrentJob->CanUseSkill())
+    {
+        ShowNotification(FText::Format(
+            FText::FromString(TEXT("{0}을(를) 아직 사용할 수 없습니다.")),
+            Data->SkillName),
+            ENotifyType::Blocked);
+        return;
     }
 
     CurrentJob->TryStartSkill();

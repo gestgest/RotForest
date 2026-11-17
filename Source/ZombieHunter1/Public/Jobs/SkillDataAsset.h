@@ -30,6 +30,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Skill")
 	int32 UnlockLevel;
 
+	// 나중에 배열로 바꿀거임
+	UPROPERTY(EditDefaultsOnly, Category = "Skill")
+	float DamageRatio;
+
+
 	UPROPERTY(EditDefaultsOnly, Category = "Skill")
 	float Cooldown;
 };

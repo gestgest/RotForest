@@ -1,6 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Jobs/HealerJob.h"
+#include "Jobs/SkillDataAsset.h"
 
 #include "Characters/CombatCharacter.h"
 #include "Characters/Companion.h"
@@ -64,9 +65,14 @@ void UHealerJob::OnProjectileHit(AEnemy* HitEnemy)
 
 void UHealerJob::UseSkill()
 {
+	if (HealMontage)
+	{
+		OwnerCharacter->PlayAnimMontage(HealMontage);
+	}
+
 	for (ACombatCharacter* Ally : GetAlliesInHealRange())
 	{
-		HealCharacter(Ally, GetDamage());
+		HealCharacter(Ally, FMath::RoundToInt(GetDamage() * SkillData->DamageRatio));
 	}
 }
 
