@@ -8,6 +8,7 @@
 
 class UBoxComponent;
 class UWeaponDataAsset;
+class URotatingMovementComponent;
 
 // 바닥에 떨어져 있는 무기 한 자루. 플레이어가 밟으면 장착되고 자신은 사라진다.
 UCLASS()
