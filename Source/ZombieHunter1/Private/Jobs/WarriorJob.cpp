@@ -109,7 +109,7 @@ void UWarriorJob::OnAttackNotify(FName NotifyName)
 bool UWarriorJob::HitEnemy(TSet<AEnemy*>& HitEnemies, const FOverlapResult& Result, const FVector& Origin, const FVector& AimDir)
 {
 	AEnemy* NewHitEnemy = Cast<AEnemy>(Result.GetActor());
-	if (!NewHitEnemy || HitEnemies.Contains(NewHitEnemy))
+	if (!NewHitEnemy || NewHitEnemy->GetIsDead() || NewHitEnemy->IsHidden() || HitEnemies.Contains(NewHitEnemy))
 	{
 		return false;
 	}

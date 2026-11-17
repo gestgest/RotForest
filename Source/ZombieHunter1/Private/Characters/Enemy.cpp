@@ -371,6 +371,10 @@ void AEnemy::ResetForSpawn()
 
 void AEnemy::TakeHit(int32 Amount, ACombatCharacter* Attacker)
 {
+	if (IsDead)
+	{
+		return;
+	}
 	LastAttacker = Attacker;
 	AddHP(-Amount);
 }

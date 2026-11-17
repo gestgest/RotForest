@@ -96,8 +96,6 @@ void AProjectile::Tick(float DeltaSeconds)
 
 
 
-
-
 void AProjectile::SetInitialSpeed(float Speed)
 {
 	if (ProjectileMovement)
@@ -148,7 +146,7 @@ void AProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* O
 		for (const FOverlapResult& O : Overlaps)
 		{
 			AEnemy* Enemy = Cast<AEnemy>(O.GetActor());
-			if (Enemy && !Damaged.Contains(Enemy))
+			if (Enemy && !Enemy->GetIsDead() && !Damaged.Contains(Enemy))
 			{
 				Damaged.Add(Enemy);
 				ApplyHit(Enemy);
