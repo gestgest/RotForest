@@ -22,22 +22,13 @@ class UInventoryComponent;
 class UMaterialInterface;
 class UNiagaraSystem;
 class USoundBase;
+class UAutoAimComponent;
 class UMaterialParameterCollection;
 
 UCLASS()
 class ZOMBIEHUNTER1_API AMyPlayer : public ACombatCharacter
 {
 	GENERATED_BODY()
-
-	/*
-		여담으로 get set같은 프로퍼티와 부품 함수라면 밑 public에 넣어라.
-		1. 핵심 메인 함수
-		2. 핵심 메인 변수
-		3. 부품 변수
-		4. 부품 함수 => 프로퍼티
-
-		private도 변수는 앞에
-	*/
 
 public:
 	AMyPlayer();
@@ -130,12 +121,7 @@ private: //평범한 변수 및 함수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Movement", meta = (AllowPrivateAccess = "true"))
 	float AttackFacingHoldFallback = 0.5f;
 
-	// 타겟 메시에 덮을 림 라이트
-	UPROPERTY(EditAnywhere, Category = "Player|AutoAim")
-	UMaterialInterface* TargetHighlightMaterial = nullptr;
 
-	// 자동조준 타겟
-	TWeakObjectPtr<ACombatCharacter> AutoTarget;
 
 	// 공격 중 남은 조준 유지 시간(초). 0보다 크면 이동 방향으로 몸을 되돌리지 않는다.
 	float AttackFacingHold = 0.0f;
@@ -226,11 +212,13 @@ private: //평범한 변수 및 함수
 	UPROPERTY()
 	UAudioComponent* CommandAudio = nullptr;
 
-
-	// [가방]
+	// [컴포넌트]
 	// 아무도 못 쓰는 무기를 보관. 판매 발판(AItemSellZone)이 전량 비운다.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
 	UInventoryComponent* Bag;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Auto", meta = (AllowPrivateAccess = "true"))
+	UAutoAimComponent* AutoAimComponent;
 
 	// [레벨업]
 	UPROPERTY(EditAnywhere, Category = "Player|Levelup")
@@ -268,10 +256,6 @@ private: //평범한 변수 및 함수
 
 	// 매 프레임 속도 방향과 액터 회전으로 LegYawOffset을 갱신한다
 	void UpdateLegYawOffset(float DeltaTime);
-
-	void UpdateAutoTarget();
-	void SetHighlightedTarget(ACombatCharacter* NewTarget);
-
 
 
 
@@ -365,6 +349,7 @@ public: //Property Function
 
 	// 레벨업 처리와 HUD 갱신까지 담당.
 	virtual void AddExp(int32 Amount) override;
+	virtual ACombatCharacter* GetSkillTarget() const override;
 
 	//차감 성공하면 true
 	bool TrySpendMoney(int32 Amount);
@@ -395,7 +380,6 @@ public: //Property Function
 	UFUNCTION(BlueprintCallable)
 	void AddMoney();
 	
-	virtual ACombatCharacter* GetSkillTarget() const override { return AutoTarget.Get(); }
 
 	// 판매처럼 한 번에 여러 개를 얻을 때
 	void GainMoney(int32 Amount);

@@ -4,7 +4,6 @@
 #include "Characters/MyPlayer.h"
 #include "Characters/Enemy.h"
 #include "Characters/Companion.h"
-#include "Characters/CombatRegistrySubsystem.h"
 
 #include "Blueprint/UserWidget.h"
 
@@ -13,7 +12,9 @@
 #include "Components/SlateWrapperTypes.h" //ESlateVisibility
 #include "Components/SkeletalMeshComponent.h" //무기 컴포넌트 메시 교체
 #include "Components/ChildActorComponent.h" //무기 ChildActor(Weapon_BP)
+
 #include "Component/InventoryComponent.h" //아이템 가방
+#include "Component/AutoAimComponent.h"
 
 
 #include "InputCoreTypes.h"            //EKeys
@@ -72,7 +73,8 @@ AMyPlayer::AMyPlayer()
 	// 동료 파티 — 섭외/명단/장비 배분은 전부 이쪽이 맡는다.
 	Party = CreateDefaultSubobject<UPartyComponent>(TEXT("Party"));
 
-	Bag = CreateDefaultSubobject<UInventoryComponent>(TEXT("Bag"));
+    Bag = CreateDefaultSubobject<UInventoryComponent>(TEXT("Bag"));
+    AutoAimComponent = CreateDefaultSubobject<UAutoAimComponent>(TEXT("AutoAim"));
 
 	// 기본 직업: 전사. 에디터(BP)에서 DefaultJobClass를 바꾸면 다른 직업으로 시작한다.
 	DefaultJobClass = UWarriorJob::StaticClass();
@@ -146,8 +148,8 @@ void AMyPlayer::Tick(float DeltaTime)
             return (AB.SizeSquared() >= C.SizeSquared()) ? AB : C;
         };
     const FVector2D Move = Largest(TouchMove, GamepadMove, MouseMove);
-
-    UpdateAutoTarget();
+    
+    AutoAimComponent->UpdateAutoTarget(GetAutoTargetRange());
     const FVector2D ButtonAim = GetAutoAimInput(Move);
     const FVector2D Aim = ButtonAim.IsZero() ? Largest(TouchAim, GamepadAim, MouseAim) : ButtonAim;
 
@@ -252,7 +254,7 @@ void AMyPlayer::OnDeath()
         PlayerControllerRef->SetInputMode(FInputModeUIOnly());
     }
     bAttackButtonHeld = false;
-    SetHighlightedTarget(nullptr);
+    AutoAimComponent->ClearTarget();
 }
 
 // 죽음 → 부활(ReStart의 SetHP) 전환 시 베이스가 1회 호출. 죽을 때 껐던 것을 되돌린다.
@@ -572,59 +574,6 @@ void AMyPlayer::UpdateLegYawOffset(float DeltaTime)
     LegYawOffset = FMath::FInterpTo(LegYawOffset, TargetOffset, DeltaTime, LegYawInterpSpeed);
 }
 
-// 자동으로 해서 림라이팅
-void AMyPlayer::UpdateAutoTarget()
-{
-    UCombatRegistrySubsystem* Registry = GetWorld()->GetSubsystem<UCombatRegistrySubsystem>();
-
-    // 사거리만큼 적 탐색
-    ACombatCharacter* Nearest = Registry ? Registry->FindNearestOfEnemy(GetActorLocation(), ETeam::Enemy, GetAutoTargetRange()) : nullptr;
-
-    SetHighlightedTarget(Nearest);
-}
-
-// 모듈형 적(머리·투구·갑옷...)의 모든 스켈레탈 메시에 오버레이를 건다
-static void SetOverlayOnAllMeshes(AActor* Actor, UMaterialInterface* Material)
-{
-    TArray<USkeletalMeshComponent*> Meshes;
-
-    // 모든 스켈레톤 매시 가져와라
-    Actor->GetComponents<USkeletalMeshComponent>(Meshes);
-
-    for (USkeletalMeshComponent* Mesh : Meshes)
-    {
-        Mesh->SetOverlayMaterial(Material);
-    }
-}
-
-
-void AMyPlayer::SetHighlightedTarget(ACombatCharacter * NewTarget)
-{
-    // 기존의 타겟과 같은 경우
-    if (AutoTarget.Get() == NewTarget)
-    {
-        return;
-    }
-
-    // 이전의 머터리얼 제거
-    if (ACombatCharacter* Old = AutoTarget.Get())
-    {
-        // 오버레이만 지움
-        SetOverlayOnAllMeshes(Old, nullptr);
-    }
-
-    AutoTarget = NewTarget;
-
-    // 림라이트 적용
-    if (NewTarget && TargetHighlightMaterial)
-    {
-        SetOverlayOnAllMeshes(NewTarget, TargetHighlightMaterial);
-    }
-}
-
-
-
-
 
 
 
@@ -763,6 +712,12 @@ void AMyPlayer::AddExp(int32 Amount)
     Super::AddExp(Amount);
     UpdateExpUI();
 }
+
+ACombatCharacter* AMyPlayer::GetSkillTarget() const
+{
+    return AutoAimComponent->GetTarget();
+}
+
 
 int32 AMyPlayer::GetExpToNextLevel() const
 {
@@ -1019,18 +974,6 @@ float AMyPlayer::GetAttackMontageLength()
     return Montage->GetPlayLength();
 }
 
-
-// 공격 사거리 반환
-float AMyPlayer::GetAutoTargetRange() const
-{
-    if (!CurrentJob || CurrentJob->GetEngageRange() <= 0.0f)
-    {
-        return AttackRange;
-    }
-    return CurrentJob->GetEngageRange();
-}
-
-
 // 
 FVector2D AMyPlayer::GetAutoAimInput(const FVector2D & Move)
 {
@@ -1043,7 +986,7 @@ FVector2D AMyPlayer::GetAutoAimInput(const FVector2D & Move)
     FVector AimDir = GetActorForwardVector();
 
     // 범위안
-    if (ACombatCharacter * Target = AutoTarget.Get())
+    if (ACombatCharacter * Target = AutoAimComponent->GetTarget())
     {
         AimDir = Target->GetActorLocation() - GetActorLocation();
         SetDesiredAimPoint(Target->GetActorLocation()); // 설정
@@ -1119,3 +1062,13 @@ void AMyPlayer::GiveKillExp(int32 Amount, ACombatCharacter * Killer)
 
 }
 
+
+// 공격 사거리 반환
+float AMyPlayer::GetAutoTargetRange() const
+{
+    if (!CurrentJob || CurrentJob->GetEngageRange() <= 0.0f)
+    {
+        return AttackRange;
+    }
+    return CurrentJob->GetEngageRange();
+}
