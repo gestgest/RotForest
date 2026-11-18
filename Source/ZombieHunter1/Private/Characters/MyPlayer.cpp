@@ -4,7 +4,6 @@
 #include "Characters/MyPlayer.h"
 #include "Characters/Enemy.h"
 #include "Characters/Companion.h"
-#include "Characters/CombatRegistrySubsystem.h"
 
 #include "Blueprint/UserWidget.h"
 
@@ -13,7 +12,10 @@
 #include "Components/SlateWrapperTypes.h" //ESlateVisibility
 #include "Components/SkeletalMeshComponent.h" //무기 컴포넌트 메시 교체
 #include "Components/ChildActorComponent.h" //무기 ChildActor(Weapon_BP)
+
 #include "Component/InventoryComponent.h" //아이템 가방
+#include "Component/AutoAimComponent.h"
+#include "Component/TopDownInputComponent.h"
 
 
 #include "InputCoreTypes.h"            //EKeys
@@ -37,8 +39,6 @@
 #include "Camera/CameraComponent.h"
 
 #include "NavigationInvokerComponent.h"
-
-#include "UI/VirtualJoystick.h"
 
 #include "Engine/SkeletalMesh.h"
 
@@ -69,10 +69,11 @@ AMyPlayer::AMyPlayer()
 	NavInvoker = CreateDefaultSubobject<UNavigationInvokerComponent>(TEXT("NavInvoker"));
 	NavInvoker->SetGenerationRadii(7000.0f, 9000.0f);
 
-	// 동료 파티 — 섭외/명단/장비 배분은 전부 이쪽이 맡는다.
+	// 컴포넌트 설정
 	Party = CreateDefaultSubobject<UPartyComponent>(TEXT("Party"));
-
-	Bag = CreateDefaultSubobject<UInventoryComponent>(TEXT("Bag"));
+    Bag = CreateDefaultSubobject<UInventoryComponent>(TEXT("Bag"));
+    AutoAimComponent = CreateDefaultSubobject<UAutoAimComponent>(TEXT("AutoAim"));
+    TopDownInput = CreateDefaultSubobject<UTopDownInputComponent>(TEXT("TopDownInput"));
 
 	// 기본 직업: 전사. 에디터(BP)에서 DefaultJobClass를 바꾸면 다른 직업으로 시작한다.
 	DefaultJobClass = UWarriorJob::StaticClass();
@@ -132,24 +133,16 @@ void AMyPlayer::Tick(float DeltaTime)
         return;
     }
 
-    // 마우스를 기존 스틱 포맷으로 변환: just like 로스트아크
-    // 커서 방향 (dx,dy) → FVector2D(Y=dx, X=dy).
-    FVector2D MouseMove = FVector2D::ZeroVector;
-    FVector2D MouseAim = FVector2D::ZeroVector;
+    const FTopDownInput Input = TopDownInput->Gather();
+    if (Input.bHasCursorAimPoint)
+    {
+        SetDesiredAimPoint(Input.CursorAimPoint);
+    }
+    const FVector2D Move = Input.Move;
 
-    MouseInput(MouseMove, MouseAim);
-
-    // 게임패드 / 터치 / 마우스 중 가장 크게 입력된 쪽을 사용 (전부 지원) => 람다임
-    auto Largest = [](const FVector2D& A, const FVector2D& B, const FVector2D& C) -> FVector2D
-        {
-            const FVector2D& AB = (A.SizeSquared() >= B.SizeSquared()) ? A : B;
-            return (AB.SizeSquared() >= C.SizeSquared()) ? AB : C;
-        };
-    const FVector2D Move = Largest(TouchMove, GamepadMove, MouseMove);
-
-    UpdateAutoTarget();
-    const FVector2D ButtonAim = GetAutoAimInput(Move);
-    const FVector2D Aim = ButtonAim.IsZero() ? Largest(TouchAim, GamepadAim, MouseAim) : ButtonAim;
+    AutoAimComponent->UpdateAutoTarget(GetAutoTargetRange());
+    const FVector2D ButtonAim = GetAutoAimInput(Move, Input.bAttackHeld);
+    const FVector2D Aim = ButtonAim.IsZero() ? Input.Aim : ButtonAim;
 
     DebugWalkSpeed(Move);
 
@@ -176,18 +169,7 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-    // 게임패드: 별도 에셋 없이 아날로그 스틱 키에 직접 바인딩
-    // (왼쪽 스틱 = 이동, 오른쪽 스틱 = 조준+공격)
-    PlayerInputComponent->BindAxisKey(EKeys::Gamepad_LeftX, this, &AMyPlayer::OnMoveX);
-    PlayerInputComponent->BindAxisKey(EKeys::Gamepad_LeftY, this, &AMyPlayer::OnMoveY);
-    PlayerInputComponent->BindAxisKey(EKeys::Gamepad_RightX, this, &AMyPlayer::OnAimX);
-    PlayerInputComponent->BindAxisKey(EKeys::Gamepad_RightY, this, &AMyPlayer::OnAimY);
-
-    // 마우스(로스트아크식): 좌클릭 = 공격, 우클릭 = 이동. 누르는 동안 Tick에서 처리.
-    PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &AMyPlayer::OnLeftMousePressed);
-    PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Released, this, &AMyPlayer::OnLeftMouseReleased);
-    PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &AMyPlayer::OnRightMousePressed);
-    PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Released, this, &AMyPlayer::OnRightMouseReleased);
+    TopDownInput->BindKeys(PlayerInputComponent);
 
     // 뒤로가기 키
     FInputKeyBinding& BackBinding = PlayerInputComponent->BindKey(
@@ -211,8 +193,6 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
         PlayerInputComponent->KeyBindings.Add(ExpBinding);
         PlayerInputComponent->BindKey(EKeys::Q, IE_Pressed, this, &AMyPlayer::OnSkillPressed);
         PlayerInputComponent->BindKey(EKeys::Q, IE_Released, this, &AMyPlayer::OnSkillReleased);
-        //PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::OnAttackButtonPressed);
-        //PlayerInputComponent->BindKey(EKeys::C, IE_Released, this, &AMyPlayer::OnAttackButtonReleased);
     }
 }
 
@@ -251,8 +231,8 @@ void AMyPlayer::OnDeath()
         PlayerControllerRef->bShowMouseCursor = true;
         PlayerControllerRef->SetInputMode(FInputModeUIOnly());
     }
-    bAttackButtonHeld = false;
-    SetHighlightedTarget(nullptr);
+    TopDownInput->ReleaseAll();
+    AutoAimComponent->ClearTarget();
 }
 
 // 죽음 → 부활(ReStart의 SetHP) 전환 시 베이스가 1회 호출. 죽을 때 껐던 것을 되돌린다.
@@ -397,112 +377,9 @@ void AMyPlayer::SetupJob()
 
 
 
-
-
-
-
-//마우스의 이동, 공격을 담당
-void AMyPlayer::MouseInput(FVector2D & MouseMove, FVector2D & MouseAim)
-{
-    if (!bRightMouseHeld && !bLeftMouseHeld)
-        return;
-
-    // 이번 프레임의 커서 방향을 구한다.
-    FVector MoveDir = FVector::ZeroVector;
-    FVector Cursor;
-
-    //커서 지면에 닿았는지 여부 => Cursor에 클릭한 값 넣기
-    if (GetCursorGroundLocation(Cursor)) 
-    {
-        LastCursorPoint = Cursor;
-        bHasLastCursorPoint = true;
-
-        FVector ToCursor = Cursor - GetActorLocation();
-        ToCursor.Z = 0.0f;
-
-        // [이동]
-        // CursorStopRadius는 너무 가까우면 player가 진자운동하는 버그 해결용
-        if (ToCursor.SizeSquared() > CursorStopRadius * CursorStopRadius && ToCursor.Normalize())
-        {
-            LastCursorDir = ToCursor; // 유효 방향 캐시
-            MoveDir = ToCursor;
-        }
-
-
-        // 마우스 공격 에임 설정
-        if (!MoveDir.IsNearlyZero() && bLeftMouseHeld)
-        {
-            const FVector2D Dir(MoveDir.Y, MoveDir.X);
-            MouseAim = Dir;
-        }
-    }
-    else //커서가 밖인 경우
-    {
-        // 직전 방향을 유지해 미세 끊김(속도 손실)을 막는다.
-        MoveDir = LastCursorDir;
-    }
-
-    // [이동]
-    if (!MoveDir.IsNearlyZero() && bRightMouseHeld)
-    {
-        // 월드 방향 (dx,dy) → 기존 스틱 포맷 FVector2D(Y=dx, X=dy)
-        MouseMove = FVector2D(MoveDir.Y, MoveDir.X);
-    }
-
-    // [조준] : MouseAim 설정 및 CursorPoint 비활성화
-    if (bLeftMouseHeld && bHasLastCursorPoint) //양심상 커서 위치는 있어야지.
-    {
-        FVector ToAim = LastCursorPoint - GetActorLocation();
-        ToAim.Z = 0;
-
-        //정규화
-        ToAim.Normalize();
-
-        MouseAim = FVector2D(ToAim.Y, ToAim.X);
-        SetDesiredAimPoint(LastCursorPoint);
-    }
-}
-
-//우클릭시 커서 위치 땅 값을 반환하고 땅이 있는지
-bool AMyPlayer::GetCursorGroundLocation(FVector& OutLocation) const
-{
-    APlayerController* PC = Cast<APlayerController>(GetController());
-    if (!PC)
-    {
-        return false;
-    }
-
-    // 화면의 마우스 위치를 월드 광선(원점+방향)으로 역투영
-    FVector WorldOrigin, WorldDirection;
-
-    // 커서가 화면 밖이거나 마우스 위치 없음
-    if (!PC->DeprojectMousePositionToWorld(WorldOrigin, WorldDirection))
-    {
-        return false; 
-    }
-
-    // 플레이어 발 높이의 수평면(z = 플레이어 Z)과 카메라 광선의 교점을 구함.
-    // 밟을 수 있는 지형인지.
-    if (FMath::IsNearlyZero(WorldDirection.Z))
-    {
-        return false; // 광선이 수평이면 평면과 안 만남
-    }
-    const float T = (GetActorLocation().Z - WorldOrigin.Z) / WorldDirection.Z;
-
-    // 평면이 카메라 뒤쪽
-    if (T < 0.0f)
-    {
-        return false; 
-    }
-    OutLocation = WorldOrigin + WorldDirection * T; //out cursor position
-    return true;
-}
-
-
-
 void AMyPlayer::UpdateMovement(float DeltaTime, const FVector2D& Move)
 {
-    if (Move.SizeSquared() <= InputDeadzone * InputDeadzone)
+    if (Move.IsZero())
     {
         return;
     }
@@ -514,7 +391,7 @@ void AMyPlayer::UpdateMovement(float DeltaTime, const FVector2D& Move)
 
 void AMyPlayer::UpdateAimAndAttack(float DeltaTime, const FVector2D& Aim, const FVector2D& Move)
 {
-    const bool bAiming = Aim.SizeSquared() > InputDeadzone * InputDeadzone;
+    const bool bAiming = !Aim.IsZero();
 
     AttackFacingHold = FMath::Max(0.0f, AttackFacingHold - DeltaTime);
 
@@ -532,7 +409,7 @@ void AMyPlayer::UpdateAimAndAttack(float DeltaTime, const FVector2D& Aim, const 
         SetActorRotation(FRotator(0.0f, GetAttackAimDir().Rotation().Yaw, 0.0f));
     }
     // 공격이 끝나면
-    else if (Move.SizeSquared() > InputDeadzone * InputDeadzone)
+    else if (!Move.IsZero())
     {
         // 이동 방향으로 되돌리기
         const FVector MoveDir(Move.Y, Move.X, 0.0f);
@@ -571,83 +448,6 @@ void AMyPlayer::UpdateLegYawOffset(float DeltaTime)
 
     LegYawOffset = FMath::FInterpTo(LegYawOffset, TargetOffset, DeltaTime, LegYawInterpSpeed);
 }
-
-// 자동으로 해서 림라이팅
-void AMyPlayer::UpdateAutoTarget()
-{
-    UCombatRegistrySubsystem* Registry = GetWorld()->GetSubsystem<UCombatRegistrySubsystem>();
-
-    // 사거리만큼 적 탐색
-    ACombatCharacter* Nearest = Registry ? Registry->FindNearestOfEnemy(GetActorLocation(), ETeam::Enemy, GetAutoTargetRange()) : nullptr;
-
-    SetHighlightedTarget(Nearest);
-}
-
-// 모듈형 적(머리·투구·갑옷...)의 모든 스켈레탈 메시에 오버레이를 건다
-static void SetOverlayOnAllMeshes(AActor* Actor, UMaterialInterface* Material)
-{
-    TArray<USkeletalMeshComponent*> Meshes;
-
-    // 모든 스켈레톤 매시 가져와라
-    Actor->GetComponents<USkeletalMeshComponent>(Meshes);
-
-    for (USkeletalMeshComponent* Mesh : Meshes)
-    {
-        Mesh->SetOverlayMaterial(Material);
-    }
-}
-
-
-void AMyPlayer::SetHighlightedTarget(ACombatCharacter * NewTarget)
-{
-    // 기존의 타겟과 같은 경우
-    if (AutoTarget.Get() == NewTarget)
-    {
-        return;
-    }
-
-    // 이전의 머터리얼 제거
-    if (ACombatCharacter* Old = AutoTarget.Get())
-    {
-        // 오버레이만 지움
-        SetOverlayOnAllMeshes(Old, nullptr);
-    }
-
-    AutoTarget = NewTarget;
-
-    // 림라이트 적용
-    if (NewTarget && TargetHighlightMaterial)
-    {
-        SetOverlayOnAllMeshes(NewTarget, TargetHighlightMaterial);
-    }
-}
-
-
-
-
-
-
-
-void AMyPlayer::SetMoveInput(FVector2D Value) { TouchMove = Value; }
-void AMyPlayer::SetAimInput(FVector2D Value) { TouchAim = Value; }
-
-void AMyPlayer::OnMoveJoystickMoved(FVector2D Value) { SetMoveInput(Value); }
-void AMyPlayer::OnAimJoystickMoved(FVector2D Value) { SetAimInput(Value); }
-
-void AMyPlayer::OnMoveX(float Value) { GamepadMove.X = Value; }
-void AMyPlayer::OnMoveY(float Value) { GamepadMove.Y = Value; }
-void AMyPlayer::OnAimX(float Value) { GamepadAim.X = Value; }
-void AMyPlayer::OnAimY(float Value) { GamepadAim.Y = Value; }
-
-// 마우스 버튼: 누르고 있는 동안만 작동(로스트아크식 조작)
-void AMyPlayer::OnLeftMousePressed() { bLeftMouseHeld = true; }
-void AMyPlayer::OnLeftMouseReleased() { bLeftMouseHeld = false; }
-void AMyPlayer::OnRightMousePressed() { bRightMouseHeld = true; }
-void AMyPlayer::OnRightMouseReleased() { bRightMouseHeld = false; }
-
-// 버튼
-void AMyPlayer::OnAttackButtonPressed() { bAttackButtonHeld = true; }
-void AMyPlayer::OnAttackButtonReleased() { bAttackButtonHeld = false; }
 
 // 파티의 커맨드를 바꾸자
 void AMyPlayer::ToggleCompanionCommand()
@@ -764,6 +564,12 @@ void AMyPlayer::AddExp(int32 Amount)
     UpdateExpUI();
 }
 
+ACombatCharacter* AMyPlayer::GetSkillTarget() const
+{
+    return AutoAimComponent->GetTarget();
+}
+
+
 int32 AMyPlayer::GetExpToNextLevel() const
 {
     return ExpBase + (Level - 1) * ExpGrowth;
@@ -865,15 +671,6 @@ void AMyPlayer::ReStart()
     }
 }
 
-//모바일용
-void AMyPlayer::MoveTopDown(FVector2D Value)
-{
-    // 카메라가 yaw 0으로 고정(월드 +X를 바라봄)이므로 컨트롤러 회전을 무시하고 월드축으로 이동.
-    // UpdateMovement(게임패드)와 동일한 매핑: 스틱/키 위(+Y) = 화면 위(+X), 오른쪽(+X) = +Y
-    AddMovementInput(FVector(1.0f, 0.0f, 0.0f), Value.Y);
-    AddMovementInput(FVector(0.0f, 1.0f, 0.0f), Value.X);
-}
-
 // HandleAttackNotify는 베이스(ACombatCharacter)의 기본 구현이 그대로 처리한다
 // (현재 직업의 OnAttackNotify로 전달) — 플레이어만의 동작이 아니라 동료와 동일해서 올렸다.
 
@@ -881,20 +678,10 @@ void AMyPlayer::SetCanvasWidget(UMyCanvas* CW)
 {
     CanvasWidget = CW;
 
-    // 캔버스에 배치된 조이스틱의 입력을 내 콜백에 바인딩.
-    // (플레이어가 캔버스를 들고 있으므로 캔버스가 거꾸로 플레이어를 찾을 필요 없음)
     if (CanvasWidget)
     {
-        // 조이스틱 표시 여부는 UMyCanvas::NativeConstruct가 정한다. 여기선 입력만 연결.
-        if (UVirtualJoystick* MoveStick = CanvasWidget->GetMoveJoystick())
-        {
-            MoveStick->OnJoystickMoved.AddUniqueDynamic(this, &AMyPlayer::OnMoveJoystickMoved);
-        }
-        if (UButton* AttackBtn = CanvasWidget->GetAttackButton())
-        {
-            AttackBtn->OnPressed.AddUniqueDynamic(this, &AMyPlayer::OnAttackButtonPressed);
-            AttackBtn->OnReleased.AddUniqueDynamic(this, &AMyPlayer::OnAttackButtonReleased);
-        }
+        TopDownInput->BindCanvas(CanvasWidget);
+
         if (UButton* CommandBtn = CanvasWidget->GetCommandButton())
         {
             CommandBtn->OnPressed.AddUniqueDynamic(this, &AMyPlayer::ToggleCompanionCommand);
@@ -1019,23 +806,11 @@ float AMyPlayer::GetAttackMontageLength()
     return Montage->GetPlayLength();
 }
 
-
-// 공격 사거리 반환
-float AMyPlayer::GetAutoTargetRange() const
-{
-    if (!CurrentJob || CurrentJob->GetEngageRange() <= 0.0f)
-    {
-        return AttackRange;
-    }
-    return CurrentJob->GetEngageRange();
-}
-
-
 // 
-FVector2D AMyPlayer::GetAutoAimInput(const FVector2D & Move)
+FVector2D AMyPlayer::GetAutoAimInput(const FVector2D & Move, bool bAttackHeld)
 {
     // 공격 버튼을 누르지 않는다면
-    if (!bAttackButtonHeld)
+    if (!bAttackHeld)
     {
         return FVector2D::ZeroVector;
     }
@@ -1043,7 +818,7 @@ FVector2D AMyPlayer::GetAutoAimInput(const FVector2D & Move)
     FVector AimDir = GetActorForwardVector();
 
     // 범위안
-    if (ACombatCharacter * Target = AutoTarget.Get())
+    if (ACombatCharacter * Target = AutoAimComponent->GetTarget())
     {
         AimDir = Target->GetActorLocation() - GetActorLocation();
         SetDesiredAimPoint(Target->GetActorLocation()); // 설정
@@ -1054,7 +829,7 @@ FVector2D AMyPlayer::GetAutoAimInput(const FVector2D & Move)
         ClearDesiredAimPoint();
 
         // 조이스틱을 밀었는가
-        if (Move.SizeSquared() > InputDeadzone * InputDeadzone) // 적이 없는 경우 바라보는 위치
+        if (!Move.IsZero()) // 적이 없는 경우 바라보는 위치
         {
             AimDir = FVector(Move.Y, Move.X, 0.0f);
         }
@@ -1119,3 +894,13 @@ void AMyPlayer::GiveKillExp(int32 Amount, ACombatCharacter * Killer)
 
 }
 
+
+// 공격 사거리 반환
+float AMyPlayer::GetAutoTargetRange() const
+{
+    if (!CurrentJob || CurrentJob->GetEngageRange() <= 0.0f)
+    {
+        return AttackRange;
+    }
+    return CurrentJob->GetEngageRange();
+}
