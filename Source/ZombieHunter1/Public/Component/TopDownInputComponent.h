@@ -51,8 +51,8 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	float CursorStopRadius = 60.0f;
 
-	FVector2D GamePadMove = FVector2D::ZeroVector;
-	FVector2D GamePadAim = FVector2D::ZeroVector;
+	FVector2D GamepadMove = FVector2D::ZeroVector;
+	FVector2D GamepadAim = FVector2D::ZeroVector;
 	FVector2D TouchMove = FVector2D::ZeroVector;
 
 	bool bLeftMouseHeld = false;
@@ -65,7 +65,9 @@ private:
 
 	void MouseInput(FVector2D& OutMove, FVector2D& OutAim);
 	bool GetCursorGroundLocation(FVector& OutLocation) const;
-	FVector2D ApplyDeadZone(const FVector2D& Value) const;
+
+	// 너무 조이스틱을 적게 움직이면 입력 무시
+	FVector2D ApplyDeadzone(const FVector2D& Value) const;
 
 	// [게임패드]
 	void OnMoveX(float Value);

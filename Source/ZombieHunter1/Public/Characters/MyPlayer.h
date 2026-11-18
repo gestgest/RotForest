@@ -12,7 +12,6 @@ class USpringArmComponent;
 class UCameraComponent;
 class UAnimMontage;
 class UNavigationInvokerComponent;
-class UVirtualJoystick;
 class UTexture2D;
 class UJobComponent;
 class USkeletalMesh;
@@ -24,6 +23,7 @@ class UNiagaraSystem;
 class USoundBase;
 class UAutoAimComponent;
 class UMaterialParameterCollection;
+class UTopDownInputComponent;
 
 UCLASS()
 class ZOMBIEHUNTER1_API AMyPlayer : public ACombatCharacter
@@ -91,28 +91,6 @@ private: //평범한 변수 및 함수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio", meta = (AllowPrivateAccess = "true"))
 	USoundBase* AttackSound; //MS
 
-	// [Input Variable]
-	// 입력 누적값 (게임패드 / 터치를 분리 저장 후 Tick에서 합성)
-	FVector2D GamepadMove = FVector2D::ZeroVector;
-	FVector2D GamepadAim = FVector2D::ZeroVector;
-	FVector2D TouchMove = FVector2D::ZeroVector;
-	FVector2D TouchAim = FVector2D::ZeroVector;
-
-	// [조이스틱]
-	UPROPERTY()
-	UVirtualJoystick* MoveJoystick;
-
-	//UPROPERTY()
-	//UVirtualJoystick* AimJoystick;
-
-	// 스틱 입력 데드존 => 안 움직임
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Input", meta = (AllowPrivateAccess = "true"))
-	float InputDeadzone = 0.25f;
-
-	// 마우스 이동: 커서가 캐릭터로부터 이 거리(cm) 안이면 이동 정지 — 가까울 때 방향이 뒤집혀 제자리 진동하는 것 방지
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Input", meta = (AllowPrivateAccess = "true"))
-	float CursorStopRadius = 60.0f;
-
 	// 캐릭터가 조준/이동 방향으로 회전하는 속도
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player|Movement", meta = (AllowPrivateAccess = "true"))
 	float TurnInterpSpeed = 12.0f;
@@ -125,9 +103,6 @@ private: //평범한 변수 및 함수
 
 	// 공격 중 남은 조준 유지 시간(초). 0보다 크면 이동 방향으로 몸을 되돌리지 않는다.
 	float AttackFacingHold = 0.0f;
-
-	// 공격 버튼을 누르는 동안
-	bool bAttackButtonHeld = false;
 
 
 
@@ -181,17 +156,6 @@ private: //평범한 변수 및 함수
 	UPROPERTY()
 	AActor* playerStart = nullptr;
 
-	// 공격 타이머(TimeSinceLastAttack)는 베이스(ACombatCharacter::TickAttack)가 관리한다.
-	bool bLeftMouseHeld = false;
-	bool bRightMouseHeld = false;
-
-	// 직전 유효 커서 방향(월드, 수평). 커서 변환이 실패한 프레임에 이걸 재사용해 끊김 방지.
-	FVector LastCursorDir = FVector::ForwardVector;
-
-	// 직전 유효 커서 좌표(월드). bHasLastCursorPoint가 true일 때만 유효.
-	FVector LastCursorPoint = FVector::ZeroVector;
-	bool bHasLastCursorPoint = false;
-
 
 	// [UI]
 	UPROPERTY()
@@ -220,6 +184,9 @@ private: //평범한 변수 및 함수
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player|Auto", meta = (AllowPrivateAccess = "true"))
 	UAutoAimComponent* AutoAimComponent;
 
+	UPROPERTY(VisibleAnywhere, Category = "Input")
+	UTopDownInputComponent* TopDownInput;
+
 	// [레벨업]
 	UPROPERTY(EditAnywhere, Category = "Player|Levelup")
 	UNiagaraSystem* LevelUpEffect = nullptr;
@@ -247,8 +214,6 @@ private: //평범한 변수 및 함수
 
 
 	// [Begin]
-	// 마우스(로스트아크식) 입력을 스틱 포맷으로 변환해 채워서 내보낸다(출력 파라미터).
-	void MouseInput(FVector2D& MouseMove, FVector2D& MouseAim);
 	void UpdateMovement(float DeltaTime, const FVector2D& Move);
 
 	// [Tick]
@@ -262,29 +227,7 @@ private: //평범한 변수 및 함수
 
 
 
-	// 마우스(로스트아크식): 우클릭 누르는 동안 커서로 이동, 좌클릭 누르는 동안 커서 방향 공격
-	void OnLeftMousePressed();
-	void OnLeftMouseReleased();
-	void OnRightMousePressed();
-	void OnRightMouseReleased();
-
 	void OnBackPressed();
-
-	// 마우스 커서가 가리키는 지면(플레이어 높이의 수평면) 위치. 카메라 광선과 평면의 교점.
-	bool GetCursorGroundLocation(FVector& OutLocation) const;
-
-	// 조이스틱 델리게이트 콜백 (→ SetMoveInput / SetAimInput 로 연결)
-	UFUNCTION()
-	void OnMoveJoystickMoved(FVector2D Value);
-
-	UFUNCTION()
-	void OnAimJoystickMoved(FVector2D Value);
-
-	UFUNCTION()
-	void OnAttackButtonPressed();
-
-	UFUNCTION()
-	void OnAttackButtonReleased();
 
 	UFUNCTION()
 	void ToggleCompanionCommand();
@@ -305,18 +248,12 @@ private: //평범한 변수 및 함수
 	void ReStart();
 
 
-	// 게임패드 아날로그 축 콜백
-	void OnMoveX(float Value);
-	void OnMoveY(float Value);
-	void OnAimX(float Value);
-	void OnAimY(float Value);
-
 	// 방금 시작한 공격 몽타주가 끝날 때까지 남은 시간
 	float GetAttackMontageLength();
 
 	float GetAutoTargetRange() const;
 	// 공격 에임 위치 설정 => 대체로 가까운 적
-	FVector2D GetAutoAimInput(const FVector2D& Move);
+	FVector2D GetAutoAimInput(const FVector2D& Move, bool bAttackHeld);
 
 
 	// [UI] Property
@@ -384,16 +321,6 @@ public: //Property Function
 	// 판매처럼 한 번에 여러 개를 얻을 때
 	void GainMoney(int32 Amount);
 	
-	// 근데 안 쓰이는 거 같다?
-	// 키보드(WASD) Enhanced Input(IA_Move)에서 호출. 카메라가 고정된 월드축 기준으로 이동
-	void MoveTopDown(FVector2D Value);
-
-	// 모바일 터치 가상 조이스틱(왼쪽: 이동)이 매 프레임 호출
-	void SetMoveInput(FVector2D Value);
-
-	// 모바일 터치 가상 조이스틱(오른쪽: 조준+공격)이 매 프레임 호출
-	void SetAimInput(FVector2D Value);
-
 
 	void ShowNotification(const FText& Text, ENotifyType Type = ENotifyType::Gain);
 
