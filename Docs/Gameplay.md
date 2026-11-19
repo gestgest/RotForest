@@ -205,6 +205,23 @@ Rot = 시간 Rot + 보스 Rot
 보스    : HP × (1 + 0.25·Rot), 공격력 × (1 + 0.15·Rot)
 ```
 
+### 스킬
+<img width="982" height="463" alt="image2" src="https://github.com/user-attachments/assets/2d6c8f09-a329-4786-bb9d-e65b96ca6f78" />
+<img width="415" height="170" alt="image" src="https://github.com/user-attachments/assets/48e6434c-fdf8-4664-a441-cb3c404efd01" />
+
+직업마다 고유 스킬이 하나씩 있고, 4레벨에 해금됩니다.
+
+| 직업 | 스킬 | 효과 | 지속 | 재사용 |
+|---|---|---|---|---|
+| 전사 | 방패 막기 | 받는 피해 70% 감소 | 최대 5초 | 10초 |
+| 궁수 | 속사 | 제자리에 멈춰 0.1초마다 화살 발사 (화살당 공격력의 50%) | 최대 3초 | 10초 |
+| 마법사 | 불 장판 | 표적 발밑에 반경 3m 불길 생성. 0.5초마다 공격력의 100% 피해 | 5초 | 10초 |
+| 힐러 | 광역 치유 | 반경 10m 안의 모든 아군을 공격력의 5배만큼 한 번에 회복 | 즉시 | 15초 |
+
+- 스킬 정보(이름 · 설명 · 아이콘 · 사운드 · 해금 레벨 · 배율 · 재사용 시간)는 `USkillDataAsset`에 담겨 있어, 수치 조정은 코드 수정 없이 에셋에서 합니다.
+- 공통 흐름(해금 확인 · 쿨다운 · 사용 중 상태)은 `UJobComponent`가 처리하고, 각 직업은 `UseSkill()` / `StopSkill()`만 구현합니다.
+- 동료도 같은 컴포넌트를 쓰므로 스킬을 사용합니다. 직업별 `WantsToUseSkill()`로 쓸 상황인지 판단한 뒤, 일정 간격마다 50% 확률로 발동합니다.
+
 ---
 
 ## 무기 · 아이템
@@ -218,6 +235,8 @@ UItemDataAsset   : 이름 · 무게 · 판매 가격
 - 무기마다 손에 쥐는 각도(`GripRotation`)와 위치(`GripLocation`)를 에셋에 저장해, 메시마다 다른 축 방향을 에셋에서 맞춥니다.
 
 ### 무기 줍기와 파티 배분
+<img width="972" height="451" alt="image3" src="https://github.com/user-attachments/assets/ae572ef8-068c-4db1-bd11-688d1dc9d528" />
+
 - 바닥의 무기(`WeaponPickup`)를 밟으면 플레이어가 먼저 판단하고, 플레이어가 안 쓰면 같은 직업 동료 중 무기가 가장 약한 동료에게 넘깁니다(`PartyComponent`).
 - 아무도 못 쓰는 무기라는 안내는 한 번만 띄웁니다.
 
