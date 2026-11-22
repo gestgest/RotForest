@@ -13,6 +13,7 @@
 #include "ZombieSlayerGameMode.generated.h"
 
 class AInfiniteMapGenerator;
+class USoundBase;
 
 UCLASS()
 class ZOMBIEHUNTER1_API AZombieSlayerGameMode : public AGameModeBase
@@ -51,14 +52,20 @@ private:
 
 	void Spawn();
 	void SpawnCoin();
-	void RecycleFarCoins(const FVector& PlayerLocation);
+	void UpdateWave();
 
 	void UpdateRot();
-	void ApplyRotToEnemy(AEnemy* Enemy) const;
 
 
 	// 너무 멀어졌거나 낙하한 적을 시야 밖 스폰 링으로 재배치 (LeashCheckInterval마다 호출) 
 	void RecycleFarEnemies();
+	void RecycleFarCoins(const FVector& PlayerLocation);
+	void ApplyRotToEnemy(AEnemy* Enemy) const;
+	void SpawnBurst(const FVector& PlayerLocation, int32 Level);
+	void SpawnDefaultEnemy(const FVector& PlayerLocation);
+	void WakeEnemyAt(AEnemy* Enemy, const FVector& Location); // 쉬고 있는 적 호출
+	AEnemy* FindDormantEnemy() const;
+
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta=(AllowPrivateAccess = "True"), Category = "Spawning")
 	int Max_Enemy_Size = 30;
@@ -81,9 +88,50 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Spawning")
 	int32 CoinPerBossKill = 2;
 
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	float SpawnInterval = 0.5f;
+
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	int32 DefaultSpawnEnemyMin = 1;
+
+	// 스폰 주기
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	int32 DefaultSpawnEnemyMax = 3;
+
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = "True"), Category = "Spawning")
 	int Max_Coin_Size = 40;
+
+	// 틱마다 코인 묶음이 나올 확률 => 0.1이라면 0.5초 간격에 평균 5초 
+	UPROPERTY(EditAnywhere, Category = "Spawning", meta = (ClampMin = "0", ClampMax = "1"))
+	float CoinChance = 0.1f;
+
+	// [웨이브]
+	// 습격 오는 시간대
+	UPROPERTY(EditAnywhere, Category = "Spawning|Wave")
+	USoundBase* BurstWarningSound = nullptr;
+
+	UPROPERTY(EditAnywhere, Category = "Spawning|Wave")
+	float BurstDuration = 20.f;
+
+	// 휴식기
+	UPROPERTY(EditAnywhere, Category = "Spawning|Wave")
+	float ClamDuration = 60.f;
+
+
+	// 평상시 적 오는량 
+	// ㄴ 그냥 값을 올려놓고 평상시 오는 적 확률을 매우 낮추자
+	UPROPERTY(EditAnywhere, Category = "Spawning|Wave")
+	float EnemyChance = 0.02f;
+
+	UPROPERTY(EditAnywhere, Category = "Spawning|Wave")
+	float BurstEnemyChance = 0.35f;
+
+	UPROPERTY(EditAnywhere, Category = "Spawning|Wave")
+	float BurstWarningTime = 5.f;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = "Spawning|Wave") // 구경 용도
+	bool bInBurst = true; // 버스트 인지 아닌지
 
 	//[Rot]
 	UPROPERTY(EditAnywhere, Category = "Rot")
@@ -104,15 +152,18 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Rot")
 	float DamagePerRot = 0.3f;
 
-	UPROPERTY(EditAnywhere, Category = "Rot")
-	bool bDebugRot = false;
-
 	// 보스 전용 => 잡몹의 절반
 	UPROPERTY(EditAnywhere, Category = "Rot|Boss")
 	float BossHPPerRot = 0.25f;
 
 	UPROPERTY(EditAnywhere, Category = "Rot|Boss")
 	float BossDamagePerRot = 0.15f;
+
+
+	UPROPERTY(EditAnywhere, Category = "Rot|Debug")
+	bool bDebugRot = false;
+
+
 
 
 	// UPROPERTY 필수 — 안 붙이면 적/코인이 Destroy될 때 이 raw 포인터가 댕글링이 되어
@@ -130,6 +181,10 @@ private:
 
 	int enemy_size = 0;
 	int CoinSize = 0;
+
+	float WavePhaseTime = 0.0f; // 시간
+	bool bForceFill = false; // burst 시작되면 바로 초반에 막 나오는 용도
+	bool bWarned = false;
 
 	float RotUpdateInterval = 1.0f;
 	float RotElapsedTime = 0.0f;
@@ -159,7 +214,7 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "True"), Category = "Enemy|Leash")
 	float LeashDistance = 4500.0f;
 
-	/** 이 Z(cm) 아래로 떨어진 적은 어떤 이유로든 즉시 회수 (리쉬가 놓친 케이스의 안전망) */
+	// 이 Z(cm) 아래로 떨어진 적은 어떤 이유로든 즉시 회수 (리쉬가 놓친 케이스의 안전망) 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "True"), Category = "Enemy|Leash")
 	float FallZThreshold = -500.0f;
 
@@ -173,11 +228,11 @@ private:
 	//////////////////////////////////////////////////////////////////////////
 	// 스폰 링 — 적/코인을 플레이어 눈앞이 아니라 "시야 밖"에 생성해 탐험하다 발견하게 한다.
 
-	/** 스폰 최소 거리(cm). 탑다운 카메라 시야보다 커야 눈앞 팝인이 안 보인다. */
+	// 스폰 최소 거리(cm). 탑다운 카메라 시야보다 커야 눈앞 팝인이 안 보인다.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "True"), Category = "Spawning")
 	float SpawnMinDistance = 2200.0f;
 
-	/** 스폰 최대 거리(cm). 리쉬(LeashDistance)와 청크 언로드 경계(~6000)보다 안쪽이어야 한다. */
+	// 스폰 최대 거리(cm). 리쉬(LeashDistance)와 청크 언로드 경계(~6000)보다 안쪽이어야 한다. 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "True"), Category = "Spawning")
 	float SpawnMaxDistance = 3500.0f;
 
@@ -186,4 +241,7 @@ public:
 
 	// 보스 BeginPlay에서 호출
 	void ApplyRotToBoss(AEnemy* Boss) const;
+
+private:
+
 };

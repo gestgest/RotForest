@@ -4,6 +4,8 @@
 #include "ZombieSlayerGameMode.h"
 
 #include "InfiniteMapGenerator.h"
+
+#include "Sound/SoundBase.h"
 #include "Characters/CombatRegistrySubsystem.h" // 보스까지 포함해 적 전체를 훑기 위해
 
 
@@ -23,15 +25,13 @@ void AZombieSlayerGameMode::StartPlay()
 
     AZombieSlayerGameMode::init();
 
-    // 풀 전체를 5초 기다리지 않고 즉시 링에 배치 (드립피드 대신 배치 스폰)
     AZombieSlayerGameMode::Spawn();
 
-    // 이후로는 5초마다 spawn()을 불러 죽어서 빈 슬롯만 다시 채운다
     GetWorldTimerManager().SetTimer(
         SpawnTimerHandle,           // 타이머 핸들
         this,                        // 호출할 객체
         &AZombieSlayerGameMode::Spawn,  // 호출할 함수
-        5.0f,                        // 간격 (5초)
+        SpawnInterval,                        // 간격
         true                         // 반복 여부 (true = 반복)
     );
 
@@ -128,10 +128,39 @@ void AZombieSlayerGameMode::initCoin(int index)
         newCoin->SetActorHiddenInGame(true);  // 비활성화
     }
 }
+
 void AZombieSlayerGameMode::Spawn()
 {
+    UpdateWave();
     SpawnEnemy();
     SpawnCoin();
+}
+
+void AZombieSlayerGameMode::UpdateWave()
+{
+    WavePhaseTime += SpawnInterval;
+
+    // bursh 타임을 알리는 까마귀 소리
+    if (!bInBurst && !bWarned && WavePhaseTime >= ClamDuration - BurstWarningTime)
+    {
+        if (BurstWarningSound)
+        {
+            UGameplayStatics::PlaySound2D(this, BurstWarningSound);
+        }
+
+        bWarned = true;
+    }
+    const float PhaseLength = bInBurst ? BurstDuration : ClamDuration;
+
+    // Toggle
+    if (WavePhaseTime >= PhaseLength)
+    {
+        bInBurst = !bInBurst;
+        WavePhaseTime = 0;
+        bWarned = false;
+
+        bForceFill = bInBurst;
+    }
 }
 
 
@@ -140,50 +169,20 @@ void AZombieSlayerGameMode::Spawn()
 // 풀에서 대기 중(숨김)인 적을 레벨 상한까지만 깨워 시야 밖 링에 배치한다.
 void AZombieSlayerGameMode::SpawnEnemy()
 {
-    AMyPlayer* myPlayer =
+    AMyPlayer* MyPlayer =
         Cast<AMyPlayer>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-    if (!myPlayer)
+    if (!MyPlayer)
     {
         return;
     }
-
-    const FVector playerLocation = myPlayer->GetActorLocation();
-    const FVector upVector(0, 0, 90.0f);
-
-    // 레벨1 => 5, 레벨3 => 9 (기본값 기준)
-    const int32 maxActive = FMath::Min(
-        Max_Enemy_Size,
-        StartEnemyCount + (myPlayer->GetLevel() - 1) * EnemyPerLevel);
-
-    for (AEnemy* enemy : enemyPool)
+    const FVector PlayerLocation = MyPlayer->GetActorLocation();
+    if (bInBurst)
     {
-        if (enemy_size >= maxActive)
-        {
-            break;
-        }
-
-        // 파괴됐거나 무효한 풀 엔트리, 이미 활성 상태인 적은 건너뛴다.
-        if (!IsValid(enemy) || !enemy->IsHidden())
-        {
-            continue;
-        }
-
-        FNavLocation resultLocation;
-
-        if (!FindReachablePointInRing(playerLocation, resultLocation))
-        {
-            continue;
-        }
-
-        enemy->OnAIController();
-
-        // pivot이 정 가운데라 +90
-        enemy->SetActorLocation(resultLocation.Location + upVector);
-        enemy->WakeFromPool();
-        ApplyRotToEnemy(enemy);
-        enemy->ResetForSpawn();
-
-        enemy_size++;
+        SpawnBurst(PlayerLocation, MyPlayer->GetLevel());
+    }
+    else
+    {
+        SpawnDefaultEnemy(PlayerLocation);
     }
 }
 
@@ -239,6 +238,8 @@ void AZombieSlayerGameMode::RecycleFarEnemies()
             continue;
         }
 
+        // 도주하다가 적을 못 잡은 경우 그냥 반납하지말고 순간이동 시키자.
+
         // 시야 밖 스폰 링으로 재배치 — 눈앞 순간이동이 보이지 않게. 실패하면 다음 주기에 재시도.
         FNavLocation resultLocation;
         if (FindReachablePointInRing(playerLocation, resultLocation))
@@ -282,6 +283,99 @@ void AZombieSlayerGameMode::ApplyRotToEnemy(AEnemy* Enemy) const
     const float DamageMul = 1.0f + Rot * DamagePerRot;
 
     Enemy->ApplyStatMultiplier(HPMul, DamageMul);
+}
+
+void AZombieSlayerGameMode::SpawnBurst(const FVector& PlayerLocation, int32 Level)
+{
+    // 레벨1 => 5, 레벨4 => 17 (기본값 기준)
+    const int32 MaxActive = FMath::Min(
+        Max_Enemy_Size,
+        StartEnemyCount + (Level - 1) * EnemyPerLevel);
+
+    int32 ToSpawn = 0;
+    for (int32 i = enemy_size; i < MaxActive; i++)
+    {
+        if (bForceFill || FMath::FRand() < BurstEnemyChance)
+        {
+            ToSpawn++;
+        }
+    }
+    bForceFill = false;
+
+    for (int32 i = 0; i < ToSpawn; i++)
+    {
+        AEnemy* Enemy = FindDormantEnemy();
+        if (!Enemy)
+        {
+            break;
+        }
+
+        FNavLocation ResultLocation;
+
+        // 주변 스폰 가능한데를 찾아봐
+        if (!FindReachablePointInRing(PlayerLocation, ResultLocation))
+        {
+            continue;
+        }
+        WakeEnemyAt(Enemy, ResultLocation.Location);
+    }
+}
+
+// 평범한 생성
+void AZombieSlayerGameMode::SpawnDefaultEnemy(const FVector & PlayerLocation)
+{
+
+    if (FMath::FRand() >= EnemyChance)
+    {
+        return;
+    }
+
+    const int32 EnemySize = FMath::RandRange(DefaultSpawnEnemyMin, DefaultSpawnEnemyMax);
+
+    for (int32 i = 0; i < EnemySize; i++)
+    {
+        AEnemy* Enemy = FindDormantEnemy();
+        if (!Enemy)
+        {
+            break;
+        }
+
+        // 스폰 가능한 지점을 찾아보자
+        FNavLocation Center;
+        if (!FindReachablePointInRing(PlayerLocation, Center))
+        {
+            continue;
+        }
+        WakeEnemyAt(Enemy, Center.Location);
+    }
+}
+
+// 쉬고 있는 적을 찾아라
+AEnemy* AZombieSlayerGameMode::FindDormantEnemy() const
+{
+    for (AEnemy* Enemy : enemyPool)
+    {
+        if (IsValid(Enemy) && Enemy->IsHidden())
+        {
+            return Enemy;
+        }
+    }
+    return nullptr;
+}
+
+void AZombieSlayerGameMode::WakeEnemyAt(AEnemy* Enemy, const FVector& Location)
+{
+    const FVector UpVector(0, 0, 90.0f);
+
+    Enemy->OnAIController();
+
+    // pivot이 정 가운데라서 90
+    Enemy->SetActorLocation(Location + UpVector);
+    Enemy->WakeFromPool();
+    ApplyRotToEnemy(Enemy);
+    Enemy->ResetForSpawn();
+
+    enemy_size++;
 }
 
 void AZombieSlayerGameMode::ApplyRotToBoss(AEnemy* Boss) const
@@ -338,8 +432,13 @@ void AZombieSlayerGameMode::SpawnCoin()
         return;
     }
 
-    // 여기서 검사
+    if (FMath::FRand() >= CoinChance)
+    {
+        return;
+    }
+    // 여기서 멀리 떨어진 코인이 있는지 검사
     RecycleFarCoins(MyPlayer->GetActorLocation());
+
 
     // 레벨1 => 5, 레벨2 => 10, 레벨4 이상 => 20 (기본값 기준)
     const int32 MaxActive = FMath::Min(
@@ -353,6 +452,8 @@ void AZombieSlayerGameMode::SpawnCoin()
 
     const FVector UpVector(0, 0, 90.0f);
 
+
+    // 쉬는 코인을 찾아보자
     for (ACoin* Coin : CoinPool)
     {
         // 꽉 찬 경우
@@ -365,6 +466,8 @@ void AZombieSlayerGameMode::SpawnCoin()
         {
             continue;
         }
+
+        // 이것도 확률인데 흐음...
 
         FNavLocation ResultLocation;
 
@@ -455,3 +558,4 @@ void AZombieSlayerGameMode::OnBossKilled()
 {
     BossKillCount++;
 }
+

@@ -90,13 +90,13 @@ protected: //핵심 함수의 부품
 
 	// SetHP로만 소통하자
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
-	int32 HP = 5;
+	int32 HP = 50;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	int32 Damage = 1;
+	int32 Damage = 10;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
-	int32 MaxHP = 5;
+	int32 MaxHP = 50;
 
 	// 죽었는지 여부. HP<=0이면 true.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")

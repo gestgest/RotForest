@@ -186,10 +186,23 @@ void AMyPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
     {
         PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &AMyPlayer::AddMoney);
         FInputKeyBinding ExpBinding(FInputChord(EKeys::X), IE_Pressed);
+
         ExpBinding.KeyDelegate.GetDelegateForManualSet().BindLambda([this]()
             {
                 AddExp(10);
+
+                if (Party)
+                {
+                    for (ACompanion* Companion : Party->GetCompanions())
+                    {
+                        if (Companion)
+                        {
+                            Companion->AddExp(10);
+                        }
+                    }
+                }
             });
+
         PlayerInputComponent->KeyBindings.Add(ExpBinding);
         PlayerInputComponent->BindKey(EKeys::Q, IE_Pressed, this, &AMyPlayer::OnSkillPressed);
         PlayerInputComponent->BindKey(EKeys::Q, IE_Released, this, &AMyPlayer::OnSkillReleased);
