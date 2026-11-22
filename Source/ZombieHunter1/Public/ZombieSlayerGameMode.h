@@ -65,6 +65,7 @@ private:
 	void SpawnDefaultEnemy(const FVector& PlayerLocation);
 	void WakeEnemyAt(AEnemy* Enemy, const FVector& Location); // 쉬고 있는 적 호출
 	AEnemy* FindDormantEnemy() const;
+	void DebugWave(const FString& Message) const;
 
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta=(AllowPrivateAccess = "True"), Category = "Spawning")
@@ -72,7 +73,7 @@ private:
 
 	// 레벨1 => StartEnemyCount, 레벨당 +EnemyPerLevel, 최대 Max_Enemy_Size
 	UPROPERTY(EditAnywhere, Category = "Spawning")
-	int32 StartEnemyCount = 5;
+	int32 StartEnemyCount = 3;
 
 	UPROPERTY(EditAnywhere, Category = "Spawning")
 	int32 EnemyPerLevel = 4;
@@ -162,6 +163,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Rot|Debug")
 	bool bDebugRot = false;
+
+	UPROPERTY(EditAnywhere, Category = "Spawning|Debug")
+	bool bDebugWave = false;
 
 
 

@@ -149,6 +149,7 @@ void AZombieSlayerGameMode::UpdateWave()
         }
 
         bWarned = true;
+        DebugWave(TEXT("까마귀 예고"));
     }
     const float PhaseLength = bInBurst ? BurstDuration : ClamDuration;
 
@@ -160,6 +161,7 @@ void AZombieSlayerGameMode::UpdateWave()
         bWarned = false;
 
         bForceFill = bInBurst;
+        DebugWave(bInBurst ? TEXT("러쉬 시작") : TEXT("휴식 시작"));
     }
 }
 
@@ -249,6 +251,9 @@ void AZombieSlayerGameMode::RecycleFarEnemies()
             enemy->ResetForSpawn(); // 리쉬된 적은 새 적 취급
         }
     }
+
+    // 멀리 떨어진 코인도 같은 주기에 회수
+    RecycleFarCoins(playerLocation);
 }
 
 void AZombieSlayerGameMode::UpdateRot()
@@ -302,6 +307,7 @@ void AZombieSlayerGameMode::SpawnBurst(const FVector& PlayerLocation, int32 Leve
     }
     bForceFill = false;
 
+    int32 Spawned = 0;
     for (int32 i = 0; i < ToSpawn; i++)
     {
         AEnemy* Enemy = FindDormantEnemy();
@@ -318,6 +324,12 @@ void AZombieSlayerGameMode::SpawnBurst(const FVector& PlayerLocation, int32 Leve
             continue;
         }
         WakeEnemyAt(Enemy, ResultLocation.Location);
+        Spawned++;
+    }
+
+    if (Spawned > 0)
+    {
+        DebugWave(FString::Printf(TEXT("적 %d 생성"), Spawned));
     }
 }
 
@@ -332,6 +344,7 @@ void AZombieSlayerGameMode::SpawnDefaultEnemy(const FVector & PlayerLocation)
 
     const int32 EnemySize = FMath::RandRange(DefaultSpawnEnemyMin, DefaultSpawnEnemyMax);
 
+    int32 Spawned = 0;
     for (int32 i = 0; i < EnemySize; i++)
     {
         AEnemy* Enemy = FindDormantEnemy();
@@ -347,6 +360,12 @@ void AZombieSlayerGameMode::SpawnDefaultEnemy(const FVector & PlayerLocation)
             continue;
         }
         WakeEnemyAt(Enemy, Center.Location);
+        Spawned++;
+    }
+
+    if (Spawned > 0)
+    {
+        DebugWave(FString::Printf(TEXT("적 %d 생성"), Spawned));
     }
 }
 
@@ -376,6 +395,21 @@ void AZombieSlayerGameMode::WakeEnemyAt(AEnemy* Enemy, const FVector& Location)
     Enemy->ResetForSpawn();
 
     enemy_size++;
+}
+
+// [러쉬]/[휴식] 태그 + 현재 적/코인 수 => bDebugWave 켜야 보임
+void AZombieSlayerGameMode::DebugWave(const FString& Message) const
+{
+    if (!bDebugWave || !GEngine)
+    {
+        return;
+    }
+
+    const TCHAR* Tag = bInBurst ? TEXT("[러쉬]") : TEXT("[휴식]");
+    const FColor Color = bInBurst ? FColor::Red : FColor::Cyan;
+
+    GEngine->AddOnScreenDebugMessage(-1, 3.0f, Color,
+        FString::Printf(TEXT("%s %s (적 %d / 코인 %d)"), Tag, *Message, enemy_size, CoinSize));
 }
 
 void AZombieSlayerGameMode::ApplyRotToBoss(AEnemy* Boss) const
@@ -436,8 +470,6 @@ void AZombieSlayerGameMode::SpawnCoin()
     {
         return;
     }
-    // 여기서 멀리 떨어진 코인이 있는지 검사
-    RecycleFarCoins(MyPlayer->GetActorLocation());
 
 
     // 레벨1 => 5, 레벨2 => 10, 레벨4 이상 => 20 (기본값 기준)
@@ -483,6 +515,11 @@ void AZombieSlayerGameMode::SpawnCoin()
 
         CoinSize++;
         SpawnedThisTick++;
+    }
+
+    if (SpawnedThisTick > 0)
+    {
+        DebugWave(FString::Printf(TEXT("코인 %d 생성"), SpawnedThisTick));
     }
 
 }
