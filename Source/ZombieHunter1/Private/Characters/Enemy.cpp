@@ -3,16 +3,20 @@
 #include "Characters/Enemy.h"
 #include "Characters/MyPlayer.h"
 #include "Characters/Companion.h" //동료도 추격 대상
-#include "NavigationSystem.h"  // 내비게이션 사용 시
+#include "Characters/CombatRegistrySubsystem.h"
+
+#include "GameFramework/CharacterMovementComponent.h" //죽을 때 이동 정지
+
+#include "Components/CapsuleComponent.h"             //죽을 때 충돌 해제
+
 #include "Kismet/GameplayStatics.h" //getCharacter, sound
 //#include "Kismet/KismetSystemLibrary.h" //ray
 
-
+#include "NavigationSystem.h"  // 내비게이션 사용 시
 #include "Navigation/PathFollowingComponent.h" //GetPathFollowingComponent에 있는 OnRequestFinished
+
+#include "TimerManager.h"
 #include "AITypes.h"
-#include "GameFramework/CharacterMovementComponent.h" //죽을 때 이동 정지
-#include "Components/CapsuleComponent.h"             //죽을 때 충돌 해제
-#include <Characters/CombatRegistrySubsystem.h>
 
 // Sets default values
 AEnemy::AEnemy()
@@ -307,6 +311,10 @@ void AEnemy::OnDeath()
 		myPlayer->GiveKillExp(ExpReward, LastAttacker.Get());
 	}
 
+	// 페이드 시작
+	FadeElapsed = 0.0f;
+	GetWorldTimerManager().SetTimer(FadeTimer, this, &AEnemy::StartFade, FadeDelay, false);
+
 	DeadEnemySignal(enemy_id); // BP: 사망 애님 재생 / 일정 시간 후 Destroy
 }
 
@@ -314,6 +322,15 @@ void AEnemy::OnDeath()
 // 이게 없으면 재활용된 적은 캡슐 콜리전이 꺼진 채라 공격 스윕(ECC_Pawn)에 안 맞고 피도 안 닳는다.
 void AEnemy::OnRevive()
 {
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		// FadeTimer 멈추기
+		GetWorldTimerManager().ClearTimer(FadeTimer);
+		SetFade(1.0f);
+
+		MeshComp->InitAnim(true);
+	}
+
 	CanAttack = true;
 
 	// 캡슐 충돌 복구 — 이게 핵심. 안 켜면 때려도 SweepMultiByChannel에 안 잡힘.
@@ -328,6 +345,38 @@ void AEnemy::OnRevive()
 		Move->SetMovementMode(MOVE_Walking);
 	}
 }
+
+void AEnemy::StartFade()
+{
+	GetWorldTimerManager().SetTimer(FadeTimer, this, &AEnemy::TickFade, FadeStep, true);
+}
+void AEnemy::TickFade()
+{
+	FadeElapsed += FadeStep;
+
+	// 0 나누기 방지
+	const float Alpha = FadeDuration > 0.0f ? 1.0f - FadeElapsed / FadeDuration : 0.0f;
+
+	SetFade(FMath::Max(Alpha, 0.0f));
+
+	// 다 됐다면
+	if (Alpha <= 0.0f)
+	{
+		GetWorldTimerManager().ClearTimer(FadeTimer);
+	}
+}
+
+void AEnemy::SetFade(float Value)
+{
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		MeshComp->SetScalarParameterValueOnMaterials(TEXT("Fade"), Value);
+	}
+
+}
+
+
+
 
 // 풀 대기: 숨김만으로는 부족하다 — 숨겨진 액터도 중력/틱이 돌아서
 // 원점 청크가 언로드되면 풀 전체가 낙하하고, 대기 적들이 매 프레임 연산 낭비를 만든다.

@@ -51,9 +51,8 @@ public:
 	//추격을 완료했다면 => Attack
 	void MoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result);
 
-
-
-
+	UFUNCTION() //몽타주의 delegate에 추가하려면 필수다.
+		void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
 
 
@@ -88,11 +87,23 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
 	float TrackFarDistance = 2000.0f;
 
+	UPROPERTY(EditAnywhere, Category = "Death")
+	float FadeDelay = 2.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Death")
+	float FadeDuration = 1.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Death")
+	float FadeStep = 0.03f;
+
+	FTimerHandle FadeTimer;
+	float FadeElapsed = 0.0f;
 
 
-	UFUNCTION() //몽타주의 delegate에 추가하려면 필수다.
-	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+	void StartFade();
+	void TickFade();
+	void SetFade(float Value);
 
 
 	/** 풀 대기 상태로 전환 — 숨김 + 콜리전/이동/틱 정지. 게임모드 풀이 반납 시 호출.
