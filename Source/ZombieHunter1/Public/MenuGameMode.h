@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -25,15 +25,18 @@ class ZOMBIEHUNTER1_API AMenuGameMode : public AGameModeBase
 public:
 	AMenuGameMode();
 
-	/** 맵 시작 시 자동으로 띄울 메뉴 위젯 (WBP_MainMenu / WBP_JobSelect 등) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
-	TSubclassOf<UUserWidget> MenuWidgetClass;
-
 protected:
 	virtual void BeginPlay() override;
 
 private:
-	/** 띄운 메뉴 위젯 (GC 방지용 참조) */
+	// 맵 시작 시 자동으로 띄울 메뉴 위젯 (WBP_MainMenu / WBP_JobSelect 등)
+	UPROPERTY(EditAnywhere, Category = "Menu")
+	TSubclassOf<UUserWidget> MenuWidgetClass;
+
+	// 띄운 메뉴 위젯 (GC 방지용 참조)
 	UPROPERTY()
 	UUserWidget* MenuWidget = nullptr;
+
+public: //get set
+	UUserWidget* GetMenuWidget() const { return MenuWidget; }
 };
