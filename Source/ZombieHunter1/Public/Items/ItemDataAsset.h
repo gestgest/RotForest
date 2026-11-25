@@ -58,6 +58,6 @@ public:
 	FVector GripLocation = FVector::ZeroVector;
 
 	// ex) socket_bow
-	UPROPERTY(EditAnywhere, Category="Weapon|Grip")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapon|Grip")
 	FName SocketName;
 };
