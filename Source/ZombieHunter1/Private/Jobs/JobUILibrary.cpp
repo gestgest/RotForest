@@ -42,3 +42,13 @@ void UJobUILibrary::PopulateJobComboBox(UComboBoxString* ComboBox, const TArray<
 		ComboBox->SetSelectedIndex(InitialIndex);
 	}
 }
+
+UWeaponDataAsset* UJobUILibrary::GetJobDefaultWeapon(TSubclassOf<UJobComponent> JobClass)
+{
+	if (!JobClass)
+	{
+		return nullptr;
+	}
+
+	return JobClass.GetDefaultObject()->GetDefaultWeapon();
+}
