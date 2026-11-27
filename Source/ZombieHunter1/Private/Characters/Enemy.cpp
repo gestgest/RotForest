@@ -259,8 +259,8 @@ bool AEnemy::hit()
 		{
 			//UE_LOG(LogTemp, Log, TEXT("Hit Ally!"));
 			Victim->AddHP(-Damage);
-			FVector force = GetActorForwardVector() * 500 + FVector(0, 0, 100);
-			Victim->LaunchCharacter(force, false, false);
+			FVector Force = GetActorForwardVector() * 500 + FVector(0, 0, 100);
+			Victim->LaunchCharacter(Force, true, true); // true true를 하면 힘이 중첩되지않는다
 			isAttack = true;
 		}
 	}
