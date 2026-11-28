@@ -31,6 +31,11 @@ void UTopDownInputComponent::BindKeys(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Released, this, &UTopDownInputComponent::OnLeftMouseReleased);
 	PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &UTopDownInputComponent::OnRightMousePressed);
 	PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Released, this, &UTopDownInputComponent::OnRightMouseReleased);
+
+	// 키보드
+	PlayerInputComponent->BindKey(EKeys::Z, IE_Pressed, this, &UTopDownInputComponent::OnAttackButtonPressed);
+	PlayerInputComponent->BindKey(EKeys::Z, IE_Released, this, &UTopDownInputComponent::OnAttackButtonReleased);
+
 }
 
 
